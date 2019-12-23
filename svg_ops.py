@@ -70,15 +70,80 @@ class SVGPath:
   def as_path(self) -> 'SVGPath':
     return self
 
+# https://www.w3.org/TR/SVG11/shapes.html#CircleElement
+@dataclasses.dataclass
+class SVGCircle:
+  r: float
+  cx: float = 0
+  cy: float = 0
+
+  def as_path(self) -> SVGPath:
+    return SVGEllipse(self.r, self.r, self.cx, self.cy).as_path()
+
+# https://www.w3.org/TR/SVG11/shapes.html#EllipseElement
+@dataclasses.dataclass
+class SVGEllipse:
+  rx: float
+  ry: float
+  cx: float = 0
+  cy: float = 0
+
+  def as_path(self) -> SVGPath:
+    rx, ry, cx, cy = dataclasses.astuple(self)
+    path = SVGPath()
+    # arc doesn't seem to like being a complete shape, draw two halves
+    path.M(cx - rx, cy)
+    path.A(rx, ry, cx + rx, cy, large_arc=1)
+    path.A(rx, ry, cx - rx, cy, large_arc=1)
+    return path
+
+# https://www.w3.org/TR/SVG11/shapes.html#LineElement
+@dataclasses.dataclass
+class SVGLine:
+  x1: float = 0
+  y1: float = 0
+  x2: float = 0
+  y2: float = 0
+
+  def as_path(self) -> SVGPath:
+    x1, y1, x2, y2 = dataclasses.astuple(self)
+    path = SVGPath()
+    path.M(x1, y1)
+    path.L(x2, y2)
+    return path
+
+# https://www.w3.org/TR/SVG11/shapes.html#PolygonElement
+@dataclasses.dataclass
+class SVGPolygon:
+  points: str
+
+  def as_path(self) -> SVGPath:
+    path = SVGPath()
+    if self.points:
+      path.d = 'M' + self.points
+      path.end()
+    return path
+
+# https://www.w3.org/TR/SVG11/shapes.html#PolylineElement
+@dataclasses.dataclass
+class SVGPolyline:
+  points: str
+
+  def as_path(self) -> SVGPath:
+    path = SVGPath()
+    if self.points:
+      path.d = 'M' + self.points
+    return path
+
 # https://www.w3.org/TR/SVG11/shapes.html#RectElement
 @dataclasses.dataclass
 class SVGRect:
-  x: int = 0
-  y: int = 0
-  width: int = 0
-  height: int = 0
-  rx: int = 0
-  ry: int = 0
+  x: float = 0
+  y: float = 0
+  width: float = 0
+  height: float = 0
+  rx: float = 0
+  ry: float = 0
 
   def __post_init__(self):
     if not self.rx:
@@ -107,24 +172,13 @@ class SVGRect:
     path.end()
     return path
 
-# https://www.w3.org/TR/SVG11/shapes.html#LineElement
-@dataclasses.dataclass
-class SVGLine:
-  x1: int = 0
-  y1: int = 0
-  x2: int = 0
-  y2: int = 0
-
-  def as_path(self) -> SVGPath:
-    x1, y1, x2, y2 = dataclasses.astuple(self)
-    path = SVGPath()
-    path.M(x1, y1)
-    path.L(x2, y2)
-    return path
-
 _ELEMENT_CLASSES = {
+  '{http://www.w3.org/2000/svg}circle': SVGCircle,
+  '{http://www.w3.org/2000/svg}ellipse': SVGEllipse,
   '{http://www.w3.org/2000/svg}line': SVGLine,
   '{http://www.w3.org/2000/svg}path': SVGPath,
+  '{http://www.w3.org/2000/svg}polygon': SVGPolygon,
+  '{http://www.w3.org/2000/svg}polyline': SVGPolyline,
   '{http://www.w3.org/2000/svg}rect': SVGRect,
 }
 _CLASS_ELEMENTS = {v: k for k, v in _ELEMENT_CLASSES.items()}
@@ -139,6 +193,7 @@ def _el_to_data(el):
 def _data_to_el(data_obj):
   el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
   for field_name, field_value in dataclasses.asdict(data_obj).items():
+    print(field_name, field_value)
     el.attrib[field_name] = field_value
   return el
 
@@ -150,11 +205,8 @@ def shape_to_path(svg_text):
     if el.tag not in _ELEMENT_CLASSES:
       continue
     data_obj = _el_to_data(el)
-    print(data_obj)
     path = data_obj.as_path()
-    print(path)
     new_el = _data_to_el(path)
-    print(etree.tostring(new_el))
     swaps.append((el, new_el))
   for old_el, new_el in swaps:
     parent = old_el.getparent()
