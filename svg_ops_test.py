@@ -2,11 +2,6 @@ from lxml import etree
 import pytest
 import svg_ops
 
-def pretty_svg(el_or_text):
-  if isinstance(el_or_text, bytes):
-    el_or_text = etree.fromstring(el_or_text)
-  return etree.tostring(el_or_text, pretty_print=True)
-
 def svg(*els):
   parser = etree.XMLParser(remove_blank_text=True)
   root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
@@ -97,12 +92,87 @@ def svg(*els):
   ]
 )
 def test_simple_shape_to_path(capsys, shape: str, expected_path: str):
-  actual = svg_ops.shape_to_path(svg(shape))
+  actual = etree.tostring(svg_ops.shape_to_path(svg(shape)))
   expected_result = svg(f'<path d="{expected_path}"/>')
   print(f'A: {actual}')
   print(f'E: {expected_result}')
   assert actual == expected_result
 
-# TODO handle transform, test
+@pytest.mark.parametrize(
+  "shape, expected_cmds",
+  [
+    # line
+    (
+      '<line x1="10" x2="50" y1="110" y2="150"/>',
+      [
+        ('M', (10., 110.)),
+        ('L', (50., 150.)),
+      ]
+    ),
+    # path explodes to show implicit commands
+    (
+      '<path d="m1,1 2,0 1,3"/>',
+      [
+        ('m', (1., 1.)),
+        ('l', (2., 0.)),
+        ('l', (1., 3.)),
+      ]
+    ),
+    # vertical and horizontal movement
+    (
+      '<path d="m1,1 v2 h2z"/>',
+      [
+        ('m', (1., 1.)),
+        ('v', (2.,)),
+        ('h', (2.,)),
+        ('z', ())
+      ]
+    ),
+  ]
+)
+def test_iter(shape, expected_cmds):
+  svg_root = svg_ops.shape_to_path(svg(shape))
+  actual_cmds = []
+  for path in svg_root.iter('{http://www.w3.org/2000/svg}path'):
+    actual_cmds.extend((t for t in svg_ops.SVGPath(path.attrib['d'])))
+  print(f'A: {actual_cmds}')
+  print(f'E: {expected_cmds}')
+  assert actual_cmds == expected_cmds
 
 
+@pytest.mark.parametrize(
+  "path, expected_result",
+  [
+    # path explodes to show implicit commands & becomes absolute
+    (
+      '<path d="m1,1 2,0 1,3"/>',
+      '<path d="M1,1 L3,1 L4,4"/>',
+    ),
+    # Vertical, Horizontal movement
+    (
+      '<path d="m2,2 h2 v2 h-1 v-1 H8 V8"/>',
+      '<path d="M2,2 H4 V4 H3 V3 H8 V8"/>',
+    ),
+    # Quadratic bezier curve
+    (
+      '<path d="m2,2 q1,1 2,2 Q5,5 6,6"/>',
+      '<path d="M2,2 Q3,3 4,4 Q5,5 6,6"/>',
+    ),
+    # Elliptic arc
+    (
+      '<path d="m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4"/>',
+      '<path d="M2,2 A1 1 0 0 0 5 5 A2 2 1 1 1 4 4"/>',
+    ),
+    # Cubic bezier
+    (
+      '<path d="m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6"/>',
+      '<path d="M2,2 C3 1 4 6 5 5 C4 4 5 5 6 6"/>',
+    ),
+  ]
+)
+def test_absolute_paths(path: str, expected_result: str):
+  actual = etree.tostring(svg_ops.make_paths_absolute(svg(path)))
+  expected_result = svg(expected_result)
+  print(f'A: {actual}')
+  print(f'E: {expected_result}')
+  assert actual == expected_result
