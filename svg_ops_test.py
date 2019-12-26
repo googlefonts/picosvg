@@ -91,8 +91,8 @@ def svg(*els):
   ),
   ]
 )
-def test_simple_shape_to_path(capsys, shape: str, expected_path: str):
-  actual = etree.tostring(svg_ops.shape_to_path(svg(shape)))
+def test_simple_replace_shapes_with_paths(capsys, shape: str, expected_path: str):
+  actual = etree.tostring(svg_ops.replace_shapes_with_paths(svg(shape)))
   expected_result = svg(f'<path d="{expected_path}"/>')
   print(f'A: {actual}')
   print(f'E: {expected_result}')
@@ -131,10 +131,8 @@ def test_simple_shape_to_path(capsys, shape: str, expected_path: str):
   ]
 )
 def test_iter(shape, expected_cmds):
-  svg_root = svg_ops.shape_to_path(svg(shape))
-  actual_cmds = []
-  for path in svg_root.iter('{http://www.w3.org/2000/svg}path'):
-    actual_cmds.extend((t for t in svg_ops.SVGPath(path.attrib['d'])))
+  svg_path = svg_ops.shape_to_path(shape)
+  actual_cmds = [t for t in svg_path]
   print(f'A: {actual_cmds}')
   print(f'E: {expected_cmds}')
   assert actual_cmds == expected_cmds
@@ -161,18 +159,72 @@ def test_iter(shape, expected_cmds):
     # Elliptic arc
     (
       '<path d="m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4"/>',
-      '<path d="M2,2 A1 1 0 0 0 5 5 A2 2 1 1 1 4 4"/>',
+      '<path d="M2,2 A1 1 0 0 0 5,5 A2 2 1 1 1 4,4"/>',
     ),
     # Cubic bezier
     (
       '<path d="m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6"/>',
-      '<path d="M2,2 C3 1 4 6 5 5 C4 4 5 5 6 6"/>',
+      '<path d="M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6"/>',
     ),
   ]
 )
-def test_absolute_paths(path: str, expected_result: str):
-  actual = etree.tostring(svg_ops.make_paths_absolute(svg(path)))
-  expected_result = svg(expected_result)
+def test_path_absolute(path: str, expected_result: str):
+  actual = etree.tostring(svg_ops.shape_to_path(path)
+                                 .absolute()
+                                 .element())
+  expected_result = etree.tostring(svg_ops.shape_to_path(expected_result)
+                                          .element())
+  print(f'A: {actual}')
+  print(f'E: {expected_result}')
+  assert actual == expected_result
+
+@pytest.mark.parametrize(
+  "path, move, expected_result",
+  [
+    # path with implicit relative lines
+    (
+      '<path d="m1,1 2,0 1,3"/>',
+      svg_ops.Point(2, 2),
+      '<path d="M3,3 l2,0 l1,3"/>',
+    ),
+    # path with implicit absolute lines
+    (
+      '<path d="M1,1 2,0 1,3"/>',
+      svg_ops.Point(2, 2),
+      '<path d="M3,3 L4,2 L3,5"/>',
+    ),
+    # Vertical, Horizontal movement
+    (
+      '<path d="m2,2 h2 v2 h-1 v-1 H8 V8"/>',
+      svg_ops.Point(-1, -2),
+      '<path d="M1,0 h2 v2 h-1 v-1 H7 V6"/>',
+    ),
+    # Quadratic bezier curve
+    (
+      '<path d="m2,2 q1,1 2,2 Q5,5 6,6"/>',
+      svg_ops.Point(3, 1),
+      '<path d="M5,3 q1,1 2,2 Q8,6 9,7"/>',
+    ),
+    # Elliptic arc
+    (
+      '<path d="m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4"/>',
+      svg_ops.Point(1, 3),
+      '<path d="M3,5 a1 1 0 0 0 3,3 A2 2 1 1 1 5,7"/>',
+    ),
+    # Cubic bezier
+    (
+      '<path d="m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6"/>',
+      svg_ops.Point(4, 2),
+      '<path d="M6,4 c1,-1 2,4 3,3 C8,6 9,7 10,8"/>',
+    ),
+  ]
+)
+def test_path_move(path: str, move, expected_result: str):
+  actual = etree.tostring(svg_ops.shape_to_path(path)
+                                 .move(move.x, move.y)
+                                 .element())
+  expected_result = etree.tostring(svg_ops.shape_to_path(expected_result)
+                                          .element())
   print(f'A: {actual}')
   print(f'E: {expected_result}')
   assert actual == expected_result

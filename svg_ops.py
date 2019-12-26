@@ -9,6 +9,8 @@ import dataclasses
 from lxml import etree
 import re
 
+_SVG_NS = 'http://www.w3.org/2000/svg'
+
 # https://www.w3.org/TR/SVG11/paths.html#PathData
 _CMD_ARGS = {
   'm': 2,
@@ -20,9 +22,26 @@ _CMD_ARGS = {
   's': 4,
   'q': 4,
   't': 2,
-  'a': 7
+  'a': 7,
 }
 _CMD_ARGS.update({k.upper(): v for k, v in _CMD_ARGS.items()})
+
+
+# For each command iterable of x-coords and iterable of y-coords
+# Helpful if you want to adjust them
+_CMD_COORDS = {
+  'm': ((0,), (1,)),
+  'z': ((), ()),
+  'l': ((0,), (1,)),
+  'h': ((0,), ()),
+  'v': ((), (0,)),
+  'c': ((0, 2, 4), (1, 3, 5)),
+  's': ((0, 2), (1, 3)),
+  'q': ((0, 2), (1, 3)),
+  't': ((0,), (1,)),
+  'a': ((5,), (6,)),
+}
+_CMD_COORDS.update({k.upper(): v for k, v in _CMD_COORDS.items()})
 
 _CMD_RE = re.compile(f'([{"".join(_CMD_ARGS.keys())}])')
 
@@ -79,17 +98,20 @@ def _ntos(n):
   return ('%.3f' % n).rstrip('0').rstrip('.')
 
 def _svg_path_segment(cmd, *args):
+  # put commas between coords, spaces otherwise, author readability pref
   cmd_args = _check_cmd(cmd, args)
-  if cmd_args == 2:
-    args = [f'{_ntos(args[i])},{_ntos(args[i + 1])}'
-            for i in range(0, len(args), 2)]
-  elif cmd_args == 4:
-    args = [f'{_ntos(args[i + 0])},{_ntos(args[i + 1])} '
-            f'{_ntos(args[i + 2])},{_ntos(args[i + 3])}'
-            for i in range(0, len(args), 4)]
-  else:
-    args = [_ntos(arg) for arg in args]
-  return cmd + ' '.join(args)
+  args = [_ntos(a) for a in args]
+  combined_args = []
+  xy_coords = set(zip(*_CMD_COORDS[cmd]))
+  i = 0
+  while i < len(args):
+    if (i, i+1) in xy_coords:
+      combined_args.append(f'{args[i]},{args[i+1]}')
+      i += 2
+    else:
+      combined_args.append(args[i])
+      i += 1
+  return cmd + ' '.join(combined_args)
 
 class SVGPathIter:
   """Iterates commands, optionally in exploded form.
@@ -111,11 +133,19 @@ class SVGPathIter:
       raise StopIteration()
     return self.cmds[self.cmd_idx]
 
+@dataclasses.dataclass
+class Point:
+  x: int = 0
+  y: int = 0
+
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
 @dataclasses.dataclass
 class SVGPath:
   d: str = ''
+
+  def __init__(self, d=''):
+    self.d = d
 
   def _add(self, path_snippet):
     if self.d:
@@ -165,8 +195,81 @@ class SVGPath:
   def as_path(self) -> 'SVGPath':
     return self
 
+  def element(self):
+    return _data_to_el(self)
+
   def __iter__(self):
     return SVGPathIter(self.d, exploded=True)
+
+  def _new_by_walk(self, callback):
+    """Build a new path by walking this one and calling callback.
+
+    def callback(curr_xy, cmd, args) -> (new_cmd, new_args)
+    """
+    # https://www.w3.org/TR/SVG11/paths.html
+    curr_pos = Point()
+    new_cmds = []
+
+    # iteration gives us exploded commands
+    for idx, (cmd, args) in enumerate(self):
+      _check_cmd(cmd, args)
+      if idx == 0 and cmd == 'm':
+        cmd = 'M'
+
+      new_cmd, new_cmd_args = callback(curr_pos, cmd, args)
+      new_cmds.append((new_cmd, new_cmd_args))
+
+      # update current position based on possibly modified command
+      x_coord_idxs, y_coord_idxs = _CMD_COORDS[new_cmd]
+      if new_cmd.isupper():
+        if x_coord_idxs:
+          curr_pos.x = 0
+        if y_coord_idxs:
+          curr_pos.y = 0
+
+      if x_coord_idxs:
+        curr_pos.x += new_cmd_args[x_coord_idxs[-1]]
+      if y_coord_idxs:
+        curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
+
+    new_path = SVGPath()
+    for cmd, args in new_cmds:
+      new_path._add_cmd(cmd, *args)
+
+    return new_path
+
+  # TODO replace with a proper transform
+  def move(self, dx, dy):
+    """Returns a new path that is this one shifted."""
+    def move_callback(_, cmd, args):
+      # Paths must start with an absolute moveto. Relative bits are ... relative.
+      # Shift the absolute parts and call it a day.
+      if cmd.islower():
+        return cmd, args
+      x_coord_idxs, y_coord_idxs = _CMD_COORDS[cmd]
+      args = list(args)  # we'd like to mutate 'em
+      for x_coord_idx in x_coord_idxs:
+        args[x_coord_idx] += dx
+      for y_coord_idx in y_coord_idxs:
+        args[y_coord_idx] += dy
+      return cmd, args
+
+    return self._new_by_walk(move_callback)
+
+  def absolute(self):
+    """Returns equivalent path with only absolute commands."""
+    def abs_callback(curr_pos, cmd, args):
+      x_coord_idxs, y_coord_idxs = _CMD_COORDS[cmd]
+      if cmd.islower():
+        cmd = cmd.upper()
+        args = list(args)  # we'd like to mutate 'em
+        for x_coord_idx in x_coord_idxs:
+          args[x_coord_idx] += curr_pos.x
+        for y_coord_idx in y_coord_idxs:
+          args[y_coord_idx] += curr_pos.y
+      return cmd, args
+
+    return self._new_by_walk(abs_callback)
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
 @dataclasses.dataclass
@@ -177,6 +280,9 @@ class SVGCircle:
 
   def as_path(self) -> SVGPath:
     return SVGEllipse(self.r, self.r, self.cx, self.cy).as_path()
+
+  def element(self):
+    return _data_to_el(self)
 
 # https://www.w3.org/TR/SVG11/shapes.html#EllipseElement
 @dataclasses.dataclass
@@ -195,6 +301,9 @@ class SVGEllipse:
     path.A(rx, ry, cx - rx, cy, large_arc=1)
     return path
 
+  def element(self):
+    return _data_to_el(self)
+
 # https://www.w3.org/TR/SVG11/shapes.html#LineElement
 @dataclasses.dataclass
 class SVGLine:
@@ -210,6 +319,9 @@ class SVGLine:
     path.L(x2, y2)
     return path
 
+  def element(self):
+    return _data_to_el(self)
+
 # https://www.w3.org/TR/SVG11/shapes.html#PolygonElement
 @dataclasses.dataclass
 class SVGPolygon:
@@ -220,6 +332,9 @@ class SVGPolygon:
       return SVGPath('M' + self.points + ' z')
     return SVGPath()
 
+  def element(self):
+    return _data_to_el(self)
+
 # https://www.w3.org/TR/SVG11/shapes.html#PolylineElement
 @dataclasses.dataclass
 class SVGPolyline:
@@ -229,6 +344,9 @@ class SVGPolyline:
     if self.points:
       return SVGPath('M' + self.points)
     return SVGPath()
+
+  def element(self):
+    return _data_to_el(self)
 
 # https://www.w3.org/TR/SVG11/shapes.html#RectElement
 @dataclasses.dataclass
@@ -267,18 +385,24 @@ class SVGRect:
     path.end()
     return path
 
+  def element(self):
+    return _data_to_el(self)
+
 _ELEMENT_CLASSES = {
-  '{http://www.w3.org/2000/svg}circle': SVGCircle,
-  '{http://www.w3.org/2000/svg}ellipse': SVGEllipse,
-  '{http://www.w3.org/2000/svg}line': SVGLine,
-  '{http://www.w3.org/2000/svg}path': SVGPath,
-  '{http://www.w3.org/2000/svg}polygon': SVGPolygon,
-  '{http://www.w3.org/2000/svg}polyline': SVGPolyline,
-  '{http://www.w3.org/2000/svg}rect': SVGRect,
+  'circle': SVGCircle,
+  'ellipse': SVGEllipse,
+  'line': SVGLine,
+  'path': SVGPath,
+  'polygon': SVGPolygon,
+  'polyline': SVGPolyline,
+  'rect': SVGRect,
 }
-_CLASS_ELEMENTS = {v: k for k, v in _ELEMENT_CLASSES.items()}
+_CLASS_ELEMENTS = {v: f'{{{_SVG_NS}}}{k}' for k, v in _ELEMENT_CLASSES.items()}
+_ELEMENT_CLASSES.update({f'{{{_SVG_NS}}}{k}': v for k, v in _ELEMENT_CLASSES.items()})
 
 def _el_to_data(el):
+  if el.tag not in _ELEMENT_CLASSES:
+    raise ValueError(f'Bad tag <{el.tag}>')
   data_type = _ELEMENT_CLASSES[el.tag]
   args = {f.name: f.type(el.attrib[f.name])
           for f in dataclasses.fields(data_type)
@@ -291,10 +415,10 @@ def _data_to_el(data_obj):
     el.attrib[field_name] = field_value
   return el
 
-def _etree(svg_content):
+def _etree(svg_content, copy=True):
   if isinstance(svg_content, str) or isinstance(svg_content, bytes):
     svg_content = etree.fromstring(svg_content)
-  else:
+  elif copy:
     svg_content = copy.deepcopy(svg_content)
   return svg_content
 
@@ -303,83 +427,22 @@ def _apply_swaps(svg_root, swaps):
     parent = old_el.getparent()
     old_el.getparent().replace(old_el, new_el)
 
-def shape_to_path(svg_root):
-  """Converts all shapes to an equivalent path."""
-  svg_root = _etree(svg_root)
+def shape_to_path(shape):
+  svg_root = _etree(shape, copy=False)
+  data_obj = _el_to_data(svg_root)
+  return data_obj.as_path()
 
+def replace_shapes_with_paths(svg_root):
+  """Converts all basic shapes to their equivalent path."""
+  svg_root = _etree(svg_root)
   swaps = []
   for el in svg_root.iter('*'):
     if el.tag not in _ELEMENT_CLASSES:
       continue
-    data_obj = _el_to_data(el)
-    path = data_obj.as_path()
+    path = shape_to_path(el)
     new_el = _data_to_el(path)
     swaps.append((el, new_el))
   _apply_swaps(svg_root, swaps)
   return svg_root
-
-def make_paths_absolute(svg_root):
-  """Makes all paths absolute.
-
-  https://www.w3.org/TR/SVG11/paths.html
-  """
-  svg_root = _etree(svg_root)
-  swaps = []
-  for el in svg_root.iter(_CLASS_ELEMENTS[SVGPath]):
-    current = (0, 0)
-    abs_cmds = []
-    abs_path = SVGPath()
-    # Note that SVGPath iteration gives us exploded commands
-    for idx, (cmd, args) in enumerate(SVGPath(el.attrib['d'])):
-      if idx == 0 and cmd == 'm':
-        cmd = 'M'
-
-      args_per_cmd = _check_cmd(cmd, args)
-      if args_per_cmd == 2:
-
-        if cmd.islower():
-          args = (current[0] + args[0], current[1] + args[1])
-
-      if args_per_cmd == 4:
-        if cmd.islower():
-          args = (current[0] + args[0], current[1] + args[1],
-                  current[0] + args[2], current[1] + args[3])
-
-      if cmd == 'a':
-        args = args[:-2] + (current[0] + args[-2], current[1] + args[-1])
-
-      if cmd == 'c':
-        args = (current[0] + args[0], current[1] + args[1],
-                current[0] + args[2], current[1] + args[3],
-                current[0] + args[4], current[1] + args[5])
-
-      # After being made absolute, last two args are always new pos
-      # if there are at least two args
-      if args_per_cmd > 1:
-        current = (args[-2], args[-1])
-
-      # h/v are mildly unique
-      if cmd == 'h':
-        cmd = 'H'
-        args = (current[0] + args[0],)
-      if cmd == 'v':
-        cmd = 'V'
-        args = (current[1] + args[0],)
-
-      cmd = cmd.upper()
-
-      # H/V touchups
-      if cmd == 'H':
-        current = (args[0], current[1])
-      if cmd == 'V':
-        current = (current[0], args[0])
-
-      abs_path._add_cmd(cmd, *args)
-    new_el = _data_to_el(abs_path)
-    swaps.append((el, new_el))
-
-  _apply_swaps(svg_root, swaps)
-  return svg_root
-
 
 
