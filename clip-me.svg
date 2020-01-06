@@ -1,0 +1,10 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="256" height="256"
+     viewBox="0 0 24 24">
+  <clipPath id="clippy">
+    <path d="M0,12 L20,12 A8,5 0 0 0 20,20 L0,20 z" />
+  </clipPath>
+  <ellipse clip-path="url(#clippy)"
+           cx="16" cy="16"
+           rx="8" ry="4" />
+</svg>
