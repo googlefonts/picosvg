@@ -7,10 +7,12 @@ class Point:
   x: int = 0
   y: int = 0
 
+# Subset of https://www.w3.org/TR/SVG11/painting.html
 @dataclasses.dataclass
 class SVGShape:
   clip_path: str = ''
   fill: str = ''
+  stroke: str = ''
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
@@ -151,6 +153,33 @@ class SVGPath(SVGShape):
     if not inplace:
       target = SVGPath(self.d, self.clip_path)
     target._walk(abs_callback)
+    return target
+
+  def explicit_lines(self, inplace=False):
+    """Replace all vertical/horizontal lines with line to (x,y)."""
+    def explicit_line_callback(curr_pos, cmd, args):
+      if cmd == 'v':
+        args = (0, args[0])
+      elif cmd == 'V':
+        args = (curr_pos.x, args[0])
+      elif cmd == 'h':
+        args = (args[0], 0)
+      elif cmd == 'H':
+        args = (args[0], curr_pos.y)
+      else:
+        return cmd, args  # nothing changes
+
+      if cmd.islower():
+        cmd = 'l'
+      else:
+        cmd = 'L'
+
+      return cmd, args
+
+    target = self
+    if not inplace:
+      target = SVGPath(d=self.d, clip_path=self.clip_path)
+    target._walk(explicit_line_callback)
     return target
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement

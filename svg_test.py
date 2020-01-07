@@ -267,6 +267,6 @@ def test_apply_clip_path(actual, expected_result):
   actual.apply_clip_paths(inplace=True)
   print(f'A: {actual.tostring().decode("utf-8")}')
   print(f'E: {expected_result.tostring().decode("utf-8")}')
-  #assert actual.tostring() == expected_result.tostring()
+  assert actual.tostring() == expected_result.tostring()
 
 
