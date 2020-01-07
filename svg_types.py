@@ -7,15 +7,20 @@ class Point:
   x: int = 0
   y: int = 0
 
+@dataclasses.dataclass
+class SVGShape:
+  clip_path: str = ''
+  fill: str = ''
+
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
 @dataclasses.dataclass
-class SVGPath:
+class SVGPath(SVGShape):
   d: str = ''
-  clip_path: str = ''
 
-  def __init__(self, d=''):
-    self.d = d
+  def __init__(self, **kwargs):
+    for name, value in kwargs.items():
+      setattr(self, name, value)
 
   def _add(self, path_snippet):
     if self.d:
@@ -125,7 +130,7 @@ class SVGPath:
 
     target = self
     if not inplace:
-      target = SVGPath(self.d, self.clip_path)
+      target = SVGPath(d=self.d, clip_path=self.clip_path)
     target._walk(move_callback)
     return target
 
@@ -212,7 +217,7 @@ class SVGPolygon:
 
   def as_path(self) -> SVGPath:
     if self.points:
-      path = SVGPath('M' + self.points + ' z')
+      path = SVGPath(d='M' + self.points + ' z')
     else:
       path = SVGPath()
     path.clip_path = self.clip_path
@@ -229,7 +234,7 @@ class SVGPolyline:
 
   def as_path(self) -> SVGPath:
     if self.points:
-      return SVGPath('M' + self.points)
+      return SVGPath(d='M' + self.points)
     return SVGPath()
 
   def element(self):

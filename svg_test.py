@@ -1,14 +1,32 @@
+import dataclasses
 from lxml import etree
 import pytest
 from svg import SVG
 from svg_types import Point
 
 def svg_string(*els):
-  parser = etree.XMLParser(remove_blank_text=True)
   root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
   for el in els:
     root.append(etree.fromstring(el))
   return etree.tostring(root)
+
+@pytest.mark.parametrize(
+  "shape, expected_attrib",
+  [
+    # path
+    (
+      "<path d='M1,1 2,2' fill='blue' />",
+      {
+        'fill': 'blue',
+      }
+    )
+  ]
+)
+def test_parse_common_attrib(shape, expected_attrib):
+  svg = SVG.fromstring(shape)
+  field_values = dataclasses.asdict(svg.shapes()[0])
+  for attrib, expected_value in expected_attrib.items():
+    assert field_values[attrib] == expected_value
 
 # https://www.w3.org/TR/SVG11/shapes.html
 @pytest.mark.parametrize(

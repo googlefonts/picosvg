@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 from lxml import etree
 from svg_meta import svgns
 from svg_types import *
@@ -15,9 +16,7 @@ _ELEMENT_CLASSES = {
 _CLASS_ELEMENTS = {v: f'{{{svgns()}}}{k}' for k, v in _ELEMENT_CLASSES.items()}
 _ELEMENT_CLASSES.update({f'{{{svgns()}}}{k}': v for k, v in _ELEMENT_CLASSES.items()})
 
-_OMIT_FIELD_IF_BLANK = {
-  'clip_path'
-}
+_OMIT_FIELD_IF_BLANK = { f.name for f in dataclasses.fields(SVGShape) }
 
 _ATTR_RENAMES = {
   'clip-path': 'clip_path'
@@ -101,14 +100,23 @@ class SVG:
 
     return self
 
+  def _update_etree(self):
+    if not self.elements:
+      return
+    swaps = []
+    for old_el, shape in self.elements:
+      swaps.append((old_el, _data_to_el(shape)))
+    for old_el, new_el in swaps:
+      parent = old_el.getparent()
+      old_el.getparent().replace(old_el, new_el)
+    self.elements = None
+
+  def toetree(self):
+    self._update_etree()
+    return copy.deepcopy(self.svg_root)
+
   def tostring(self):
-    if self.elements:
-      swaps = []
-      for old_el, shape in self.elements:
-        swaps.append((old_el, _data_to_el(shape)))
-      for old_el, new_el in swaps:
-        parent = old_el.getparent()
-        old_el.getparent().replace(old_el, new_el)
+    self._update_etree()
     return etree.tostring(self.svg_root)
 
   def fromstring(string):
