@@ -52,7 +52,6 @@ def _do_pathop(op, svg_shapes):
     sk_path = skia_path(svg_shape)
     op_builder.add(sk_path, op)
   result = op_builder.resolve()
-  print(result)
   return svg_path(result)
 
 def union(svg_shapes):
