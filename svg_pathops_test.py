@@ -47,7 +47,7 @@ def test_skia_path_roundtrip(shape, expected_segments, expected_path):
   ]
 )
 def test_pathops_union(shapes, expected_result):
-  assert svg_pathops.union(shapes).d == expected_result
+  assert svg_pathops.union(*shapes).d == expected_result
 
 @pytest.mark.parametrize(
   "shapes, expected_result",
@@ -56,9 +56,9 @@ def test_pathops_union(shapes, expected_result):
     (
       (SVGRect(x=4, y=4, width=6, height=6),
        SVGRect(x=6, y=6, width=6, height=6),),
-      'M6,6 L10,6 L10,10 L6,10 L10,6 Z',
+      'M6,6 L10,6 L10,10 L6,10 Z',
     ),
   ]
 )
 def test_pathops_intersection(shapes, expected_result):
-  assert svg_pathops.intersection(shapes).d == expected_result
+  assert svg_pathops.intersection(*shapes).d == expected_result

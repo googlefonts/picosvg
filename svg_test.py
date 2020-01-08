@@ -10,6 +10,14 @@ def svg_string(*els):
     root.append(etree.fromstring(el))
   return etree.tostring(root)
 
+def drop_whitespace(svg):
+  svg._update_etree()
+  for el in svg.svg_root.iter('*'):
+    if el.text is not None:
+      el.text = el.text.strip()
+    if el.tail is not None:
+      el.tail = el.tail.strip()
+
 @pytest.mark.parametrize(
   "shape, expected_attrib",
   [
@@ -265,6 +273,8 @@ def test_path_move(path: str, move, expected_result: str):
 )
 def test_apply_clip_path(actual, expected_result):
   actual.apply_clip_paths(inplace=True)
+  drop_whitespace(actual)
+  drop_whitespace(expected_result)
   print(f'A: {actual.tostring().decode("utf-8")}')
   print(f'E: {expected_result.tostring().decode("utf-8")}')
   assert actual.tostring() == expected_result.tostring()

@@ -39,7 +39,6 @@ def _data_to_el(data_obj):
   for field_name, field_value in dataclasses.asdict(data_obj).items():
     if field_name in _OMIT_FIELD_IF_BLANK and not field_value:
       continue
-    print(f'Set {_FIELD_RENAMES.get(field_name, field_name)} = {field_value}')
     el.attrib[_FIELD_RENAMES.get(field_name, field_name)] = str(field_value)
   return el
 
@@ -84,6 +83,16 @@ class SVG:
       self.elements[idx] = (el, shape.as_path())
     return self
 
+  def _resolve_url(self, url, el_tag):
+    match = re.match(r'^url[(]#([\w-]+)[)]$', url)
+    if not match:
+      raise ValueError(f'Unrecognized url "{url}"')
+    xpath = f'//svg:{el_tag}[@id="{match.group(1)}"]'
+    els = self.svg_root.xpath(xpath, namespaces={'svg': svgns()})
+    if len(els) != 1:
+      raise ValueError(f'Need exactly 1 match for {xpath}, got {len(els)}')
+    return els[0]
+
   def apply_clip_paths(self, inplace=False):
     """Apply clipping to shapes and remove the clip paths."""
     if not inplace:
@@ -94,35 +103,35 @@ class SVG:
     self._update_etree()
 
     # find elements with clip paths
-    clips = []
+    clips = []  # 2-tuples of element index, clip path to apply
+    clip_path_els = []
     for idx, (el, shape) in enumerate(self._elements()):
       if not shape.clip_path:
         continue
-      match = re.match(r'^url[(]#([^)]+)[)]$', shape.clip_path)
-      if not match:
-        raise ValueError(f'Unrecognized clip-path "{shape.clip_path}"')
-      clip_path_id = match.group(1)
-      xpath = f'//svg:clipPath[@id="{clip_path_id}"]'
-      clip_path_els = self.svg_root.xpath(xpath, namespaces={'svg': svgns()})
-      if len(clip_path_els) != 1:
-        raise ValueError(f'Need exactly 1 match for {xpath}'
-                         f', got {len(clip_path_els)}')
-      clip_el = clip_path_els[0]
+      clip_path_els.append(self._resolve_url(shape.clip_path, 'clipPath'))
+
       # union all the shapes under the clipPath
-      # TODO what if what was there was more complex?
-      clip_path = svg_pathops.union([_el_to_data(el) for el in clip_el])
-      clips.append((idx, clip_el, clip_path))
+      # TODO what if the clip path contained non-shapes
+      clip_path = svg_pathops.union(*[_el_to_data(el) for el in clip_path_els[-1]])
+      clips.append((idx, clip_path))
 
     # TODO handle inherited clipping
     # https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
 
     # apply clip path to target
-    for el_idx, _, clip_path in clips:
-      print(f'Clip {self.elements[el_idx][1]} with {clip_path}')
-
+    for el_idx, clip_path in clips:
+      el, target = self.elements[el_idx]
+      target = target.as_path()
+      target.d = svg_pathops.intersection(target, clip_path).d
+      target.clip_path = ''
+      self.elements[el_idx] = (el, target)
 
     # destroy the clip path elements
-    # destroy clip path container if now empty
+    for clip_path_el in clip_path_els:
+      clip_path_el.getparent().remove(clip_path_el)
+
+    # TODO destroy clip path container if now empty
+    # TODO destroy paths that are now empty?
 
     return self
 

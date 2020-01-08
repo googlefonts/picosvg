@@ -47,15 +47,17 @@ def svg_path(skia_path: pathops.Path):
   return path
 
 def _do_pathop(op, svg_shapes):
-  op_builder = pathops.OpBuilder()
-  for svg_shape in svg_shapes:
-    sk_path = skia_path(svg_shape)
-    op_builder.add(sk_path, op)
-  result = op_builder.resolve()
-  return svg_path(result)
+  if not svg_shapes:
+    return SVGPath()
 
-def union(svg_shapes):
+  sk_path = skia_path(svg_shapes[0])
+  for svg_shape in svg_shapes[1:]:
+    sk_path2 = skia_path(svg_shape)
+    sk_path = pathops.op(sk_path, sk_path2, op)
+  return svg_path(sk_path)
+
+def union(*svg_shapes):
   return _do_pathop(pathops.PathOp.UNION, svg_shapes)
 
-def intersection(svg_shapes):
+def intersection(*svg_shapes):
   return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
