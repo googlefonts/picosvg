@@ -10,5 +10,6 @@ py==1.8.0
 pyparsing==2.4.5
 pytest==5.3.2
 six==1.13.0
+-e git+git@github.com:rsheeter/skia-pathops.git@784668cb7fafb15301d2d9d4689ab1258e168a8f#egg=skia_pathops
 wcwidth==0.1.7
 zipp==0.6.0
