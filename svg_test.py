@@ -269,6 +269,7 @@ def test_path_move(path: str, move, expected_result: str):
   "actual, expected_result",
   [
     (SVG.parse('clip-rect.svg'), SVG.parse('clip-rect-clipped.svg')),
+    (SVG.parse('clip-ellipse.svg'), SVG.parse('clip-ellipse-clipped.svg')),
   ]
 )
 def test_apply_clip_path(actual, expected_result):

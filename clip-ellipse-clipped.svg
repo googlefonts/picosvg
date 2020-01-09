@@ -1,8 +1,6 @@
 <svg id='svg' xmlns="http://www.w3.org/2000/svg"
      width="256" height="256"
      viewBox="0 0 24 24">
-  <!-- TODO what is the path for the clip? -->
-  <ellipse clip-path="url(#clippy)"
-           cx="16" cy="16"
+  <ellipse cx="16" cy="16"
            rx="8" ry="4" />
 </svg>
