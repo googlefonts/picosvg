@@ -2,29 +2,31 @@
 import pathops
 from svg_types import SVGPath, SVGShape
 
-# Absolutes only
+# Absolutes coords assumed
 _SVG_CMD_TO_SKIA_FN = {
   'M': pathops.Path.moveTo,
   'L': pathops.Path.lineTo,
   'Q': pathops.Path.quadTo,
   'Z': pathops.Path.close,
-  # TODO 'C': ,
+  'C': pathops.Path.cubicTo,
   # TODO 'S': ,
   # TODO 'T': ,
-  # TODO 'A': ,
+  # 'A': should never happen, we convert arc=>cubic
 }
 
 _SKIA_CMD_TO_SVG_CMD = {
   'moveTo': 'M',
   'lineTo': 'L',
   'quadTo': 'Q',
+  'curveTo': 'C',
   'closePath': 'Z',
 }
 
 def skia_path(shape: SVGShape):
   path = (shape.as_path()
           .explicit_lines()  # hHvV => lL
-          .absolute(inplace=True))
+          .absolute(inplace=True)
+          .arcs_to_cubics(inplace=True))
 
   sk_path = pathops.Path()
   for cmd, args in path:
@@ -39,11 +41,10 @@ def svg_path(skia_path: pathops.Path):
   for cmd, arg_tuples in skia_path.segments:
     if cmd not in _SKIA_CMD_TO_SVG_CMD:
       raise ValueError(f'No mapping to svg for "{cmd}"')
-    cmd = _SKIA_CMD_TO_SVG_CMD[cmd]
-    for arg_tuple in arg_tuples:
-      path._add_cmd(cmd, *arg_tuple)
-    if not arg_tuples:
-      path._add_cmd(cmd)
+    svg_cmd = _SKIA_CMD_TO_SVG_CMD[cmd]
+    # skia gives us sequences of points, svg likes it flat
+    svg_args = tuple(c for pt in arg_tuples for c in pt)
+    path._add_cmd(svg_cmd, *svg_args)
   return path
 
 def _do_pathop(op, svg_shapes):

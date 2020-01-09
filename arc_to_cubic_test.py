@@ -32,6 +32,8 @@ def _uncomplex(*values):
         ),
       ),
     )
+    # TODO test of degenerate arc
+    # TODO test sweep, docs seemed to suggest it should reverse but ... not?
   ]
 )
 def test_parse_common_attrib(arc, expected_curves):

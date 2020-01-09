@@ -1,3 +1,4 @@
+from arc_to_cubic import arc_to_cubic
 import dataclasses
 import svg_meta
 from svg_path_iter import SVGPathIter
@@ -79,10 +80,10 @@ class SVGPath(SVGShape):
   def __iter__(self):
     return SVGPathIter(self.d, exploded=True)
 
-  def _walk(self, callback):
-    """Walking path and call callback to build new commands.
+  def walk(self, callback):
+    """Walk path and call callback to build potentially new commands.
 
-    def callback(curr_xy, cmd, args) -> (new_cmd, new_args)
+    def callback(curr_xy, cmd, args) -> sequence of (new_cmd, new_args)
     """
     # https://www.w3.org/TR/SVG11/paths.html
     curr_pos = Point()
@@ -94,21 +95,21 @@ class SVGPath(SVGShape):
       if idx == 0 and cmd == 'm':
         cmd = 'M'
 
-      new_cmd, new_cmd_args = callback(curr_pos, cmd, args)
-      new_cmds.append((new_cmd, new_cmd_args))
+      for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args):
+        new_cmds.append((new_cmd, new_cmd_args))
 
-      # update current position based on possibly modified command
-      x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
-      if new_cmd.isupper():
+        # update current position
+        x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
+        if new_cmd.isupper():
+          if x_coord_idxs:
+            curr_pos.x = 0
+          if y_coord_idxs:
+            curr_pos.y = 0
+
         if x_coord_idxs:
-          curr_pos.x = 0
+          curr_pos.x += new_cmd_args[x_coord_idxs[-1]]
         if y_coord_idxs:
-          curr_pos.y = 0
-
-      if x_coord_idxs:
-        curr_pos.x += new_cmd_args[x_coord_idxs[-1]]
-      if y_coord_idxs:
-        curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
+          curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
 
     self.d = ''
     for cmd, args in new_cmds:
@@ -121,19 +122,19 @@ class SVGPath(SVGShape):
       # Paths must start with an absolute moveto. Relative bits are ... relative.
       # Shift the absolute parts and call it a day.
       if cmd.islower():
-        return cmd, args
+        return ((cmd, args),)
       x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
       args = list(args)  # we'd like to mutate 'em
       for x_coord_idx in x_coord_idxs:
         args[x_coord_idx] += dx
       for y_coord_idx in y_coord_idxs:
         args[y_coord_idx] += dy
-      return cmd, args
+      return ((cmd, args),)
 
     target = self
     if not inplace:
       target = SVGPath(d=self.d, clip_path=self.clip_path)
-    target._walk(move_callback)
+    target.walk(move_callback)
     return target
 
   def absolute(self, inplace=False):
@@ -147,12 +148,12 @@ class SVGPath(SVGShape):
           args[x_coord_idx] += curr_pos.x
         for y_coord_idx in y_coord_idxs:
           args[y_coord_idx] += curr_pos.y
-      return cmd, args
+      return ((cmd, args),)
 
     target = self
     if not inplace:
       target = SVGPath(self.d, self.clip_path)
-    target._walk(abs_callback)
+    target.walk(abs_callback)
     return target
 
   def explicit_lines(self, inplace=False):
@@ -167,19 +168,49 @@ class SVGPath(SVGShape):
       elif cmd == 'H':
         args = (args[0], curr_pos.y)
       else:
-        return cmd, args  # nothing changes
+        return ((cmd, args),)  # nothing changes
 
       if cmd.islower():
         cmd = 'l'
       else:
         cmd = 'L'
 
-      return cmd, args
+      return ((cmd, args),)
 
     target = self
     if not inplace:
       target = SVGPath(d=self.d, clip_path=self.clip_path)
-    target._walk(explicit_line_callback)
+    target.walk(explicit_line_callback)
+    return target
+
+
+  def arcs_to_cubics(self, inplace=False):
+    """Replace all arcs with similar cubics"""
+    def arc_to_cubic_callback(curr_pos, cmd, args):
+      if cmd not in {'a', 'A'}:
+        # no work to do
+        return ((cmd, args),)
+
+      (rx, ry, x_rotation, large, sweep, end_x, end_y) = args
+      start_pt = (curr_pos.x, curr_pos.y)
+
+      if cmd == 'a':
+        end_x += curr_pos[0]
+        end_y += curr_pos[1]
+      end_pt = (end_x, end_y)
+
+      result = []
+      for p1, p2, target in arc_to_cubic(start_pt, rx, ry, x_rotation, large, sweep, end_pt):
+        x1, y1 = p1.real, p1.imag
+        x2, y2 = p2.real, p2.imag
+        x, y = target.real, target.imag
+        result.append(('C', (x1, y1, x2, y2, x, y)))
+      return tuple(result)
+
+    target = self
+    if not inplace:
+      target = SVGPath(d=self.d, clip_path=self.clip_path)
+    target.walk(arc_to_cubic_callback)
     return target
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement

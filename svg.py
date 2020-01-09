@@ -121,7 +121,9 @@ class SVG:
     # apply clip path to target
     for el_idx, clip_path in clips:
       el, target = self.elements[el_idx]
-      target = target.as_path()
+      target = (target.as_path()
+                .absolute(inplace=True))
+
       target.d = svg_pathops.intersection(target, clip_path).d
       target.clip_path = ''
       self.elements[el_idx] = (el, target)

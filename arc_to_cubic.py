@@ -170,6 +170,16 @@ def _arc_to_cubic(arc):
         yield point1, point2, target_point
 
 def arc_to_cubic(start_point, rx, ry, rotation, large, sweep, end_point):
+    """Convert arc to cubic(s).
+
+    start/end point are absolute, either complex or sequence of x,y.
+
+    See https://skia.org/user/api/SkPath_Reference#SkPath_arcTo_4
+    Note in particular:
+        SVG sweep-flag value is opposite the integer value of sweep;
+        SVG sweep-flag uses 1 for clockwise, while kCW_Direction cast to int is zero.
+    Yields 3-tuples of complex values, each representing a point
+    """
     if not isinstance(start_point, complex):
         start_point = complex(*start_point)
     if not isinstance(end_point, complex):
