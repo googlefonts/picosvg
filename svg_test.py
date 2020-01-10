@@ -2,7 +2,6 @@ import dataclasses
 from lxml import etree
 import pytest
 from svg import SVG
-from svg_types import Point
 
 def svg_string(*els):
   root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
@@ -169,107 +168,12 @@ def test_iter(shape, expected_cmds):
   print(f'E: {expected_cmds}')
   assert actual_cmds == expected_cmds
 
-
-@pytest.mark.parametrize(
-  "path, expected_result",
-  [
-    # path explodes to show implicit commands & becomes absolute
-    (
-      '<path d="m1,1 2,0 1,3"/>',
-      '<path d="M1,1 L3,1 L4,4"/>',
-    ),
-    # Vertical, Horizontal movement
-    (
-      '<path d="m2,2 h2 v2 h-1 v-1 H8 V8"/>',
-      '<path d="M2,2 H4 V4 H3 V3 H8 V8"/>',
-    ),
-    # Quadratic bezier curve
-    (
-      '<path d="m2,2 q1,1 2,2 Q5,5 6,6"/>',
-      '<path d="M2,2 Q3,3 4,4 Q5,5 6,6"/>',
-    ),
-    # Elliptic arc
-    (
-      '<path d="m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4"/>',
-      '<path d="M2,2 A1 1 0 0 0 5,5 A2 2 1 1 1 4,4"/>',
-    ),
-    # Cubic bezier
-    (
-      '<path d="m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6"/>',
-      '<path d="M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6"/>',
-    ),
-  ]
-)
-def test_path_absolute(path: str, expected_result: str):
-  actual = (SVG.fromstring(svg_string(path))
-            .shapes_to_paths())
-  for shape in actual.shapes():
-    shape.absolute(inplace=True)
-  actual = actual.tostring()
-  expected_result = (SVG.fromstring(svg_string(expected_result))
-                     .tostring())
-  print(f'A: {actual}')
-  print(f'E: {expected_result}')
-  assert actual == expected_result
-
-@pytest.mark.parametrize(
-  "path, move, expected_result",
-  [
-    # path with implicit relative lines
-    (
-      '<path d="m1,1 2,0 1,3"/>',
-      Point(2, 2),
-      '<path d="M3,3 l2,0 l1,3"/>',
-    ),
-    # path with implicit absolute lines
-    (
-      '<path d="M1,1 2,0 1,3"/>',
-      Point(2, 2),
-      '<path d="M3,3 L4,2 L3,5"/>',
-    ),
-    # Vertical, Horizontal movement
-    (
-      '<path d="m2,2 h2 v2 h-1 v-1 H8 V8"/>',
-      Point(-1, -2),
-      '<path d="M1,0 h2 v2 h-1 v-1 H7 V6"/>',
-    ),
-    # Quadratic bezier curve
-    (
-      '<path d="m2,2 q1,1 2,2 Q5,5 6,6"/>',
-      Point(3, 1),
-      '<path d="M5,3 q1,1 2,2 Q8,6 9,7"/>',
-    ),
-    # Elliptic arc
-    (
-      '<path d="m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4"/>',
-      Point(1, 3),
-      '<path d="M3,5 a1 1 0 0 0 3,3 A2 2 1 1 1 5,7"/>',
-    ),
-    # Cubic bezier
-    (
-      '<path d="m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6"/>',
-      Point(4, 2),
-      '<path d="M6,4 c1,-1 2,4 3,3 C8,6 9,7 10,8"/>',
-    ),
-  ]
-)
-def test_path_move(path: str, move, expected_result: str):
-  actual = (SVG.fromstring(svg_string(path))
-            .shapes_to_paths())
-  for shape in actual.shapes():
-    shape.move(move.x, move.y, inplace=True)
-  actual = actual.tostring()
-  expected_result = (SVG.fromstring(svg_string(expected_result))
-                     .tostring())
-  print(f'A: {actual}')
-  print(f'E: {expected_result}')
-  assert actual == expected_result
-
 @pytest.mark.parametrize(
   "actual, expected_result",
   [
     (SVG.parse('clip-rect.svg'), SVG.parse('clip-rect-clipped.svg')),
     (SVG.parse('clip-ellipse.svg'), SVG.parse('clip-ellipse-clipped.svg')),
+    (SVG.parse('clip-curves.svg'), SVG.parse('clip-curves-clipped.svg')),
   ]
 )
 def test_apply_clip_path(actual, expected_result):

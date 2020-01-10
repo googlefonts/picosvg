@@ -1,4 +1,5 @@
 from arc_to_cubic import arc_to_cubic
+import copy
 import dataclasses
 import svg_meta
 from svg_path_iter import SVGPathIter
@@ -83,7 +84,9 @@ class SVGPath(SVGShape):
   def walk(self, callback):
     """Walk path and call callback to build potentially new commands.
 
-    def callback(curr_xy, cmd, args) -> sequence of (new_cmd, new_args)
+    def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
+      prev_* None if there was no previous
+      returns sequence of (new_cmd, new_args) that replace cmd, args
     """
     # https://www.w3.org/TR/SVG11/paths.html
     curr_pos = Point()
@@ -95,9 +98,11 @@ class SVGPath(SVGShape):
       if idx == 0 and cmd == 'm':
         cmd = 'M'
 
-      for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args):
-        new_cmds.append((new_cmd, new_cmd_args))
+      prev = (None, None, None)
+      if new_cmds:
+        prev = new_cmds[-1]
 
+      for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
         # update current position
         x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
         if new_cmd.isupper():
@@ -111,14 +116,16 @@ class SVGPath(SVGShape):
         if y_coord_idxs:
           curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
 
+        new_cmds.append((copy.copy(curr_pos), new_cmd, new_cmd_args))
+
     self.d = ''
-    for cmd, args in new_cmds:
+    for _, cmd, args in new_cmds:
       self._add_cmd(cmd, *args)
 
   # TODO replace with a proper transform
   def move(self, dx, dy, inplace=False):
     """Returns a new path that is this one shifted."""
-    def move_callback(_, cmd, args):
+    def move_callback(_, cmd, args, *_unused):
       # Paths must start with an absolute moveto. Relative bits are ... relative.
       # Shift the absolute parts and call it a day.
       if cmd.islower():
@@ -137,28 +144,31 @@ class SVGPath(SVGShape):
     target.walk(move_callback)
     return target
 
+  def _relative_to_absolute(curr_pos, cmd, args):
+    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    if cmd.islower():
+      cmd = cmd.upper()
+      args = list(args)  # we'd like to mutate 'em
+      for x_coord_idx in x_coord_idxs:
+        args[x_coord_idx] += curr_pos.x
+      for y_coord_idx in y_coord_idxs:
+        args[y_coord_idx] += curr_pos.y
+    return ((cmd, args),)
+
   def absolute(self, inplace=False):
     """Returns equivalent path with only absolute commands."""
-    def abs_callback(curr_pos, cmd, args):
-      x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
-      if cmd.islower():
-        cmd = cmd.upper()
-        args = list(args)  # we'd like to mutate 'em
-        for x_coord_idx in x_coord_idxs:
-          args[x_coord_idx] += curr_pos.x
-        for y_coord_idx in y_coord_idxs:
-          args[y_coord_idx] += curr_pos.y
-      return ((cmd, args),)
+    def absolute_callback(curr_pos, cmd, args, *_):
+      return SVGPath._relative_to_absolute(curr_pos, cmd, args)
 
     target = self
     if not inplace:
       target = SVGPath(self.d, self.clip_path)
-    target.walk(abs_callback)
+    target.walk(absolute_callback)
     return target
 
   def explicit_lines(self, inplace=False):
     """Replace all vertical/horizontal lines with line to (x,y)."""
-    def explicit_line_callback(curr_pos, cmd, args):
+    def explicit_line_callback(curr_pos, cmd, args, *_):
       if cmd == 'v':
         args = (0, args[0])
       elif cmd == 'V':
@@ -186,7 +196,7 @@ class SVGPath(SVGShape):
 
   def arcs_to_cubics(self, inplace=False):
     """Replace all arcs with similar cubics"""
-    def arc_to_cubic_callback(curr_pos, cmd, args):
+    def arc_to_cubic_callback(curr_pos, cmd, args, *_):
       if cmd not in {'a', 'A'}:
         # no work to do
         return ((cmd, args),)
@@ -211,6 +221,37 @@ class SVGPath(SVGShape):
     if not inplace:
       target = SVGPath(d=self.d, clip_path=self.clip_path)
     target.walk(arc_to_cubic_callback)
+    return target
+
+  def expand_shorthand(self, inplace=False):
+    """Rewrite commands that imply knowledge of prior commands arguments.
+
+    In particular, shorthand quadratic and bezier curves become explicit.
+
+    See https://www.w3.org/TR/SVG11/paths.html#PathDataCurveCommands.
+    """
+    def expand_shorthand_callback(curr_pos, cmd, args,
+                                  prev_pos, prev_cmd, prev_args):
+      short_to_long = {
+        'S': 'C',
+        'T': 'Q'
+      }
+      if not cmd.upper() in short_to_long:
+        return ((cmd, args),)
+      if cmd.islower():
+        cmd, args = SVGPath._relative_to_absolute(cmd, args)
+
+      # reflect 2nd-last x,y pair over curr_pos and make it our first arg
+      prev_cp = Point(prev_args[-4], prev_args[-3])
+      new_cp = (2 * curr_pos.x - prev_cp.x,
+                2 * curr_pos.y - prev_cp.y)
+
+      return ((short_to_long[cmd], new_cp + args),)
+
+    target = self
+    if not inplace:
+      target = SVGPath(d=self.d, clip_path=self.clip_path)
+    target.walk(expand_shorthand_callback)
     return target
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
