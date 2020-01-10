@@ -92,8 +92,11 @@ def test_path_move(path: str, move, expected_result: str):
       'M600,800 C625,700 725,700 750,800 S875,900 900,800',
       'M600,800 C625,700 725,700 750,800 C775,900 875,900 900,800'
     ),
-    # TODO Q/T test
-    # TODO chain of shorthands
+    # Q/T
+    (
+      'M16,12 Q20,14 16,16 T16,20 L24,20 24,12',
+      'M16,12 Q20,14 16,16 Q12,18 16,20 L24,20 L24,12'
+    ),
   ]
 )
 def test_expand_shorthand(path, expected_result):
