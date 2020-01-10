@@ -242,9 +242,13 @@ class SVGPath(SVGShape):
         cmd, args = SVGPath._relative_to_absolute(cmd, args)
 
       # reflect 2nd-last x,y pair over curr_pos and make it our first arg
-      prev_cp = Point(prev_args[-4], prev_args[-3])
-      new_cp = (2 * curr_pos.x - prev_cp.x,
-                2 * curr_pos.y - prev_cp.y)
+      if prev_cmd and prev_cmd.upper() in short_to_long.values():
+        prev_cp = Point(prev_args[-4], prev_args[-3])
+        new_cp = (2 * curr_pos.x - prev_cp.x,
+                  2 * curr_pos.y - prev_cp.y)
+      else:
+        # if there is no prev, or a bad prev, control point coincident current
+        new_cp = (curr_pos.x, curr_pos.y)
 
       return ((short_to_long[cmd], new_cp + args),)
 

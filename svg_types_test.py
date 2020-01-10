@@ -97,6 +97,16 @@ def test_path_move(path: str, move, expected_result: str):
       'M16,12 Q20,14 16,16 T16,20 L24,20 24,12',
       'M16,12 Q20,14 16,16 Q12,18 16,20 L24,20 L24,12'
     ),
+    # S without preceding C
+    (
+      'S875,900 900,800',
+      'C0,0 875,900 900,800'
+    ),
+    # T without preceding Q
+    (
+      'M16,12 T16,20',
+      'M16,12 Q16,12 16,20'
+    ),
   ]
 )
 def test_expand_shorthand(path, expected_result):
