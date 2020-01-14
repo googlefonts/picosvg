@@ -75,9 +75,6 @@ class SVGPath(SVGShape):
   def as_path(self) -> 'SVGPath':
     return self
 
-  def element(self):
-    return _data_to_el(self)
-
   def __iter__(self):
     return SVGPathIter(self.d, exploded=True)
 
@@ -269,9 +266,6 @@ class SVGCircle:
   def as_path(self) -> SVGPath:
     return SVGEllipse(self.r, self.r, self.cx, self.cy, self.clip_path).as_path()
 
-  def element(self):
-    return _data_to_el(self)
-
 # https://www.w3.org/TR/SVG11/shapes.html#EllipseElement
 @dataclasses.dataclass
 class SVGEllipse:
@@ -291,9 +285,6 @@ class SVGEllipse:
     path.clip_path = clip_path
     return path
 
-  def element(self):
-    return _data_to_el(self)
-
 # https://www.w3.org/TR/SVG11/shapes.html#LineElement
 @dataclasses.dataclass
 class SVGLine:
@@ -311,9 +302,6 @@ class SVGLine:
     path.clip_path = clip_path
     return path
 
-  def element(self):
-    return _data_to_el(self)
-
 # https://www.w3.org/TR/SVG11/shapes.html#PolygonElement
 @dataclasses.dataclass
 class SVGPolygon:
@@ -328,9 +316,6 @@ class SVGPolygon:
     path.clip_path = self.clip_path
     return path
 
-  def element(self):
-    return _data_to_el(self)
-
 # https://www.w3.org/TR/SVG11/shapes.html#PolylineElement
 @dataclasses.dataclass
 class SVGPolyline:
@@ -341,9 +326,6 @@ class SVGPolyline:
     if self.points:
       return SVGPath(d='M' + self.points)
     return SVGPath()
-
-  def element(self):
-    return _data_to_el(self)
 
 # https://www.w3.org/TR/SVG11/shapes.html#RectElement
 @dataclasses.dataclass
@@ -383,6 +365,3 @@ class SVGRect:
     path.end()
     path.clip_path = clip_path
     return path
-
-  def element(self):
-    return _data_to_el(self)

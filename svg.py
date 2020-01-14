@@ -25,7 +25,7 @@ _ATTR_RENAMES = {
 }
 _FIELD_RENAMES = {v: k for k, v in _ATTR_RENAMES.items()}
 
-def _el_to_data(el):
+def from_element(el):
   if el.tag not in _ELEMENT_CLASSES:
     raise ValueError(f'Bad tag <{el.tag}>')
   data_type = _ELEMENT_CLASSES[el.tag]
@@ -34,23 +34,13 @@ def _el_to_data(el):
           if _FIELD_RENAMES.get(f.name, f.name) in el.attrib}
   return data_type(**args)
 
-def _data_to_el(data_obj):
+def to_element(data_obj):
   el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
   for field_name, field_value in dataclasses.asdict(data_obj).items():
     if field_name in _OMIT_FIELD_IF_BLANK and not field_value:
       continue
     el.attrib[_FIELD_RENAMES.get(field_name, field_name)] = str(field_value)
   return el
-
-def _apply_swaps(svg_root, swaps):
-  for old_el, new_el in swaps:
-    parent = old_el.getparent()
-    old_el.getparent().replace(old_el, new_el)
-
-def shape_to_path(shape):
-  svg_root = _etree(shape, duplicate=False)
-  data_obj = _el_to_data(svg_root)
-  return data_obj.as_path()
 
 class SVG:
   def __init__(self, svg_root):
@@ -64,7 +54,7 @@ class SVG:
     for el in self.svg_root.iter('*'):
       if el.tag not in _ELEMENT_CLASSES:
         continue
-      elements.append((el, _el_to_data(el)))
+      elements.append((el, from_element(el)))
     self.elements = elements
     return self.elements
 
@@ -112,7 +102,7 @@ class SVG:
 
       # union all the shapes under the clipPath
       # TODO what if the clip path contained non-shapes
-      clip_path = svg_pathops.union(*[_el_to_data(el) for el in clip_path_els[-1]])
+      clip_path = svg_pathops.union(*[from_element(el) for el in clip_path_els[-1]])
       clips.append((idx, clip_path))
 
     # TODO handle inherited clipping
@@ -142,7 +132,7 @@ class SVG:
       return
     swaps = []
     for old_el, shape in self.elements:
-      swaps.append((old_el, _data_to_el(shape)))
+      swaps.append((old_el, to_element(shape)))
     for old_el, new_el in swaps:
       parent = old_el.getparent()
       old_el.getparent().replace(old_el, new_el)
@@ -156,8 +146,10 @@ class SVG:
     self._update_etree()
     return etree.tostring(self.svg_root)
 
-  def fromstring(string):
+  @classmethod
+  def fromstring(_, string):
     return SVG(etree.fromstring(string))
 
-  def parse(file_or_path):
+  @classmethod
+  def parse(_, file_or_path):
     return SVG(etree.parse(file_or_path))
