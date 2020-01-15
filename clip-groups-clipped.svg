@@ -1,0 +1,11 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <g>
+    <g>
+      <g>
+        <path d="M9,9 L11,9 L11,11 L9,11 Z"/>
+      </g>
+    </g>
+  </g>
+</svg>

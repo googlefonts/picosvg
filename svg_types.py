@@ -12,6 +12,7 @@ class Point:
 # Subset of https://www.w3.org/TR/SVG11/painting.html
 @dataclasses.dataclass
 class SVGShape:
+  id: str=''
   clip_path: str = ''
   fill: str = ''
   stroke: str = ''

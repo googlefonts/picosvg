@@ -73,15 +73,85 @@ class SVG:
       self.elements[idx] = (el, shape.as_path())
     return self
 
+  def _xpath(self, xpath):
+    return self.svg_root.xpath(xpath, namespaces={'svg': svgns()})
+
+  def _xpath_one(self, xpath):
+    els = self._xpath(xpath)
+    if len(els) != 1:
+      raise ValueError(f'Need exactly 1 match for {xpath}, got {len(els)}')
+    return els[0]
+
   def _resolve_url(self, url, el_tag):
     match = re.match(r'^url[(]#([\w-]+)[)]$', url)
     if not match:
       raise ValueError(f'Unrecognized url "{url}"')
-    xpath = f'//svg:{el_tag}[@id="{match.group(1)}"]'
-    els = self.svg_root.xpath(xpath, namespaces={'svg': svgns()})
-    if len(els) != 1:
-      raise ValueError(f'Need exactly 1 match for {xpath}, got {len(els)}')
-    return els[0]
+    return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
+
+  def resolve_use(self, inplace=False):
+    """Instantiate reused elements.
+
+    https://www.w3.org/TR/SVG11/struct.html#UseElement"""
+    if not inplace:
+      svg = SVG(copy.deepcopy(self.svg_root))
+      svg.resolve_use(inplace=True)
+      return svg
+
+    self._update_etree()
+
+    attrib_not_copied = {'x', 'y', 'width', 'height', 'xlink_href'}
+
+    swaps = []
+
+    for use_el in self._xpath('//svg:use'):
+      ref = use_el.attrib.get('xlink_href', '')
+      if not ref.startswith('#'):
+        raise ValueError('Only use #fragment supported')
+      target = self._xpath_one(f'//svg:*[@id="{ref[1:]}"]')
+      group = etree.Element('g')
+      group.append(copy.deepcopy(target))
+
+      use_x = use_el.attrib.get('x', 0)
+      use_y = use_el.attrib.get('y', 0)
+      if use_x != 0 or use_y != 0:
+        group.attrib['transform'] = (group.attrib.get('transform', '') 
+                                     + f' translate({use_x}, {use_y})').strip()
+
+      for attr_name in use_el.attrib:
+        if attr_name in attrib_not_copied:
+          continue
+        group.attrib[attr_name] = use_el.attrib[attr_name]
+
+      swaps.append((use_el, group))
+
+    for old_el, new_el in swaps:
+      old_el.getparent().replace(old_el, new_el)
+
+  def _clip_path(self, el):
+    """Resolve clip path for element, including inherited clipping.
+
+    None if there is no clipping.
+
+    https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
+    """
+    clip_paths = []
+    while el is not None:
+      clip_url = el.attrib.get('clip-path', None)
+      if clip_url:
+        clip_path_el = self._resolve_url(clip_url, 'clipPath')
+        # union all the shapes under the clipPath
+        # TODO what if the clip path contained non-shapes
+        clip_path = svg_pathops.union(*[from_element(el) for el in clip_path_el])
+        clip_paths.append(clip_path)
+
+      el = el.getparent()
+
+    # multiple clip paths leave behind their intersection
+    if len(clip_paths) > 1:
+      return svg_pathops.intersection(*clip_paths)
+    elif clip_paths:
+      return clip_paths[0]
+    return None
 
   def apply_clip_paths(self, inplace=False):
     """Apply clipping to shapes and remove the clip paths."""
@@ -96,17 +166,10 @@ class SVG:
     clips = []  # 2-tuples of element index, clip path to apply
     clip_path_els = []
     for idx, (el, shape) in enumerate(self._elements()):
-      if not shape.clip_path:
+      clip_path = self._clip_path(el)
+      if not clip_path:
         continue
-      clip_path_els.append(self._resolve_url(shape.clip_path, 'clipPath'))
-
-      # union all the shapes under the clipPath
-      # TODO what if the clip path contained non-shapes
-      clip_path = svg_pathops.union(*[from_element(el) for el in clip_path_els[-1]])
       clips.append((idx, clip_path))
-
-    # TODO handle inherited clipping
-    # https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
 
     # apply clip path to target
     for el_idx, clip_path in clips:
@@ -118,12 +181,13 @@ class SVG:
       target.clip_path = ''
       self.elements[el_idx] = (el, target)
 
-    # destroy the clip path elements
-    for clip_path_el in clip_path_els:
+    # destroy clip path elements
+    for clip_path_el in self._xpath('//svg:clipPath'):
       clip_path_el.getparent().remove(clip_path_el)
 
-    # TODO destroy clip path container if now empty
-    # TODO destroy paths that are now empty?
+    # destroy clip-path attributes
+    for el in self._xpath('//svg:*[@clip-path]'):
+      del el.attrib['clip-path']
 
     return self
 
@@ -144,12 +208,22 @@ class SVG:
 
   def tostring(self):
     self._update_etree()
-    return etree.tostring(self.svg_root)
+    return (etree.tostring(self.svg_root)
+            .decode('utf-8')
+            .replace('xlink_href', 'xlink:href'))
 
   @classmethod
   def fromstring(_, string):
+    if isinstance(string, bytes):
+      string = string.decode('utf-8')
+    string = string.replace('xlink:href', 'xlink_href')
     return SVG(etree.fromstring(string))
 
   @classmethod
   def parse(_, file_or_path):
-    return SVG(etree.parse(file_or_path))
+    if hasattr(file_or_path, 'read'):
+      raw_svg = file_or_path.read()
+    else:
+      with open(file_or_path) as f:
+        raw_svg = f.read()
+    return SVG.fromstring(raw_svg)

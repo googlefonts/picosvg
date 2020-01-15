@@ -171,17 +171,35 @@ def test_iter(shape, expected_cmds):
 @pytest.mark.parametrize(
   "actual, expected_result",
   [
-    (SVG.parse('clip-rect.svg'), SVG.parse('clip-rect-clipped.svg')),
-    (SVG.parse('clip-ellipse.svg'), SVG.parse('clip-ellipse-clipped.svg')),
-    (SVG.parse('clip-curves.svg'), SVG.parse('clip-curves-clipped.svg')),
+    ('clip-rect.svg', 'clip-rect-clipped.svg'),
+    ('clip-ellipse.svg', 'clip-ellipse-clipped.svg'),
+    ('clip-curves.svg', 'clip-curves-clipped.svg'),
+    ('clip-multirect.svg', 'clip-multirect-clipped.svg'),
+    ('clip-groups.svg', 'clip-groups-clipped.svg'),
   ]
 )
 def test_apply_clip_path(actual, expected_result):
+  actual = SVG.parse(actual)
+  expected_result = SVG.parse(expected_result)
   actual.apply_clip_paths(inplace=True)
   drop_whitespace(actual)
   drop_whitespace(expected_result)
-  print(f'A: {actual.tostring().decode("utf-8")}')
-  print(f'E: {expected_result.tostring().decode("utf-8")}')
+  print(f'A: {actual.tostring()}')
+  print(f'E: {expected_result.tostring()}')
   assert actual.tostring() == expected_result.tostring()
 
-
+@pytest.mark.parametrize(
+  "actual, expected_result",
+  [
+    ('use-ellipse.svg', 'use-ellipse-resolved.svg'),
+  ]
+)
+def test_resolve_use(actual, expected_result):
+  actual = SVG.parse(actual)
+  expected_result = SVG.parse(expected_result)
+  actual.resolve_use(inplace=True)
+  drop_whitespace(actual)
+  drop_whitespace(expected_result)
+  print(f'A: {actual.tostring()}')
+  print(f'E: {expected_result.tostring()}')
+  assert actual.tostring() == expected_result.tostring()
