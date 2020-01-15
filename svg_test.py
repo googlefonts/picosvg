@@ -18,22 +18,48 @@ def drop_whitespace(svg):
       el.tail = el.tail.strip()
 
 @pytest.mark.parametrize(
-  "shape, expected_attrib",
+  "shape, expected_fields",
   [
-    # path
+    # path, fill
     (
       "<path d='M1,1 2,2' fill='blue' />",
       {
         'fill': 'blue',
       }
-    )
+    ),
+    # rect, opacity
+    (
+      "<rect x='5' y='5' width='5' height='5' opacity='0.5'/>",
+      {
+        'opacity': 0.5,
+      }
+    ),
+    # polyline, clip-path
+    (
+      "<polyline points='1,1 5,5 2,2' clip-path='url(#cp)'/>",
+      {
+        'clip_path': 'url(#cp)',
+      }
+    ),
+    # line, stroke
+    (
+      "<line x1='1' y1='1' x2='10' y2='10' stroke='red'/>",
+      {
+        'stroke': 'red',
+      }
+    ),
   ]
 )
-def test_parse_common_attrib(shape, expected_attrib):
+def test_common_attrib(shape, expected_fields):
   svg = SVG.fromstring(shape)
   field_values = dataclasses.asdict(svg.shapes()[0])
-  for attrib, expected_value in expected_attrib.items():
-    assert field_values[attrib] == expected_value
+  for field_name, expected_value in expected_fields.items():
+    assert field_values.get(field_name, '') == expected_value, field_name
+
+  svg = svg.shapes_to_paths()
+  field_values = dataclasses.asdict(svg.shapes()[0])
+  for field_name, expected_value in expected_fields.items():
+    assert field_values.get(field_name, '') == expected_value, field_name
 
 # https://www.w3.org/TR/SVG11/shapes.html
 @pytest.mark.parametrize(
@@ -203,3 +229,4 @@ def test_resolve_use(actual, expected_result):
   print(f'A: {actual.tostring()}')
   print(f'E: {expected_result.tostring()}')
   assert actual.tostring() == expected_result.tostring()
+

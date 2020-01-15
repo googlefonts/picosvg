@@ -16,6 +16,14 @@ class SVGShape:
   clip_path: str = ''
   fill: str = ''
   stroke: str = ''
+  opacity: float = ''
+
+  def _copy_common_fields(self, id, clip_path, fill, stroke, opacity):
+    self.id = id
+    self.clip_path = clip_path
+    self.fill = fill
+    self.stroke = stroke
+    self.opacity = opacity
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
@@ -288,56 +296,57 @@ class SVGEllipse:
 
 # https://www.w3.org/TR/SVG11/shapes.html#LineElement
 @dataclasses.dataclass
-class SVGLine:
+class SVGLine(SVGShape):
   x1: float = 0
   y1: float = 0
   x2: float = 0
   y2: float = 0
-  clip_path: str = ''
 
   def as_path(self) -> SVGPath:
-    x1, y1, x2, y2, clip_path = dataclasses.astuple(self)
+    *shape_fields, x1, y1, x2, y2 = dataclasses.astuple(self)
     path = SVGPath()
     path.M(x1, y1)
     path.L(x2, y2)
-    path.clip_path = clip_path
+    path._copy_common_fields(*shape_fields)
     return path
 
 # https://www.w3.org/TR/SVG11/shapes.html#PolygonElement
 @dataclasses.dataclass
-class SVGPolygon:
-  points: str
-  clip_path: str = ''
+class SVGPolygon(SVGShape):
+  points: str = ''
 
   def as_path(self) -> SVGPath:
+    *shape_fields, points = dataclasses.astuple(self)
     if self.points:
       path = SVGPath(d='M' + self.points + ' z')
     else:
       path = SVGPath()
-    path.clip_path = self.clip_path
+    path._copy_common_fields(*shape_fields)
     return path
 
 # https://www.w3.org/TR/SVG11/shapes.html#PolylineElement
 @dataclasses.dataclass
-class SVGPolyline:
-  points: str
-  clip_path: str = ''
+class SVGPolyline(SVGShape):
+  points: str = ''
 
   def as_path(self) -> SVGPath:
-    if self.points:
-      return SVGPath(d='M' + self.points)
-    return SVGPath()
+    *shape_fields, points = dataclasses.astuple(self)
+    if points:
+      path = SVGPath(d='M' + self.points)
+    else:
+      path = SVGPath()
+    path._copy_common_fields(*shape_fields)
+    return path
 
 # https://www.w3.org/TR/SVG11/shapes.html#RectElement
 @dataclasses.dataclass
-class SVGRect:
+class SVGRect(SVGShape):
   x: float = 0
   y: float = 0
   width: float = 0
   height: float = 0
   rx: float = 0
   ry: float = 0
-  clip_path: str = ''
 
   def __post_init__(self):
     if not self.rx:
@@ -348,7 +357,7 @@ class SVGRect:
     self.ry = min(self.ry, self.height / 2)
 
   def as_path(self) -> SVGPath:
-    x, y, w, h, rx, ry, clip_path = dataclasses.astuple(self)
+    *shape_fields, x, y, w, h, rx, ry = dataclasses.astuple(self)
     path = SVGPath()
     path.M(x + rx, y)
     path.H(x + w - rx)
@@ -364,5 +373,6 @@ class SVGRect:
     if rx > 0:
       path.A(rx, ry, x + rx, y)
     path.end()
-    path.clip_path = clip_path
+    path._copy_common_fields(*shape_fields)
+    
     return path
