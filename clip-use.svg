@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     id="svg" width="512" height="512"
+     viewBox="0 0 8 8">
+  <defs>
+      <path id="a" d="M1,1 2,1 2,4 1,4 z" />
+  </defs>
+    <clipPath id="s">
+        <use xlink:href="#a" />
+    </clipPath>
+    <g clip-path="url(#s)">
+      <rect x="0" y="1" width="3" height="2"/>
+    </g>
+</svg>

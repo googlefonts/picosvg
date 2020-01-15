@@ -376,3 +376,4 @@ class SVGRect(SVGShape):
     path._copy_common_fields(*shape_fields)
     
     return path
+

@@ -202,6 +202,7 @@ def test_iter(shape, expected_cmds):
     ('clip-curves.svg', 'clip-curves-clipped.svg'),
     ('clip-multirect.svg', 'clip-multirect-clipped.svg'),
     ('clip-groups.svg', 'clip-groups-clipped.svg'),
+    ('clip-use.svg', 'clip-use-clipped.svg'),
   ]
 )
 def test_apply_clip_path(actual, expected_result):

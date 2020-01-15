@@ -73,8 +73,10 @@ class SVG:
       self.elements[idx] = (el, shape.as_path())
     return self
 
-  def _xpath(self, xpath):
-    return self.svg_root.xpath(xpath, namespaces={'svg': svgns()})
+  def _xpath(self, xpath, el=None):
+    if el is None:
+      el = self.svg_root
+    return el.xpath(xpath, namespaces={'svg': svgns()})
 
   def _xpath_one(self, xpath):
     els = self._xpath(xpath)
@@ -88,22 +90,12 @@ class SVG:
       raise ValueError(f'Unrecognized url "{url}"')
     return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
 
-  def resolve_use(self, inplace=False):
-    """Instantiate reused elements.
-
-    https://www.w3.org/TR/SVG11/struct.html#UseElement"""
-    if not inplace:
-      svg = SVG(copy.deepcopy(self.svg_root))
-      svg.resolve_use(inplace=True)
-      return svg
-
-    self._update_etree()
-
+  def _resolve_use(self, scope_el):
     attrib_not_copied = {'x', 'y', 'width', 'height', 'xlink_href'}
 
     swaps = []
 
-    for use_el in self._xpath('//svg:use'):
+    for use_el in self._xpath('.//svg:use', el=scope_el):
       ref = use_el.attrib.get('xlink_href', '')
       if not ref.startswith('#'):
         raise ValueError('Only use #fragment supported')
@@ -127,6 +119,36 @@ class SVG:
     for old_el, new_el in swaps:
       old_el.getparent().replace(old_el, new_el)
 
+  def resolve_use(self, inplace=False):
+    """Instantiate reused elements.
+
+    https://www.w3.org/TR/SVG11/struct.html#UseElement"""
+    if not inplace:
+      svg = SVG(copy.deepcopy(self.svg_root))
+      svg.resolve_use(inplace=True)
+      return svg
+
+    self._update_etree()
+    self._resolve_use(self.svg_root)
+
+  def _ungroup(self, scope_el):
+    """Push anything in a group up out of it
+    """
+    groups = [e for e in self._xpath(f'.//g', scope_el)]
+    for group in groups:
+      # move groups children up
+      for child in group:
+        group.remove(child)
+        group.addnext(child)
+
+      # TODO apply group attributes
+      if group.attrib:
+        raise ValueError('Application of group attrs not implemented')
+
+    for group in groups:
+      if group.getparent() is not None:
+        group.getparent().remove(group)
+
   def _clip_path(self, el):
     """Resolve clip path for element, including inherited clipping.
 
@@ -139,9 +161,13 @@ class SVG:
       clip_url = el.attrib.get('clip-path', None)
       if clip_url:
         clip_path_el = self._resolve_url(clip_url, 'clipPath')
+        self._resolve_use(clip_path_el)
+        self._ungroup(clip_path_el)
+
         # union all the shapes under the clipPath
-        # TODO what if the clip path contained non-shapes
-        clip_path = svg_pathops.union(*[from_element(el) for el in clip_path_el])
+        # Fails if there are any non-shapes under clipPath
+        clip_path = svg_pathops.union(*[from_element(e)
+                                        for e in clip_path_el])
         clip_paths.append(clip_path)
 
       el = el.getparent()
