@@ -107,6 +107,11 @@ def test_path_move(path: str, move, expected_result: str):
       'M16,12 T16,20',
       'M16,12 Q16,12 16,20'
     ),
+    # C/s
+    (
+      'M600,800 C625,700 725,700 750,800 s55,55 200,100',
+      'M600,800 C625,700 725,700 750,800 C775,900 805,855 950,900'
+    ),
   ]
 )
 def test_expand_shorthand(path, expected_result):

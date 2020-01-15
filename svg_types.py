@@ -146,11 +146,12 @@ class SVGPath(SVGShape):
 
     target = self
     if not inplace:
-      target = SVGPath(d=self.d, clip_path=self.clip_path)
+      target = copy.deepcopy(self)
     target.walk(move_callback)
     return target
 
-  def _relative_to_absolute(curr_pos, cmd, args):
+  @classmethod
+  def _relative_to_absolute(_, curr_pos, cmd, args):
     x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
     if cmd.islower():
       cmd = cmd.upper()
@@ -159,16 +160,16 @@ class SVGPath(SVGShape):
         args[x_coord_idx] += curr_pos.x
       for y_coord_idx in y_coord_idxs:
         args[y_coord_idx] += curr_pos.y
-    return ((cmd, args),)
+    return (cmd, tuple(args))
 
   def absolute(self, inplace=False):
     """Returns equivalent path with only absolute commands."""
     def absolute_callback(curr_pos, cmd, args, *_):
-      return SVGPath._relative_to_absolute(curr_pos, cmd, args)
+      return (SVGPath._relative_to_absolute(curr_pos, cmd, args),)
 
     target = self
     if not inplace:
-      target = SVGPath(self.d, self.clip_path)
+      target = copy.deepcopy(self)
     target.walk(absolute_callback)
     return target
 
@@ -195,7 +196,7 @@ class SVGPath(SVGShape):
 
     target = self
     if not inplace:
-      target = SVGPath(d=self.d, clip_path=self.clip_path)
+      target = copy.deepcopy(self)
     target.walk(explicit_line_callback)
     return target
 
@@ -225,7 +226,7 @@ class SVGPath(SVGShape):
 
     target = self
     if not inplace:
-      target = SVGPath(d=self.d, clip_path=self.clip_path)
+      target = copy.deepcopy(self)
     target.walk(arc_to_cubic_callback)
     return target
 
@@ -245,7 +246,7 @@ class SVGPath(SVGShape):
       if not cmd.upper() in short_to_long:
         return ((cmd, args),)
       if cmd.islower():
-        cmd, args = SVGPath._relative_to_absolute(cmd, args)
+        cmd, args = SVGPath._relative_to_absolute(curr_pos, cmd, args)
 
       # reflect 2nd-last x,y pair over curr_pos and make it our first arg
       if prev_cmd and prev_cmd.upper() in short_to_long.values():
@@ -260,7 +261,7 @@ class SVGPath(SVGShape):
 
     target = self
     if not inplace:
-      target = SVGPath(d=self.d, clip_path=self.clip_path)
+      target = copy.deepcopy(self)
     target.walk(expand_shorthand_callback)
     return target
 
