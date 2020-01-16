@@ -6,8 +6,14 @@ setup(
     name="nanosvg",
     version="0.1",
     packages=find_packages(),
-    scripts=["nanosvg.py"],
+    entry_points={
+        'console_scripts': [
+            'nanosvg=nanosvg:main',
+        ],
+    },
+
     install_requires=["lxml>=4.0", "skia-pathops>=0.2",],
+
     # metadata to display on PyPI
     author="Rod S",
     author_email="rsheeter",
