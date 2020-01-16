@@ -9,23 +9,24 @@ from svg import SVG
 from svg_meta import svgns
 import sys
 
+
 def _reduce_text(text):
-  text = text.strip() if text else None
-  return text if text else None
+    text = text.strip() if text else None
+    return text if text else None
 
 
 def main():
-  svg = (SVG.parse(sys.argv[1])
-         .tonanosvg())
+    svg = SVG.parse(sys.argv[1]).tonanosvg()
 
-  tree = svg.toetree()
+    tree = svg.toetree()
 
-  # lxml really likes to retain whitespace
-  for e in tree.iter('*'):
-    e.text = _reduce_text(e.text)
-    e.tail = _reduce_text(e.tail)
+    # lxml really likes to retain whitespace
+    for e in tree.iter("*"):
+        e.text = _reduce_text(e.text)
+        e.tail = _reduce_text(e.tail)
 
-  print(etree.tostring(tree, pretty_print=True).decode('utf-8'))
+    print(etree.tostring(tree, pretty_print=True).decode("utf-8"))
 
-if __name__== '__main__':
-  main()
+
+if __name__ == "__main__":
+    main()

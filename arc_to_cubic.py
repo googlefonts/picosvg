@@ -29,37 +29,48 @@ def _normSinCos(v):
         v = -1
     return v
 
-ArcTuple = collections.namedtuple('ArcTuple',
-                                  ['start_point', 'rx', 'ry', 'rotation',
-                                  'large', 'sweep', 'end_point', 'angle'])
 
-ArcParameterizationTuple = collections.namedtuple('ArcParameterizationTuple',
-                                                  ['theta1', 'theta2', 
-                                                   'theta_arc', 'center_point'])
+ArcTuple = collections.namedtuple(
+    "ArcTuple",
+    ["start_point", "rx", "ry", "rotation", "large", "sweep", "end_point", "angle"],
+)
+
+ArcParameterizationTuple = collections.namedtuple(
+    "ArcParameterizationTuple", ["theta1", "theta2", "theta_arc", "center_point"]
+)
 
 _AFFINE_IDENTITY = (1, 0, 0, 1, 0, 0)
 
+
 def _transform_transform(t1, t2):
-    return (t1[0]*t2[0] + t1[1]*t2[2],
-            t1[0]*t2[1] + t1[1]*t2[3],
-            t1[2]*t2[0] + t1[3]*t2[2],
-            t1[2]*t2[1] + t1[3]*t2[3],
-            t2[0]*t1[4] + t2[2]*t1[5] + t2[4],
-            t2[1]*t1[4] + t2[3]*t1[5] + t2[5])
+    return (
+        t1[0] * t2[0] + t1[1] * t2[2],
+        t1[0] * t2[1] + t1[1] * t2[3],
+        t1[2] * t2[0] + t1[3] * t2[2],
+        t1[2] * t2[1] + t1[3] * t2[3],
+        t2[0] * t1[4] + t2[2] * t1[5] + t2[4],
+        t2[1] * t1[4] + t2[3] * t1[5] + t2[5],
+    )
+
 
 def _rotate(transform, angle):
     c = _normSinCos(cos(angle))
     s = _normSinCos(sin(angle))
     return _transform_transform(transform, (c, s, -s, c, 0, 0))
 
+
 def _scale(transform, scale_x, scale_y):
     return _transform_transform(transform, (scale_x, 0, 0, scale_y, 0, 0))
+
 
 def _transform_pt(transform, pt):
     x = pt.real
     y = pt.imag
-    return complex(transform[0]*x + transform[2]*y + transform[4],
-                   transform[1]*x + transform[3]*y + transform[5])
+    return complex(
+        transform[0] * x + transform[2] * y + transform[4],
+        transform[1] * x + transform[3] * y + transform[5],
+    )
+
 
 # https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
 def _end_to_center_parameterization(arc):
@@ -95,7 +106,7 @@ def _end_to_center_parameterization(arc):
     if radii_scale > 1:
         rx *= sqrt(radii_scale)
         ry *= sqrt(radii_scale)
-        arc = arc._replace(rx = rx, ry = ry)
+        arc = arc._replace(rx=rx, ry=ry)
 
     point_transform = _scale(_AFFINE_IDENTITY, 1 / rx, 1 / ry)
     point_transform = _rotate(point_transform, -arc.angle)
@@ -127,6 +138,7 @@ def _end_to_center_parameterization(arc):
         theta_arc -= TWO_PI
 
     return ArcParameterizationTuple(theta1, theta1 + theta_arc, theta_arc, center_point)
+
 
 def _arc_to_cubic(arc):
     arc_params = _end_to_center_parameterization(arc)
@@ -169,6 +181,7 @@ def _arc_to_cubic(arc):
 
         yield point1, point2, target_point
 
+
 def arc_to_cubic(start_point, rx, ry, rotation, large, sweep, end_point):
     """Convert arc to cubic(s).
 
@@ -190,10 +203,3 @@ def arc_to_cubic(start_point, rx, ry, rotation, large, sweep, end_point):
     arc = ArcTuple(start_point, rx, ry, rotation, large, sweep, end_point, angle)
     for t in _arc_to_cubic(arc):
         yield t
-
-
-
-
-
-
-
