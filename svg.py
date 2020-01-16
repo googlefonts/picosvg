@@ -100,9 +100,10 @@ class SVG:
       if not ref.startswith('#'):
         raise ValueError('Only use #fragment supported')
       target = self._xpath_one(f'//svg:*[@id="{ref[1:]}"]')
-      group = etree.Element('g')
-      group.append(copy.deepcopy(target))
 
+      new_el = copy.deepcopy(target)
+
+      group = etree.Element('g')
       use_x = use_el.attrib.get('x', 0)
       use_y = use_el.attrib.get('y', 0)
       if use_x != 0 or use_y != 0:
@@ -114,7 +115,11 @@ class SVG:
           continue
         group.attrib[attr_name] = use_el.attrib[attr_name]
 
-      swaps.append((use_el, group))
+      if len(group.attrib):
+        group.append(new_el)
+        swaps.append((use_el, group))
+      else:
+        swaps.append((use_el, new_el))
 
     for old_el, new_el in swaps:
       old_el.getparent().replace(old_el, new_el)
@@ -130,26 +135,89 @@ class SVG:
 
     self._update_etree()
     self._resolve_use(self.svg_root)
+    return self
+
+  def _resolve_clip_path(self, clip_path_url):
+    clip_path_el = self._resolve_url(clip_path_url, 'clipPath')
+    self._resolve_use(clip_path_el)
+    self._ungroup(clip_path_el)
+
+    # union all the shapes under the clipPath
+    # Fails if there are any non-shapes under clipPath
+    clip_path = svg_pathops.union(*[from_element(e)
+                                    for e in clip_path_el])
+    return clip_path
+
+  def _combine_clip_paths(self, clip_paths):
+    # multiple clip paths leave behind their intersection
+    if len(clip_paths) > 1:
+      return svg_pathops.intersection(*clip_paths)
+    elif clip_paths:
+      return clip_paths[0]
+    return None
+
+  def _new_id(self, tag, template):
+    for i in range(100):
+      potential_id = template % i
+      existing = self._xpath(f'//svg:{tag}[@id="{potential_id}"]')
+      if not existing:
+        return potential_id
+    raise ValueError(f'No free id for {template}')
 
   def _ungroup(self, scope_el):
-    """Push anything in a group up out of it
+    """Push inherited attributes from group down, then remove the group.
+
+    If result has multiple clip paths merge them.
     """
-    groups = [e for e in self._xpath(f'.//g', scope_el)]
+    groups = [e for e in self._xpath(f'.//svg:g', scope_el)]
+    multi_clips = []
     for group in groups:
       # move groups children up
       for child in group:
         group.remove(child)
         group.addnext(child)
 
-      # TODO apply group attributes
-      if group.attrib:
-        raise ValueError('Application of group attrs not implemented')
+        #  apply group attributes
+        if 'clip-path' in group.attrib:
+          clips = sorted(child.attrib.get('clip-path', '').split(',')
+                         + [group.attrib.get('clip-path')])
+          child.attrib['clip-path'] = ','.join([c for c in clips if c])
+          if ',' in child.attrib['clip-path']:
+            multi_clips.append(child)
 
+    # nuke the groups
     for group in groups:
       if group.getparent() is not None:
         group.getparent().remove(group)
 
-  def _clip_path(self, el):
+    # if we have new combinations of clip paths materialize them
+    new_clip_paths = {}
+    old_clip_paths = []
+    for clipped_el in multi_clips:
+      clip_refs = clipped_el.attrib['clip-path']
+      if clip_refs not in new_clip_paths:
+        clip_ref_urls = clip_refs.split(',')
+        old_clip_paths.extend([self._resolve_url(ref, 'clipPath')
+                               for ref in clip_ref_urls])
+        clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
+        clip_path = self._combine_clip_paths(clip_paths)
+        new_el = etree.SubElement(self.svg_root, 'clipPath')
+        new_el.attrib['id'] = self._new_id('clipPath', 'merged-clip-%d')
+        new_el.append(to_element(clip_path))
+        new_clip_paths[clip_refs] = new_el
+
+      new_ref_id = new_clip_paths[clip_refs].attrib['id']
+      clipped_el.attrib['clip-path'] = f'url(#{new_ref_id})'
+
+    # destroy unreferenced clip paths
+    for old_clip_path in old_clip_paths:
+      if old_clip_path.getparent() is None:
+        continue
+      old_id = old_clip_path.attrib['id']
+      if not self._xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
+        old_clip_path.getparent().remove(old_clip_path)
+
+  def _compute_clip_path(self, el):
     """Resolve clip path for element, including inherited clipping.
 
     None if there is no clipping.
@@ -160,24 +228,20 @@ class SVG:
     while el is not None:
       clip_url = el.attrib.get('clip-path', None)
       if clip_url:
-        clip_path_el = self._resolve_url(clip_url, 'clipPath')
-        self._resolve_use(clip_path_el)
-        self._ungroup(clip_path_el)
-
-        # union all the shapes under the clipPath
-        # Fails if there are any non-shapes under clipPath
-        clip_path = svg_pathops.union(*[from_element(e)
-                                        for e in clip_path_el])
-        clip_paths.append(clip_path)
-
+        clip_paths.append(self._resolve_clip_path(clip_url))
       el = el.getparent()
 
-    # multiple clip paths leave behind their intersection
-    if len(clip_paths) > 1:
-      return svg_pathops.intersection(*clip_paths)
-    elif clip_paths:
-      return clip_paths[0]
-    return None
+    return self._combine_clip_paths(clip_paths)
+
+  def ungroup(self, inplace=False):
+    if not inplace:
+      svg = SVG(copy.deepcopy(self.svg_root))
+      svg.ungroup(inplace=True)
+      return svg
+
+    self._update_etree()
+    self._ungroup(self.svg_root)
+    return self
 
   def apply_clip_paths(self, inplace=False):
     """Apply clipping to shapes and remove the clip paths."""
@@ -192,7 +256,7 @@ class SVG:
     clips = []  # 2-tuples of element index, clip path to apply
     clip_path_els = []
     for idx, (el, shape) in enumerate(self._elements()):
-      clip_path = self._clip_path(el)
+      clip_path = self._compute_clip_path(el)
       if not clip_path:
         continue
       clips.append((idx, clip_path))
@@ -214,6 +278,24 @@ class SVG:
     # destroy clip-path attributes
     for el in self._xpath('//svg:*[@clip-path]'):
       del el.attrib['clip-path']
+
+    return self
+
+  def tonanosvg(self, inplace=False):
+    if not inplace:
+      svg = SVG(copy.deepcopy(self.svg_root))
+      svg.tonanosvg(inplace=True)
+      return svg
+
+    self.shapes_to_paths(inplace=True)
+    self.resolve_use(inplace=True)
+    self.apply_clip_paths(inplace=True)
+    self.ungroup(inplace=True)
+
+    # TODO remove <defs> that aren't gradients
+    # TODO collect gradients / massage defs
+    # TODO check if we're a legal nanosvg, bail if not
+    # TODO define what that means
 
     return self
 

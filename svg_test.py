@@ -9,6 +9,18 @@ def svg_string(*els):
     root.append(etree.fromstring(el))
   return etree.tostring(root)
 
+def _pretty_print(svg_tree):
+  def _reduce_text(text):
+    text = text.strip() if text else None
+    return text if text else None
+
+  # lxml really likes to retain whitespace
+  for e in svg_tree.iter('*'):
+    e.text = _reduce_text(e.text)
+    e.tail = _reduce_text(e.tail)
+
+  return etree.tostring(svg_tree, pretty_print=True).decode('utf-8')
+
 def drop_whitespace(svg):
   svg._update_etree()
   for el in svg.svg_root.iter('*'):
@@ -146,12 +158,12 @@ def test_common_attrib(shape, expected_fields):
 def test_simple_replace_shapes_with_paths(shape: str, expected_path: str):
   actual = (SVG.fromstring(svg_string(shape))
             .shapes_to_paths(inplace=True)
-            .tostring())
+            .toetree())
   expected_result = (SVG.fromstring(svg_string(f'<path d="{expected_path}"/>'))
-                     .tostring())
-  print(f'A: {actual}')
-  print(f'E: {expected_result}')
-  assert actual == expected_result
+                     .toetree())
+  print(f'A: {_pretty_print(actual)}')
+  print(f'E: {_pretty_print(expected_result)}')
+  assert etree.tostring(actual) == etree.tostring(expected_result)
 
 @pytest.mark.parametrize(
   "shape, expected_cmds",
@@ -211,8 +223,8 @@ def test_apply_clip_path(actual, expected_result):
   actual.apply_clip_paths(inplace=True)
   drop_whitespace(actual)
   drop_whitespace(expected_result)
-  print(f'A: {actual.tostring()}')
-  print(f'E: {expected_result.tostring()}')
+  print(f'A: {_pretty_print(actual.toetree())}')
+  print(f'E: {_pretty_print(expected_result.toetree())}')
   assert actual.tostring() == expected_result.tostring()
 
 @pytest.mark.parametrize(
@@ -227,7 +239,37 @@ def test_resolve_use(actual, expected_result):
   actual.resolve_use(inplace=True)
   drop_whitespace(actual)
   drop_whitespace(expected_result)
-  print(f'A: {actual.tostring()}')
-  print(f'E: {expected_result.tostring()}')
+  print(f'A: {_pretty_print(actual.toetree())}')
+  print(f'E: {_pretty_print(expected_result.toetree())}')
   assert actual.tostring() == expected_result.tostring()
 
+@pytest.mark.parametrize(
+  "actual, expected_result",
+  [
+    ('ungroup-before.svg', 'ungroup-after.svg'),
+  ]
+)
+def test_ungroup(actual, expected_result):
+  actual = SVG.parse(actual)
+  expected_result = SVG.parse(expected_result)
+  actual.ungroup(inplace=True)
+  drop_whitespace(actual)
+  drop_whitespace(expected_result)
+  print(f'A: {_pretty_print(actual.toetree())}')
+  print(f'E: {_pretty_print(expected_result.toetree())}')
+  assert actual.tostring() == expected_result.tostring()
+
+@pytest.mark.parametrize(
+  "actual, expected_result",
+  [
+    ('ungroup-before.svg', 'ungroup-nano.svg'),
+  ]
+)
+def test_tonanosvg(actual, expected_result):
+  actual = SVG.parse(actual).tonanosvg()
+  expected_result = SVG.parse(expected_result)
+  drop_whitespace(actual)
+  drop_whitespace(expected_result)
+  print(f'A: {_pretty_print(actual.toetree())}')
+  print(f'E: {_pretty_print(expected_result.toetree())}')
+  assert actual.tostring() == expected_result.tostring()

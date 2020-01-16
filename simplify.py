@@ -15,12 +15,8 @@ def _reduce_text(text):
 
 
 def main():
-  svg = SVG.parse(sys.argv[1])
-  svg.shapes_to_paths(inplace=True)
-  svg.resolve_use(inplace=True)
-  svg.apply_clip_paths(inplace=True)
-
-  # TODO ungroup
+  svg = (SVG.parse(sys.argv[1])
+         .tonanosvg())
 
   tree = svg.toetree()
 
