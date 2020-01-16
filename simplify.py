@@ -20,18 +20,6 @@ def main():
 
   tree = svg.toetree()
 
-  # destroy defs
-  for def_el in [e for e in tree.xpath('//svg:defs', namespaces={'svg': svgns()})]:
-    def_el.getparent().remove(def_el)
-
-  # gather gradients together, perhaps to a single top defs
-  defs = etree.Element('defs')
-  tree.insert(0, defs)
-  for gradient in tree.xpath('//svg:linearGradient | //svg:radialGradient',
-                             namespaces={'svg': svgns()}):
-    gradient.getparent().remove(gradient)
-    defs.append(gradient)
-
   # lxml really likes to retain whitespace
   for e in tree.iter('*'):
     e.text = _reduce_text(e.text)

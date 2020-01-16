@@ -287,13 +287,24 @@ class SVG:
       svg.tonanosvg(inplace=True)
       return svg
 
+    self._update_etree()
+
     self.shapes_to_paths(inplace=True)
     self.resolve_use(inplace=True)
     self.apply_clip_paths(inplace=True)
     self.ungroup(inplace=True)
 
-    # TODO remove <defs> that aren't gradients
-    # TODO collect gradients / massage defs
+    # Collect gradients; remove other defs
+    gradient_defs = etree.Element('defs')
+    for gradient in self._xpath('//svg:linearGradient | //svg:radialGradient'):
+      gradient.getparent().remove(gradient)
+      gradient_defs.append(gradient)
+
+    for def_el in [e for e in self._xpath('//svg:defs')]:
+      def_el.getparent().remove(def_el)
+
+    self.svg_root.insert(0, gradient_defs)
+
     # TODO check if we're a legal nanosvg, bail if not
     # TODO define what that means
 

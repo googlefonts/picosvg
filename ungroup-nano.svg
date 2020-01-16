@@ -1,15 +1,7 @@
 <svg id='svg' xmlns="http://www.w3.org/2000/svg"
      width="512" height="512"
      viewBox="0 0 24 24">
-  <defs>
-    <rect id="r1" x="9" y="9" width="5" height="5"/>
-  </defs>
-  <defs>
-    <rect id="r2" x="5" y="5" width="10" height="10"/>
-  </defs>
-  <use xlink_href="#r2" clip-path="url(#merged-clip-0)"/>
-  <clipPath id="merged-clip-0">
-    <path d="M9,9 L11,9 L11,11 L9,11 Z"/>
-  </clipPath>
+  <defs/>
+  <path id="r2" d="M9,9 L11,9 L11,11 L9,11 Z"/>
 </svg>
 
