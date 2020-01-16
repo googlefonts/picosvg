@@ -2,7 +2,7 @@ import copy
 import dataclasses
 from lxml import etree
 import re
-from svg_meta import svgns
+from svg_meta import ntos, svgns
 import svg_pathops
 from svg_types import *
 
@@ -164,6 +164,31 @@ class SVG:
         return potential_id
     raise ValueError(f'No free id for {template}')
 
+  def _inherit_group_attrib(self, group, child):
+    attrib = copy.deepcopy(group.attrib)
+
+    if 'clip-path' in attrib:
+      clips = sorted(child.attrib.get('clip-path', '').split(',')
+                     + [attrib.get('clip-path')])
+      child.attrib['clip-path'] = ','.join([c for c in clips if c])
+
+      del attrib['clip-path']
+
+    # TODO copy for list that get simple copies
+    if 'fill' in attrib:
+      if 'fill' not in child.attrib:
+        child.attrib['fill'] = attrib['fill']
+      del attrib['fill']
+
+    if 'opacity' in attrib:
+      opacity = float(attrib['opacity'])
+      opacity *= float(child.attrib.get('opacity', 1.))
+      child.attrib['opacity'] = ntos(opacity)
+      del attrib['opacity']
+
+    if attrib:
+      raise ValueError(f'Unable to process group attrib {attrib}')
+
   def _ungroup(self, scope_el):
     """Push inherited attributes from group down, then remove the group.
 
@@ -177,13 +202,9 @@ class SVG:
         group.remove(child)
         group.addnext(child)
 
-        #  apply group attributes
-        if 'clip-path' in group.attrib:
-          clips = sorted(child.attrib.get('clip-path', '').split(',')
-                         + [group.attrib.get('clip-path')])
-          child.attrib['clip-path'] = ','.join([c for c in clips if c])
-          if ',' in child.attrib['clip-path']:
-            multi_clips.append(child)
+        self._inherit_group_attrib(group, child)
+        if ',' in child.attrib.get('clip-path', ''):
+          multi_clips.append(child)
 
     # nuke the groups
     for group in groups:

@@ -56,14 +56,14 @@ def cmd_coords(cmd):
     raise ValueError(f'Invalid svg command "{cmd}"')
   return _CMD_COORDS[cmd]
 
-def _ntos(n):
+def ntos(n):
   # %f likes to add unnecessary 0's, %g isn't consistent about # decimals
   return ('%.3f' % n).rstrip('0').rstrip('.')
 
 def path_segment(cmd, *args):
   # put commas between coords, spaces otherwise, author readability pref
   cmd_args = check_cmd(cmd, args)
-  args = [_ntos(a) for a in args]
+  args = [ntos(a) for a in args]
   combined_args = []
   xy_coords = set(zip(*_CMD_COORDS[cmd]))
   i = 0

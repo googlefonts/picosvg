@@ -7,7 +7,8 @@
   <defs>
     <rect id="r2" x="5" y="5" width="10" height="10"/>
   </defs>
-  <use xlink_href="#r2" clip-path="url(#merged-clip-0)"/>
+  <use xlink_href="#r2" clip-path="url(#merged-clip-0)"
+       fill="#BBBBBB" opacity="0.25" />
   <clipPath id="merged-clip-0">
     <path d="M9,9 L11,9 L11,11 L9,11 Z"/>
   </clipPath>
