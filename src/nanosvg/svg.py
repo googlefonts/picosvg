@@ -3,7 +3,7 @@ import dataclasses
 from lxml import etree
 import re
 from nanosvg.svg_meta import ntos, svgns
-import nanosvg.svg_pathops
+from nanosvg import svg_pathops
 from nanosvg.svg_types import *
 
 _ELEMENT_CLASSES = {

@@ -1,8 +1,11 @@
 import dataclasses
 from lxml import etree
+import os
 import pytest
 from nanosvg.svg import SVG
 
+def _test_file(filename):
+    return os.path.join(os.path.dirname(__file__), filename)
 
 def svg_string(*els):
     root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
@@ -166,8 +169,8 @@ def test_iter(shape, expected_cmds):
     ],
 )
 def test_apply_clip_path(actual, expected_result):
-    actual = SVG.parse(actual)
-    expected_result = SVG.parse(expected_result)
+    actual = SVG.parse(_test_file(actual))
+    expected_result = SVG.parse(_test_file(expected_result))
     actual.apply_clip_paths(inplace=True)
     drop_whitespace(actual)
     drop_whitespace(expected_result)
@@ -180,8 +183,8 @@ def test_apply_clip_path(actual, expected_result):
     "actual, expected_result", [("use-ellipse.svg", "use-ellipse-resolved.svg"),]
 )
 def test_resolve_use(actual, expected_result):
-    actual = SVG.parse(actual)
-    expected_result = SVG.parse(expected_result)
+    actual = SVG.parse(_test_file(actual))
+    expected_result = SVG.parse(_test_file(expected_result))
     actual.resolve_use(inplace=True)
     drop_whitespace(actual)
     drop_whitespace(expected_result)
@@ -194,8 +197,8 @@ def test_resolve_use(actual, expected_result):
     "actual, expected_result", [("ungroup-before.svg", "ungroup-after.svg"),]
 )
 def test_ungroup(actual, expected_result):
-    actual = SVG.parse(actual)
-    expected_result = SVG.parse(expected_result)
+    actual = SVG.parse(_test_file(actual))
+    expected_result = SVG.parse(_test_file(expected_result))
     actual.ungroup(inplace=True)
     drop_whitespace(actual)
     drop_whitespace(expected_result)
@@ -208,8 +211,8 @@ def test_ungroup(actual, expected_result):
     "actual, expected_result", [("ungroup-before.svg", "ungroup-nano.svg"),]
 )
 def test_tonanosvg(actual, expected_result):
-    actual = SVG.parse(actual).tonanosvg()
-    expected_result = SVG.parse(expected_result)
+    actual = SVG.parse(_test_file(actual)).tonanosvg()
+    expected_result = SVG.parse(_test_file(expected_result))
     drop_whitespace(actual)
     drop_whitespace(expected_result)
     print(f"A: {_pretty_print(actual.toetree())}")

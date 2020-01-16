@@ -1,5 +1,5 @@
 import pytest
-import nanosvg.svg_pathops
+from nanosvg import svg_pathops
 from nanosvg.svg_types import SVGPath, SVGRect
 
 
