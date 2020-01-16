@@ -19,8 +19,14 @@ def _explode_cmd(args_per_cmd, cmd, args):
     cmds.append((cmd, tuple(args[i * args_per_cmd:(i + 1) * args_per_cmd])))
   return cmds
 
-def _parse_svg_path(svg_path: str, exploded=False):
-  """Parses an svg path to tuples of (cmd, (args))"""
+def parse_svg_path(svg_path: str, exploded=False):
+  """Parses an svg path.
+
+  Exploded means when params repeat each the command is reported as
+  if multiplied. For example "M1,1 2,2 3,3" would report as three
+  separate steps when exploded.
+
+  Yields tuples of (cmd, (args))."""
   command_tuples = []
   parts = _CMD_RE.split(svg_path)[1:]
   for i in range(0, len(parts), 2):
@@ -37,24 +43,6 @@ def _parse_svg_path(svg_path: str, exploded=False):
       command_tuples.append((cmd, tuple(args)))
     else:
       command_tuples.extend(_explode_cmd(args_per_cmd, cmd, args))
-  return command_tuples
+  for t in command_tuples:
+    yield t
 
-class SVGPathIter:
-  """Iterates commands, optionally in exploded form.
-
-  Exploded means when params repeat each the command is reported as
-  if multiplied. For example "M1,1 2,2 3,3" would report as three
-  separate steps when exploded.
-  """
-  def __init__(self, path: str, exploded=False):
-    self.cmds = _parse_svg_path(path, exploded=exploded)
-    self.cmd_idx = -1
-
-  def __iter__(self):
-    return self
-
-  def __next__(self):
-    self.cmd_idx += 1
-    if self.cmd_idx >= len(self.cmds):
-      raise StopIteration()
-    return self.cmds[self.cmd_idx]

@@ -2,7 +2,7 @@ from arc_to_cubic import arc_to_cubic
 import copy
 import dataclasses
 import svg_meta
-from svg_path_iter import SVGPathIter
+from svg_path_iter import parse_svg_path
 
 @dataclasses.dataclass
 class Point:
@@ -85,7 +85,7 @@ class SVGPath(SVGShape):
     return self
 
   def __iter__(self):
-    return SVGPathIter(self.d, exploded=True)
+    return parse_svg_path(self.d, exploded=True)
 
   def walk(self, callback):
     """Walk path and call callback to build potentially new commands.
