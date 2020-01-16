@@ -1,6 +1,6 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import pathops
-from svg_types import SVGPath, SVGShape
+from nanosvg.svg_types import SVGPath, SVGShape
 
 # Absolutes coords assumed
 # A should never occur because we convert arcs to cubics

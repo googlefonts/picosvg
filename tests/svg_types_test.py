@@ -1,5 +1,5 @@
 import pytest
-from svg_types import SVGPath
+from nanosvg.svg_types import SVGPath
 
 
 @pytest.mark.parametrize(

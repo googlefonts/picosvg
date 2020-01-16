@@ -1,12 +1,12 @@
 """Simplify svg.
 
 Usage:
-simplify.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
+nanosvg.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
 <simplified svg dumped to stdout>
 """
 from lxml import etree
-from svg import SVG
-from svg_meta import svgns
+from nanosvg.svg import SVG
+from nanosvg.svg_meta import svgns
 import sys
 
 

@@ -1,5 +1,5 @@
 import re
-import svg_meta
+from nanosvg import svg_meta
 
 _CMD_RE = re.compile(f'([{"".join(svg_meta.cmds())}])')
 

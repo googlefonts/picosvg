@@ -2,9 +2,9 @@ import copy
 import dataclasses
 from lxml import etree
 import re
-from svg_meta import ntos, svgns
-import svg_pathops
-from svg_types import *
+from nanosvg.svg_meta import ntos, svgns
+import nanosvg.svg_pathops
+from nanosvg.svg_types import *
 
 _ELEMENT_CLASSES = {
     "circle": SVGCircle,

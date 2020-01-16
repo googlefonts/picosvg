@@ -1,8 +1,8 @@
-from arc_to_cubic import arc_to_cubic
 import copy
 import dataclasses
-import svg_meta
-from svg_path_iter import parse_svg_path
+from nanosvg.arc_to_cubic import arc_to_cubic
+import nanosvg.svg_meta
+from nanosvg.svg_path_iter import parse_svg_path
 
 
 @dataclasses.dataclass

@@ -1,7 +1,7 @@
 import dataclasses
 from lxml import etree
 import pytest
-from svg import SVG
+from nanosvg.svg import SVG
 
 
 def svg_string(*els):

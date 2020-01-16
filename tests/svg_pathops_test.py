@@ -1,6 +1,6 @@
 import pytest
-import svg_pathops
-from svg_types import SVGPath, SVGRect
+import nanosvg.svg_pathops
+from nanosvg.svg_types import SVGPath, SVGRect
 
 
 @pytest.mark.parametrize(

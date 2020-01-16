@@ -5,10 +5,11 @@ from setuptools import setup, find_packages
 setup(
     name="nanosvg",
     version="0.1",
-    packages=find_packages(),
+    package_dir={'': 'src'},
+    packages=find_packages(where='src'),
     entry_points={
         'console_scripts': [
-            'nanosvg=nanosvg:main',
+            'nanosvg=nanosvg.nanosvg:main',
         ],
     },
 

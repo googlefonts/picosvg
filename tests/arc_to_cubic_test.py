@@ -1,7 +1,7 @@
 """Adapted from FontTools ests/svgLib/path/parser_test.py.
 
 Quick sanity check our minor changes give similar results to the original."""
-from arc_to_cubic import arc_to_cubic
+from nanosvg.arc_to_cubic import arc_to_cubic
 import pytest
 
 
