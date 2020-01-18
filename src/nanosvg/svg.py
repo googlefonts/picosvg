@@ -168,27 +168,38 @@ class SVG:
         raise ValueError(f"No free id for {template}")
 
     def _inherit_group_attrib(self, group, child):
-        attrib = copy.deepcopy(group.attrib)
+        def _inherit_copy(attrib, child, attr_name):
+            child.attrib[attr_name] = child.attrib.get(attr_name,
+                                                       attrib[attr_name])
 
-        if "clip-path" in attrib:
+        def _inherit_multiply(attrib, child, attr_name):
+            value = float(attrib[attr_name])
+            value *= float(child.attrib.get(attr_name, 1.0))
+            child.attrib[attr_name] = ntos(value)
+
+        def _inherit_clip_path(attrib, child, attr_name):
             clips = sorted(
                 child.attrib.get("clip-path", "").split(",") + [attrib.get("clip-path")]
             )
             child.attrib["clip-path"] = ",".join([c for c in clips if c])
 
-            del attrib["clip-path"]
+        attrib_handlers = {
+            'fill': _inherit_copy,
+            'stroke': _inherit_copy,
+            'stroke-linecap:': _inherit_copy,
+            'stroke-linejoin': _inherit_copy,
+            'stroke-dasharray': _inherit_copy,
+            'fill-opacity': _inherit_multiply,
+            'opacity': _inherit_multiply,
+            'clip-path': _inherit_clip_path,
+        }
 
-        # TODO copy for list that get simple copies
-        if "fill" in attrib:
-            if "fill" not in child.attrib:
-                child.attrib["fill"] = attrib["fill"]
-            del attrib["fill"]
-
-        if "opacity" in attrib:
-            opacity = float(attrib["opacity"])
-            opacity *= float(child.attrib.get("opacity", 1.0))
-            child.attrib["opacity"] = ntos(opacity)
-            del attrib["opacity"]
+        attrib = copy.deepcopy(group.attrib)
+        for attr_name in sorted(attrib.keys()):
+            if not attr_name in attrib_handlers:
+                continue
+            attrib_handlers[attr_name](attrib, child, attr_name)
+            del attrib[attr_name]
 
         if attrib:
             raise ValueError(f"Unable to process group attrib {attrib}")
