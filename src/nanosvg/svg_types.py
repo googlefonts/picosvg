@@ -18,13 +18,31 @@ class SVGShape:
     clip_path: str = ""
     fill: str = ""
     stroke: str = ""
+    stroke_width: float = 1.
+    stroke_linecap: str = "butt"
+    stroke_linejoin: str = "miter"
+    stroke_miterlimit: float = 4
+    stroke_dasharray: str = ""
+    stroke_dashoffset: float = 1.0
+    stroke_opacity: str = ""
     opacity: float = ""
 
-    def _copy_common_fields(self, id, clip_path, fill, stroke, opacity):
+    def _copy_common_fields(self, id, clip_path, fill,
+                            stroke, stroke_width, stroke_linecap,
+                            stroke_linejoin, stroke_miterlimit,
+                            stroke_dasharray, stroke_dashoffset, stroke_opacity,
+                            opacity):
         self.id = id
         self.clip_path = clip_path
         self.fill = fill
         self.stroke = stroke
+        self.stroke_width = stroke_width
+        self.stroke_linecap = stroke_linecap
+        self.stroke_linejoin = stroke_linejoin
+        self.stroke_miterlimit = stroke_miterlimit
+        self.stroke_dasharray = stroke_dasharray
+        self.stroke_dashoffset = stroke_dashoffset
+        self.stroke_opacity = stroke_opacity
         self.opacity = opacity
 
 

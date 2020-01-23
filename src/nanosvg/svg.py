@@ -20,7 +20,16 @@ _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.ite
 
 _OMIT_FIELD_IF_BLANK = {f.name for f in dataclasses.fields(SVGShape)}
 
-_ATTR_RENAMES = {"clip-path": "clip_path"}
+_ATTR_RENAMES = {
+    "clip-path": "clip_path",
+    "stroke-width": "stroke_width",
+    "stroke-linecap": "stroke_linecap",
+    "stroke-linejoin": "stroke_linejoin",
+    "stroke-miterlimit": "stroke_miterlimit",
+    "stroke-dasharray": "stroke_dasharray",
+    "stroke-dashoffset": "stroke_dashoffset",
+    "stroke-opacity": "stroke_opacity",
+}
 _FIELD_RENAMES = {v: k for k, v in _ATTR_RENAMES.items()}
 
 
@@ -38,10 +47,16 @@ def from_element(el):
 
 def to_element(data_obj):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
-    for field_name, field_value in dataclasses.asdict(data_obj).items():
-        if field_name in _OMIT_FIELD_IF_BLANK and not field_value:
+    data = dataclasses.asdict(data_obj)
+    for field in dataclasses.fields(data_obj):
+        field_value = data[field.name]
+        if field.name in _OMIT_FIELD_IF_BLANK and not field_value:
             continue
-        el.attrib[_FIELD_RENAMES.get(field_name, field_name)] = str(field_value)
+        if field_value == field.default:
+            continue
+
+        attr_name = _FIELD_RENAMES.get(field.name, field.name)
+        el.attrib[attr_name] = str(field_value)
     return el
 
 
@@ -57,12 +72,15 @@ class SVG:
         for el in self.svg_root.iter("*"):
             if el.tag not in _ELEMENT_CLASSES:
                 continue
-            elements.append((el, from_element(el)))
+            elements.append((el, (from_element(el),)))
         self.elements = elements
         return self.elements
 
     def shapes(self):
-        return tuple(s for (_, s) in self._elements())
+
+        return tuple(shape
+                     for (_, shapes) in self._elements()
+                     for shape in shapes)
 
     def shapes_to_paths(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
@@ -72,8 +90,8 @@ class SVG:
             return svg
 
         swaps = []
-        for idx, (el, shape) in enumerate(self._elements()):
-            self.elements[idx] = (el, shape.as_path())
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            self.elements[idx] = (el, (shape.as_path(),))
         return self
 
     def _xpath(self, xpath, el=None):
@@ -280,6 +298,31 @@ class SVG:
         self._ungroup(self.svg_root)
         return self
 
+    def apply_strokes(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.apply_strokes(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        # Find stroked things
+        stroked = []
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            if not shape.stroke:
+                continue
+            stroked.append(idx)
+
+        # Stroke 'em
+        for idx in stroked:
+            el, (shape,) = self.elements[idx]
+            self.elements[idx] = (el, tuple(svg_pathops.stroke(shape)))
+
+        # Update the etree
+        self._update_etree()
+
+        return self
+
     def apply_clip_paths(self, inplace=False):
         """Apply clipping to shapes and remove the clip paths."""
         if not inplace:
@@ -300,12 +343,12 @@ class SVG:
 
         # apply clip path to target
         for el_idx, clip_path in clips:
-            el, target = self.elements[el_idx]
+            el, (target,) = self.elements[el_idx]
             target = target.as_path().absolute(inplace=True)
 
             target.d = svg_pathops.intersection(target, clip_path).d
             target.clip_path = ""
-            self.elements[el_idx] = (el, target)
+            self.elements[el_idx] = (el, (target,))
 
         # destroy clip path elements
         for clip_path_el in self._xpath("//svg:clipPath"):
@@ -350,11 +393,15 @@ class SVG:
         if not self.elements:
             return
         swaps = []
-        for old_el, shape in self.elements:
-            swaps.append((old_el, to_element(shape)))
-        for old_el, new_el in swaps:
+        for old_el, shapes in self.elements:
+            swaps.append((old_el, [to_element(s) for s in shapes]))
+        for old_el, new_els in swaps:
+            for new_el in new_els:
+                old_el.addnext(new_el)
             parent = old_el.getparent()
-            old_el.getparent().replace(old_el, new_el)
+            if parent is None:
+                raise ValueError('Lost parent!')
+            parent.remove(old_el)
         self.elements = None
 
     def toetree(self):
