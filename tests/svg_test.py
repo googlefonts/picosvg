@@ -129,7 +129,7 @@ def test_common_attrib(shape, expected_fields):
         ),
     ],
 )
-def test_simple_replace_shapes_with_paths(shape: str, expected_path: str):
+def test_shapes_to_paths(shape: str, expected_path: str):
     actual = SVG.fromstring(svg_string(shape)).shapes_to_paths(inplace=True).toetree()
     expected_result = SVG.fromstring(
         svg_string(f'<path {expected_path}/>')
@@ -199,8 +199,8 @@ def test_ungroup(actual, expected_result):
 @pytest.mark.parametrize(
     "actual, expected_result", [("stroke-before.svg", "stroke-after.svg"),]
 )
-def test_ungroup(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.apply_strokes(inplace=True))
+def test_strokes_to_paths(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.strokes_to_paths(inplace=True))
 
 
 @pytest.mark.parametrize(

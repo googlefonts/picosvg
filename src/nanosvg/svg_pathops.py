@@ -73,27 +73,11 @@ def union(*svg_shapes):
 def intersection(*svg_shapes):
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
 
+
 def stroke(shape: SVGShape):
-    """Produces one or more new shapes in draw order."""
+    """Create a path that is shape with it's stroke applied."""
+    sk_path = skia_path(shape)
+    sk_path.stroke(shape.stroke_width)
+    return svg_path(sk_path)
 
-    # map old attrs to new dest
-    _renamed_attr = {
-        'shape': 'fill',
-        'stroke-opacity': 'opacity',
-    }
-
-    if not shape.stroke:
-        return [shape]
-
-    # snapshot the current path
-    original = shape.as_path()
-
-    # make a new path that is the stroked path
-
-
-    # nuke stroke attrs from current
-    
-
-    # nuke some of the stroke attrs from stroke
-    # convert some stroke attrs (e.g. stroke => fill)
 

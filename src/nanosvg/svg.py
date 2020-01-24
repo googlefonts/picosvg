@@ -5,6 +5,7 @@ import re
 from nanosvg.svg_meta import ntos, svgns
 from nanosvg import svg_pathops
 from nanosvg.svg_types import *
+import numbers
 
 _ELEMENT_CLASSES = {
     "circle": SVGCircle,
@@ -20,27 +21,21 @@ _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.ite
 
 _OMIT_FIELD_IF_BLANK = {f.name for f in dataclasses.fields(SVGShape)}
 
-_ATTR_RENAMES = {
-    "clip-path": "clip_path",
-    "stroke-width": "stroke_width",
-    "stroke-linecap": "stroke_linecap",
-    "stroke-linejoin": "stroke_linejoin",
-    "stroke-miterlimit": "stroke_miterlimit",
-    "stroke-dasharray": "stroke_dasharray",
-    "stroke-dashoffset": "stroke_dashoffset",
-    "stroke-opacity": "stroke_opacity",
-}
-_FIELD_RENAMES = {v: k for k, v in _ATTR_RENAMES.items()}
 
+def _attr_name(field_name):
+    return field_name.replace('_', '-')
+
+def _field_name(attr_name):
+    return attr_name.replace('-', '_')
 
 def from_element(el):
     if el.tag not in _ELEMENT_CLASSES:
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _ELEMENT_CLASSES[el.tag]
     args = {
-        f.name: f.type(el.attrib[_FIELD_RENAMES.get(f.name, f.name)])
+        f.name: f.type(el.attrib[_attr_name(f.name)])
         for f in dataclasses.fields(data_type)
-        if _FIELD_RENAMES.get(f.name, f.name) in el.attrib
+        if _attr_name(f.name) in el.attrib
     }
     return data_type(**args)
 
@@ -54,10 +49,17 @@ def to_element(data_obj):
             continue
         if field_value == field.default:
             continue
-
-        attr_name = _FIELD_RENAMES.get(field.name, field.name)
-        el.attrib[attr_name] = str(field_value)
+        attrib_value = field_value
+        if isinstance(attrib_value, numbers.Number):
+            attrib_value = ntos(attrib_value)
+        el.attrib[_attr_name(field.name)] = attrib_value
     return el
+
+
+def _reset_attrs(data_obj, field_pred):
+    for field in dataclasses.fields(data_obj):
+        if field_pred(field):
+            setattr(data_obj, field.name, field.default)
 
 
 class SVG:
@@ -272,6 +274,7 @@ class SVG:
             if not self._xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
                 old_clip_path.getparent().remove(old_clip_path)
 
+
     def _compute_clip_path(self, el):
         """Resolve clip path for element, including inherited clipping.
 
@@ -288,6 +291,7 @@ class SVG:
 
         return self._combine_clip_paths(clip_paths)
 
+
     def ungroup(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -298,7 +302,44 @@ class SVG:
         self._ungroup(self.svg_root)
         return self
 
-    def apply_strokes(self, inplace=False):
+
+    def _stroke(self, shape):
+        """Convert stroke to path.
+
+        Returns sequence of shapes in draw order. That is, result[1] should be
+        drawn on top of result[0], etc."""
+
+        def stroke_pred(field):
+            return field.name.startswith('stroke')
+
+        # map old attrs to new dest
+        _stroke_attr = {
+            'stroke': 'fill',
+            'stroke-opacity': 'opacity',
+        }
+
+        if not shape.stroke:
+            return (shape,)
+
+        # snapshot the current path
+        shape = shape.as_path()
+        stroke = svg_pathops.stroke(shape)
+
+        # convert some stroke attrs (e.g. stroke => fill)
+        for field in dataclasses.fields(shape):
+            dest_field = _stroke_attr.get(field.name, None)
+            if not dest_field:
+                continue
+            setattr(stroke, dest_field, getattr(shape, field.name))
+
+        # remove all the stroke settings
+        _reset_attrs(shape, stroke_pred)
+
+        return (shape, stroke)
+
+
+    def strokes_to_paths(self, inplace=False):
+        """Convert stroked shapes to equivalent filled shape + path for stroke."""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
             svg.apply_strokes(inplace=True)
@@ -316,12 +357,13 @@ class SVG:
         # Stroke 'em
         for idx in stroked:
             el, (shape,) = self.elements[idx]
-            self.elements[idx] = (el, tuple(svg_pathops.stroke(shape)))
+            self.elements[idx] = (el, self._stroke(shape))
 
         # Update the etree
         self._update_etree()
 
         return self
+
 
     def apply_clip_paths(self, inplace=False):
         """Apply clipping to shapes and remove the clip paths."""
@@ -396,7 +438,7 @@ class SVG:
         for old_el, shapes in self.elements:
             swaps.append((old_el, [to_element(s) for s in shapes]))
         for old_el, new_els in swaps:
-            for new_el in new_els:
+            for new_el in reversed(new_els):
                 old_el.addnext(new_el)
             parent = old_el.getparent()
             if parent is None:
