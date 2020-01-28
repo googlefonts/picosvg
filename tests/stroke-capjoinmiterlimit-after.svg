@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512"
+     viewBox="0 0 15 15">
+    TODO what should after look like
+    <path fill="none" d="M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2"/>
+    <path d="M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2"
+        fill="black"/>
+    <path fill="none" d="m5,6 4,4 -4,4"/>
+    <path d="m5,6 4,4 -4,4"
+        fill="blue" />
+</svg>

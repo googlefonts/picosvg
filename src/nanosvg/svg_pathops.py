@@ -1,4 +1,5 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
+import functools
 import pathops
 from nanosvg.svg_types import SVGPath, SVGShape
 
@@ -13,13 +14,42 @@ _SVG_CMD_TO_SKIA_FN = {
     "C": pathops.Path.cubicTo,
 }
 
+_SVG_TO_SKIA_LINE_CAP = {
+    'butt': pathops.LineCap.BUTT_CAP,
+    'round': pathops.LineCap.ROUND_CAP,
+    'square': pathops.LineCap.SQUARE_CAP,
+}
+
+_SVG_TO_SKIA_LINE_JOIN = {
+    'miter': pathops.LineJoin.MITER_JOIN,
+    'round': pathops.LineJoin.ROUND_JOIN,
+    'bevel': pathops.LineJoin.BEVEL_JOIN,
+    # No arcs or miter-clip
+}
+
+
+def _simple_skia_to_svg(svg_cmd, svg_path, points):
+    # pathops.Path gives us sequences of points, flatten 'em
+    cmd_args = tuple(c for pt in points for c in pt)
+    svg_path._add_cmd(svg_cmd, *cmd_args)
+
+
+def _qcurveto_to_svg(svg_path, points):
+    for (control_pt, end_pt) in pathops.decompose_quadratic_segment(points):
+        svg_path._add_cmd('Q', *control_pt, *end_pt)
+
+
 _SKIA_CMD_TO_SVG_CMD = {
-    "moveTo": "M",
-    "lineTo": "L",
-    "quadTo": "Q",
-    "curveTo": "C",
-    "closePath": "Z",
-    "endPath": None,
+    # simple conversions
+    "moveTo": functools.partial(_simple_skia_to_svg, "M"),
+    "lineTo": functools.partial(_simple_skia_to_svg, "L"),
+    "quadTo": functools.partial(_simple_skia_to_svg, "Q"),
+    "curveTo": functools.partial(_simple_skia_to_svg, "C"),
+    "closePath": functools.partial(_simple_skia_to_svg, "Z"),
+    # more interesting conversions
+    "qCurveTo": _qcurveto_to_svg,
+    # nop
+    "endPath": lambda *_: None,
 }
 
 
@@ -35,24 +65,19 @@ def skia_path(shape: SVGShape):
     sk_path = pathops.Path()
     for cmd, args in path:
         if cmd not in _SVG_CMD_TO_SKIA_FN:
-            raise ValueError(f'No mapping to Skia for "{cmd}"')
+            raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
         _SVG_CMD_TO_SKIA_FN[cmd](sk_path, *args)
 
     return sk_path
 
 
 def svg_path(skia_path: pathops.Path):
-    path = SVGPath()
-    for cmd, arg_tuples in skia_path.segments:
+    svg_path = SVGPath()
+    for cmd, points in skia_path.segments:
         if cmd not in _SKIA_CMD_TO_SVG_CMD:
-            raise ValueError(f'No mapping to svg for "{cmd}"')
-        svg_cmd = _SKIA_CMD_TO_SVG_CMD[cmd]
-        if svg_cmd is None:
-            continue  # nop
-        # skia gives us sequences of points, svg likes it flat
-        svg_args = tuple(c for pt in arg_tuples for c in pt)
-        path._add_cmd(svg_cmd, *svg_args)
-    return path
+            raise ValueError(f'No mapping to svg for "{cmd} {points}"')
+        _SKIA_CMD_TO_SVG_CMD[cmd](svg_path, points)
+    return svg_path
 
 
 def _do_pathop(op, svg_shapes):
@@ -76,8 +101,17 @@ def intersection(*svg_shapes):
 
 def stroke(shape: SVGShape):
     """Create a path that is shape with it's stroke applied."""
+    cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
+    if cap is None:
+        raise ValueError(f'Unsupported cap {shape.stroke_linecap}')
+    join = _SVG_TO_SKIA_LINE_JOIN.get(shape.stroke_linejoin, None)
+    if join is None:
+        raise ValueError(f'Unsupported join {shape.stroke_linejoin}')
     sk_path = skia_path(shape)
-    sk_path.stroke(shape.stroke_width)
+    sk_path.stroke(shape.stroke_width,
+                   cap,
+                   join,
+                   shape.stroke_miterlimit)
     return svg_path(sk_path)
 
 

@@ -197,7 +197,11 @@ def test_ungroup(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("stroke-before.svg", "stroke-after.svg"),]
+    "actual, expected_result",
+    [
+        ("stroke-simplepath-before.svg", "stroke-simplepath-after.svg"),
+        ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
+    ]
 )
 def test_strokes_to_paths(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.strokes_to_paths(inplace=True))
