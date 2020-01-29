@@ -157,6 +157,13 @@ def test_shapes_to_paths(shape: str, expected_path: str):
             '<path d="m1,1 v2 h2z"/>',
             [("m", (1.0, 1.0)), ("v", (2.0,)), ("h", (2.0,)), ("z", ())],
         ),
+        # arc, negative offsets
+        (
+            '<path d="M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2"/>',
+            [('M', (7.0, 5.0)),
+             ('a', (3.0, 1.0, 0.0, 0.0, 0.0, 0.0, -3.0)),
+             ('a', (3.0, 3.0, 0.0, 0.0, 1.0, -4.0, 2.0))],
+        ),
     ],
 )
 def test_iter(shape, expected_cmds):

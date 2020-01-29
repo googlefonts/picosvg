@@ -227,8 +227,8 @@ class SVG:
     def _ungroup(self, scope_el):
         """Push inherited attributes from group down, then remove the group.
 
-    If result has multiple clip paths merge them.
-    """
+        If result has multiple clip paths merge them.
+        """
         groups = [e for e in self._xpath(f".//svg:g", scope_el)]
         multi_clips = []
         for group in groups:
@@ -321,8 +321,7 @@ class SVG:
         if not shape.stroke:
             return (shape,)
 
-        # snapshot the current path
-        shape = shape.as_path()
+        # make a new path that is the stroke
         stroke = svg_pathops.stroke(shape)
 
         # convert some stroke attrs (e.g. stroke => fill)
@@ -411,6 +410,7 @@ class SVG:
         self._update_etree()
 
         self.shapes_to_paths(inplace=True)
+        self.strokes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.ungroup(inplace=True)
