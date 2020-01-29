@@ -15,6 +15,8 @@ from nanosvg.svg_types import SVGPath
         ("m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4", "M2,2 A1 1 0 0 0 5,5 A2 2 1 1 1 4,4",),
         # Cubic bezier
         ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6",),
+        # Elliptic arc that goes haywire when stroked
+        ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4")
     ],
 )
 def test_path_absolute(path: str, expected_result: str):
