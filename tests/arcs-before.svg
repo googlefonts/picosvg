@@ -1,6 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="512" height="512"
-     viewBox="0 0 15 15">
-    <path d="M7,5 a3,1 0,0,0 0,-3 "
-        stroke="black" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"
+  viewBox="-100 -100 600 600">
+  <path d="M150,200 A150, 150 0 1 0 300,50"
+        fill="none" stroke="blue" />
+  <path d="M150,200 A150, 150 0 0 0 300,50"
+        fill="none" stroke="green" />
+  <path d="M150,200 A150, 150 0 1 1 300,50"
+        fill="none" stroke="orange" />
+  <path d="M150,200 A150, 150 0 0 1 300,50"
+        fill="none" stroke="red" />
 </svg>
