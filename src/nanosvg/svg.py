@@ -84,6 +84,18 @@ class SVG:
                      for (_, shapes) in self._elements()
                      for shape in shapes)
 
+    def absolute(self, inplace=False):
+        """Converts all basic shapes to their equivalent path."""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.absolute(inplace=True)
+            return svg
+
+        swaps = []
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            self.elements[idx] = (el, (shape.absolute(),))
+        return self
+
     def shapes_to_paths(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:
@@ -341,7 +353,7 @@ class SVG:
         """Convert stroked shapes to equivalent filled shape + path for stroke."""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.apply_strokes(inplace=True)
+            svg.strokes_to_paths(inplace=True)
             return svg
 
         self._update_etree()
