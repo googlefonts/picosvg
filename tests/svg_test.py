@@ -215,7 +215,11 @@ def test_strokes_to_paths(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("ungroup-before.svg", "ungroup-nano.svg"),]
+    "actual, expected_result",
+    [
+        ("ungroup-before.svg", "ungroup-nano.svg"),
+        ("arcs-before.svg", "arcs-nano.svg"),
+    ]
 )
 def test_tonanosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.tonanosvg())
