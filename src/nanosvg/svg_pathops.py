@@ -3,6 +3,14 @@ import functools
 import pathops
 from nanosvg.svg_types import SVGPath, SVGShape
 
+
+def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):
+    # SVG 'sweep-flag' value is opposite the integer value of SkPath.arcTo 'sweep'.
+    # SVG sweep-flag uses 1 for clockwise, while SkPathDirection::kCW cast to
+    # int is zero, thus we need to negate it.
+    self.arcTo(rx, ry, xAxisRotate, largeArc, not sweep, x, y)
+
+
 # Absolutes coords assumed
 # A should never occur because we convert arcs to cubics
 # S,T should never occur because we eliminate shorthand
@@ -12,6 +20,7 @@ _SVG_CMD_TO_SKIA_FN = {
     "Q": pathops.Path.quadTo,
     "Z": pathops.Path.close,
     "C": pathops.Path.cubicTo,
+    "A": _svg_arc_to_skia_arcTo,
 }
 
 _SVG_TO_SKIA_LINE_CAP = {
@@ -59,7 +68,6 @@ def skia_path(shape: SVGShape):
         .explicit_lines()  # hHvV => lL
         .expand_shorthand(inplace=True)
         .absolute(inplace=True)
-        .arcs_to_cubics(inplace=True)
     )
 
     sk_path = pathops.Path()
@@ -68,6 +76,7 @@ def skia_path(shape: SVGShape):
             raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
         _SVG_CMD_TO_SKIA_FN[cmd](sk_path, *args)
 
+    sk_path.convertConicsToQuads()
     return sk_path
 
 
