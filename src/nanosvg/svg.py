@@ -346,6 +346,9 @@ class SVG:
         # remove all the stroke settings
         _reset_attrs(shape, stroke_pred)
 
+        if shape.fill == 'none':
+            return (stroke,)
+
         return (shape, stroke)
 
 

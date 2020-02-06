@@ -1,6 +1,5 @@
 import copy
 import dataclasses
-from nanosvg.arc_to_cubic import arc_to_cubic
 from nanosvg import svg_meta
 from nanosvg.svg_path_iter import parse_svg_path
 
@@ -220,38 +219,6 @@ class SVGPath(SVGShape):
         if not inplace:
             target = copy.deepcopy(self)
         target.walk(explicit_line_callback)
-        return target
-
-    def arcs_to_cubics(self, inplace=False):
-        """Replace all arcs with similar cubics"""
-
-        def arc_to_cubic_callback(curr_pos, cmd, args, *_):
-            if cmd not in {"a", "A"}:
-                # no work to do
-                return ((cmd, args),)
-
-            (rx, ry, x_rotation, large, sweep, end_x, end_y) = args
-            start_pt = (curr_pos.x, curr_pos.y)
-
-            if cmd == "a":
-                end_x += curr_pos[0]
-                end_y += curr_pos[1]
-            end_pt = (end_x, end_y)
-
-            result = []
-            for p1, p2, target in arc_to_cubic(
-                start_pt, rx, ry, x_rotation, large, sweep, end_pt
-            ):
-                x1, y1 = p1.real, p1.imag
-                x2, y2 = p2.real, p2.imag
-                x, y = target.real, target.imag
-                result.append(("C", (x1, y1, x2, y2, x, y)))
-            return tuple(result)
-
-        target = self
-        if not inplace:
-            target = copy.deepcopy(self)
-        target.walk(arc_to_cubic_callback)
         return target
 
     def expand_shorthand(self, inplace=False):
