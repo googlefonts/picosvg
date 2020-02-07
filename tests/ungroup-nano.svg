@@ -1,4 +1,5 @@
-<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+<svg xmlns="http://www.w3.org/2000/svg"
+     id='svg'
      width="512" height="512"
      viewBox="0 0 24 24">
   <defs/>
@@ -7,5 +8,10 @@
         fill="#BBBBBB"
         opacity="0.25"
         />
+  <path id="r2"
+        d="M5,5 H15 V15 H5 V5 z"
+        stroke-linecap="round"
+        stroke-miterlimit="10"
+        stroke-width="0.9563"/>
 </svg>
 

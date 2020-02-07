@@ -20,4 +20,11 @@
       </g>
     </g>
   </g>
+  <g stroke-linecap="round">
+    <g stroke-miterlimit="10">
+      <g stroke-width="0.9563">
+        <use xlink:href="#r2" />
+      </g>
+    </g>
+  </g>
 </svg>

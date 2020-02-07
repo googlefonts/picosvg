@@ -2,7 +2,7 @@ import copy
 import dataclasses
 from lxml import etree
 import re
-from nanosvg.svg_meta import ntos, svgns
+from nanosvg.svg_meta import ntos, svgns, xlinkns
 from nanosvg import svg_pathops
 from nanosvg.svg_types import *
 import numbers
@@ -21,6 +21,49 @@ _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.ite
 
 _OMIT_FIELD_IF_BLANK = {f.name for f in dataclasses.fields(SVGShape)}
 
+_XLINK_TEMP = "xlink_"
+
+def _xlink_href_attr_name():
+    return f'{{{xlinkns()}}}href'
+
+
+def _copy_new_nsmap(tree, nsm):
+    new_tree = etree.Element(tree.tag, nsmap=nsm)
+    new_tree.attrib.update(tree.attrib)
+    new_tree[:] = tree[:]
+    return new_tree
+
+def _fix_xlink_ns(tree):
+    """Fix xlink namespace problems.
+
+    If there are xlink temps, add namespace and fix temps.
+    If we declare xlink but don't use it then remove it.
+    """
+    xlink_nsmap = {'xlink': xlinkns()}
+    if 'xlink' in tree.nsmap and not len(tree.xpath('//*[@xlink:href]',
+                                                    namespaces=xlink_nsmap)):
+        print('DROP XLINK')
+        # no reason to keep xlink
+        nsm = copy.copy(tree.nsmap)
+        del nsm['xlink']
+        tree = _copy_new_nsmap(tree, nsm)
+
+    elif 'xlink' not in tree.nsmap and len(tree.xpath(f'//*[@{_XLINK_TEMP}]')):
+        print('ADD XLINK')
+        # declare xlink and fix temps
+        nsm = copy.copy(tree.nsmap)
+        nsm['xlink'] = xlinkns()
+        tree = _copy_new_nsmap(tree, nsm)
+        for el in tree.xpath(f'//*[@{_XLINK_TEMP}]'):
+            # try to retain attrib order, unexpected when they shuffle
+            attrs = [(k, v) for k,v in el.attrib.items()]
+            el.attrib.clear()
+            for name, value in attrs:
+                if name == _XLINK_TEMP:
+                    name = _xlink_href_attr_name()
+                el.attrib[name] = value
+
+    return tree
 
 def _attr_name(field_name):
     return field_name.replace('_', '-')
@@ -126,12 +169,12 @@ class SVG:
         return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
 
     def _resolve_use(self, scope_el):
-        attrib_not_copied = {"x", "y", "width", "height", "xlink_href"}
+        attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
 
         swaps = []
 
         for use_el in self._xpath(".//svg:use", el=scope_el):
-            ref = use_el.attrib.get("xlink_href", "")
+            ref = use_el.attrib.get(_xlink_href_attr_name(), "")
             if not ref.startswith("#"):
                 raise ValueError("Only use #fragment supported")
             target = self._xpath_one(f'//svg:*[@id="{ref[1:]}"]')
@@ -218,8 +261,10 @@ class SVG:
         attrib_handlers = {
             'fill': _inherit_copy,
             'stroke': _inherit_copy,
-            'stroke-linecap:': _inherit_copy,
+            'stroke-width': _inherit_copy,
+            'stroke-linecap': _inherit_copy,
             'stroke-linejoin': _inherit_copy,
+            'stroke-miterlimit': _inherit_copy,
             'stroke-dasharray': _inherit_copy,
             'fill-opacity': _inherit_multiply,
             'opacity': _inherit_multiply,
@@ -463,22 +508,25 @@ class SVG:
 
     def toetree(self):
         self._update_etree()
+        self.svg_root = _fix_xlink_ns(self.svg_root)
         return copy.deepcopy(self.svg_root)
 
     def tostring(self):
-        self._update_etree()
-        return (
-            etree.tostring(self.svg_root)
-            .decode("utf-8")
-            .replace("xlink_href", "xlink:href")
-        )
+        return etree.tostring(self.toetree()).decode("utf-8")
 
     @classmethod
     def fromstring(_, string):
         if isinstance(string, bytes):
             string = string.decode("utf-8")
-        string = string.replace("xlink:href", "xlink_href")
-        return SVG(etree.fromstring(string))
+
+        # svgs are fond of not declaring xlink
+        # based on https://mailman-mail5.webfaction.com/pipermail/lxml/20100323/021184.html
+        if 'xlink' in string and 'xmlns:xlink' not in string:
+            string = string.replace("xlink:href", _XLINK_TEMP)
+
+        tree = etree.fromstring(string)
+        tree = _fix_xlink_ns(tree)
+        return SVG(tree)
 
     @classmethod
     def parse(_, file_or_path):

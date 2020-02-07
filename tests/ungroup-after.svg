@@ -1,4 +1,6 @@
-<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+<svg id='svg'
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
      width="512" height="512"
      viewBox="0 0 24 24">
   <defs>
@@ -7,8 +9,12 @@
   <defs>
     <rect id="r2" x="5" y="5" width="10" height="10"/>
   </defs>
-  <use xlink_href="#r2" clip-path="url(#merged-clip-0)"
+  <use xlink:href="#r2" clip-path="url(#merged-clip-0)"
        fill="#BBBBBB" opacity="0.25" />
+  <use xlink:href="#r2"
+       stroke-linecap="round"
+       stroke-miterlimit="10"
+       stroke-width="0.9563" />
   <clipPath id="merged-clip-0">
     <path d="M9,9 L11,9 L11,11 L9,11 Z"/>
   </clipPath>
