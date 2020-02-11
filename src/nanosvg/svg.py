@@ -461,6 +461,44 @@ class SVG:
 
         return self
 
+    def checknanosvg(self):
+        """Check for nano violations, return xpaths to bad elements.
+
+        If result sequence empty then this is a valid nanosvg.
+        """
+        def _strip_ns(tagname):
+            if '}' in tagname:
+                return tagname[tagname.index('}') + 1:]
+            return tagname
+
+        self._update_etree()
+
+        errors = []
+
+        path_whitelist = {
+            r'^/svg\[0\]$',
+            r'^/svg\[0\]/defs\[0\]$',
+            r'^/svg\[0\]/defs\[0\]/(linear|radial)Gradient\[\d+\](/stop\[\d+\])?$',
+            r'^/svg\[0\]/path\[(?!0\])\d+\]$',
+        }
+
+        # Make a list of xpaths with offsets (/svg/defs[0]/..., etc)
+        frontier = [(0, self.svg_root, '')]
+        while frontier:
+            el_idx, el, parent_path = frontier.pop(0)
+            el_tag = _strip_ns(el.tag)
+            el_path = f'{parent_path}/{el_tag}[{el_idx}]'
+
+            if not any((re.match(pat, el_path) for pat in path_whitelist)):
+                errors.append(f'BadElement: {el_path}')
+
+            for child_idx, child in enumerate(el):
+                frontier.append((child_idx, child, el_path))
+
+        # TODO paths & gradients should only have specific attributes
+
+        return tuple(errors)
+
     def tonanosvg(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -476,18 +514,19 @@ class SVG:
         self.ungroup(inplace=True)
 
         # Collect gradients; remove other defs
-        gradient_defs = etree.Element("defs")
+        defs = etree.Element(f'{{{svgns()}}}defs', nsmap=self.svg_root.nsmap)
         for gradient in self._xpath("//svg:linearGradient | //svg:radialGradient"):
             gradient.getparent().remove(gradient)
-            gradient_defs.append(gradient)
+            defs.append(gradient)
 
         for def_el in [e for e in self._xpath("//svg:defs")]:
             def_el.getparent().remove(def_el)
 
-        self.svg_root.insert(0, gradient_defs)
+        self.svg_root.insert(0, defs)
 
-        # TODO check if we're a legal nanosvg, bail if not
-        # TODO define what that means
+        nano_violations = self.checknanosvg()
+        if nano_violations:
+            raise ValueError('Unable to convert to nanosvg: ' + ','.join(nano_violations))
 
         return self
 

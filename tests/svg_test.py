@@ -223,3 +223,21 @@ def test_strokes_to_paths(actual, expected_result):
 )
 def test_tonanosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.tonanosvg())
+
+@pytest.mark.parametrize(
+    "svg_file, expected_violations",
+    [
+        ("good-defs-0.svg", ()),
+        ("bad-defs-0.svg", (
+            'BadElement: /svg[0]/defs[1]',
+            'BadElement: /svg[0]/donkey[2]',
+            'BadElement: /svg[0]/defs[1]/path[0]'
+        )),
+        ("bad-defs-1.svg", (
+            'BadElement: /svg[0]/path[0]',
+        )),
+    ]
+)
+def test_checknanosvg(svg_file, expected_violations):
+    nano_violations = SVG.parse(_test_file(svg_file)).checknanosvg()
+    assert expected_violations == nano_violations
