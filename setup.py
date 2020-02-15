@@ -13,7 +13,7 @@ setup(
         ],
     },
 
-    install_requires=["lxml>=4.0", "skia-pathops>=0.2",],
+    install_requires=["lxml>=4.0", "skia-pathops>=0.3",],
 
     # metadata to display on PyPI
     author="Rod S",
