@@ -108,11 +108,12 @@ class SVGPath(SVGShape):
     def walk(self, callback):
         """Walk path and call callback to build potentially new commands.
 
-    def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
-      prev_* None if there was no previous
-      returns sequence of (new_cmd, new_args) that replace cmd, args
-    """
-        # https://www.w3.org/TR/SVG11/paths.html
+        https://www.w3.org/TR/SVG11/paths.html
+
+        def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
+          prev_* None if there was no previous
+          returns sequence of (new_cmd, new_args) that replace cmd, args
+        """
         curr_pos = Point()
         new_cmds = []
 
@@ -125,8 +126,9 @@ class SVGPath(SVGShape):
             prev = (None, None, None)
             if new_cmds:
                 prev = new_cmds[-1]
-
             for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
+                prev_pos = copy.copy(curr_pos)
+
                 # update current position
                 x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
                 if new_cmd.isupper():
@@ -140,7 +142,7 @@ class SVGPath(SVGShape):
                 if y_coord_idxs:
                     curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
 
-                new_cmds.append((copy.copy(curr_pos), new_cmd, new_cmd_args))
+                new_cmds.append((prev_pos, new_cmd, new_cmd_args))
 
         self.d = ""
         for _, cmd, args in new_cmds:
@@ -224,10 +226,10 @@ class SVGPath(SVGShape):
     def expand_shorthand(self, inplace=False):
         """Rewrite commands that imply knowledge of prior commands arguments.
 
-    In particular, shorthand quadratic and bezier curves become explicit.
+        In particular, shorthand quadratic and bezier curves become explicit.
 
-    See https://www.w3.org/TR/SVG11/paths.html#PathDataCurveCommands.
-    """
+        See https://www.w3.org/TR/SVG11/paths.html#PathDataCurveCommands.
+        """
 
         def expand_shorthand_callback(
             curr_pos, cmd, args, prev_pos, prev_cmd, prev_args
@@ -235,16 +237,19 @@ class SVGPath(SVGShape):
             short_to_long = {"S": "C", "T": "Q"}
             if not cmd.upper() in short_to_long:
                 return ((cmd, args),)
+
             if cmd.islower():
                 cmd, args = SVGPath._relative_to_absolute(curr_pos, cmd, args)
 
-            # reflect 2nd-last x,y pair over curr_pos and make it our first arg
-            if prev_cmd and prev_cmd.upper() in short_to_long.values():
-                prev_cp = Point(prev_args[-4], prev_args[-3])
-                new_cp = (2 * curr_pos.x - prev_cp.x, 2 * curr_pos.y - prev_cp.y)
-            else:
-                # if there is no prev, or a bad prev, control point coincident current
-                new_cp = (curr_pos.x, curr_pos.y)
+            # if there is no prev, or a bad prev, control point coincident current
+            new_cp = (curr_pos.x, curr_pos.y)
+            if prev_cmd:
+                if prev_cmd.islower():
+                    prev_cmd, prev_args = SVGPath._relative_to_absolute(prev_pos, prev_cmd, prev_args)
+                if prev_cmd in short_to_long.values():
+                    # reflect 2nd-last x,y pair over curr_pos and make it our first arg
+                    prev_cp = Point(prev_args[-4], prev_args[-3])
+                    new_cp = (2 * curr_pos.x - prev_cp.x, 2 * curr_pos.y - prev_cp.y)
 
             return ((short_to_long[cmd], new_cp + args),)
 
