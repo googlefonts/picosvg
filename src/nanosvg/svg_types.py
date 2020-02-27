@@ -262,33 +262,34 @@ class SVGPath(SVGShape):
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
 @dataclasses.dataclass
-class SVGCircle:
-    r: float
+class SVGCircle(SVGShape):
+    r: float = 0
     cx: float = 0
     cy: float = 0
-    clip_path: str = ""
 
     def as_path(self) -> SVGPath:
-        return SVGEllipse(self.r, self.r, self.cx, self.cy, self.clip_path).as_path()
+        *shape_fields, r, cx, cy = dataclasses.astuple(self)
+        path = SVGEllipse(rx=r, ry=r, cx=cx, cy=cy).as_path()
+        path._copy_common_fields(*shape_fields)
+        return path
 
 
 # https://www.w3.org/TR/SVG11/shapes.html#EllipseElement
 @dataclasses.dataclass
-class SVGEllipse:
-    rx: float
-    ry: float
+class SVGEllipse(SVGShape):
+    rx: float = 0
+    ry: float = 0
     cx: float = 0
     cy: float = 0
-    clip_path: str = ""
 
     def as_path(self) -> SVGPath:
-        rx, ry, cx, cy, clip_path = dataclasses.astuple(self)
+        *shape_fields, rx, ry, cx, cy = dataclasses.astuple(self)
         path = SVGPath()
         # arc doesn't seem to like being a complete shape, draw two halves
         path.M(cx - rx, cy)
         path.A(rx, ry, cx + rx, cy, large_arc=1)
         path.A(rx, ry, cx - rx, cy, large_arc=1)
-        path.clip_path = clip_path
+        path._copy_common_fields(*shape_fields)
         return path
 
 

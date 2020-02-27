@@ -42,14 +42,12 @@ def _fix_xlink_ns(tree):
     xlink_nsmap = {'xlink': xlinkns()}
     if 'xlink' in tree.nsmap and not len(tree.xpath('//*[@xlink:href]',
                                                     namespaces=xlink_nsmap)):
-        print('DROP XLINK')
         # no reason to keep xlink
         nsm = copy.copy(tree.nsmap)
         del nsm['xlink']
         tree = _copy_new_nsmap(tree, nsm)
 
     elif 'xlink' not in tree.nsmap and len(tree.xpath(f'//*[@{_XLINK_TEMP}]')):
-        print('ADD XLINK')
         # declare xlink and fix temps
         nsm = copy.copy(tree.nsmap)
         nsm['xlink'] = xlinkns()
