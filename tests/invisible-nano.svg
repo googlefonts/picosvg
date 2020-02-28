@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"
+  viewBox="-100 -100 600 600">
+  <defs/>
+  <path d="M0,1 L200,200" />
+  <path fill="red"
+        d="M0.35,3.643 L200.35,199.643 L199.65,200.357 L-0.35,4.357 L0.35,3.643 Z" />
+</svg>

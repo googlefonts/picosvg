@@ -19,8 +19,6 @@ _ELEMENT_CLASSES = {
 _CLASS_ELEMENTS = {v: f"{{{svgns()}}}{k}" for k, v in _ELEMENT_CLASSES.items()}
 _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.items()})
 
-_OMIT_FIELD_IF_BLANK = {f.name for f in dataclasses.fields(SVGShape)}
-
 _XLINK_TEMP = "xlink_"
 
 def _xlink_href_attr_name():
@@ -85,8 +83,6 @@ def to_element(data_obj):
     data = dataclasses.asdict(data_obj)
     for field in dataclasses.fields(data_obj):
         field_value = data[field.name]
-        if field.name in _OMIT_FIELD_IF_BLANK and not field_value:
-            continue
         if field_value == field.default:
             continue
         attrib_value = field_value
@@ -374,13 +370,13 @@ class SVG:
         def stroke_pred(field):
             return field.name.startswith('stroke')
 
-        # map old attrs to new dest
-        _stroke_attr = {
+        # map old fields to new dest
+        _stroke_fields = {
             'stroke': 'fill',
-            'stroke-opacity': 'opacity',
+            'stroke_opacity': 'opacity',
         }
 
-        if not shape.stroke:
+        if shape.stroke == 'none':
             return (shape,)
 
         # make a new path that is the stroke
@@ -388,7 +384,7 @@ class SVG:
 
         # convert some stroke attrs (e.g. stroke => fill)
         for field in dataclasses.fields(shape):
-            dest_field = _stroke_attr.get(field.name, None)
+            dest_field = _stroke_fields.get(field.name, None)
             if not dest_field:
                 continue
             setattr(stroke, dest_field, getattr(shape, field.name))
@@ -414,7 +410,7 @@ class SVG:
         # Find stroked things
         stroked = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            if not shape.stroke:
+            if shape.stroke == 'none':
                 continue
             stroked.append(idx)
 
@@ -422,6 +418,7 @@ class SVG:
         for idx in stroked:
             el, (shape,) = self.elements[idx]
             self.elements[idx] = (el, self._stroke(shape))
+            for s in self.elements[idx][1]:
 
         # Update the etree
         self._update_etree()
@@ -463,6 +460,27 @@ class SVG:
         # destroy clip-path attributes
         for el in self._xpath("//svg:*[@clip-path]"):
             del el.attrib["clip-path"]
+
+        return self
+
+
+    def remove_unpainted_shapes(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_unpainted_shapes(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        remove = []
+        for (el, (shape,)) in self._elements():
+            if not shape.visible():
+                remove.append(el)
+
+        for el in remove:
+            el.getparent().remove(el)
+
+        self.elements = None
 
         return self
 
@@ -517,6 +535,7 @@ class SVG:
         self.resolve_use(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.ungroup(inplace=True)
+        self.remove_unpainted_shapes(inplace=True)
 
         # Collect gradients; remove other defs
         defs = etree.Element(f'{{{svgns()}}}defs', nsmap=self.svg_root.nsmap)

@@ -219,10 +219,22 @@ def test_strokes_to_paths(actual, expected_result):
     [
         ("ungroup-before.svg", "ungroup-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
+        ("invisible-before.svg", "invisible-nano.svg"),
     ]
 )
 def test_tonanosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.tonanosvg())
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        ("invisible-before.svg", "invisible-after.svg"),
+    ]
+)
+def test_remove_unpainted_shapes(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.remove_unpainted_shapes())
+
 
 @pytest.mark.parametrize(
     "svg_file, expected_violations",
@@ -241,6 +253,7 @@ def test_tonanosvg(actual, expected_result):
 def test_checknanosvg(svg_file, expected_violations):
     nano_violations = SVG.parse(_test_file(svg_file)).checknanosvg()
     assert expected_violations == nano_violations
+
 
 @pytest.mark.parametrize(
     "svg_string, expected_result",
