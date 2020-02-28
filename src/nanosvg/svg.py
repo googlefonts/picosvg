@@ -418,7 +418,6 @@ class SVG:
         for idx in stroked:
             el, (shape,) = self.elements[idx]
             self.elements[idx] = (el, self._stroke(shape))
-            for s in self.elements[idx][1]:
 
         # Update the etree
         self._update_etree()
