@@ -15,16 +15,16 @@ class Point:
 class SVGShape:
     id: str = ""
     clip_path: str = ""
-    fill: str = ""
-    stroke: str = ""
+    fill: str = "black"
+    stroke: str = "none"
     stroke_width: float = 1.
     stroke_linecap: str = "butt"
     stroke_linejoin: str = "miter"
     stroke_miterlimit: float = 4
     stroke_dasharray: str = ""
     stroke_dashoffset: float = 1.0
-    stroke_opacity: str = ""
-    opacity: float = ""
+    stroke_opacity: float = 1.0
+    opacity: float = 1.0
 
     def _copy_common_fields(self, id, clip_path, fill,
                             stroke, stroke_width, stroke_linecap,
@@ -43,6 +43,13 @@ class SVGShape:
         self.stroke_dashoffset = stroke_dashoffset
         self.stroke_opacity = stroke_opacity
         self.opacity = opacity
+
+    def visible(self):
+        def _visible(fill, opacity):
+            return fill != 'none' and opacity != 0
+            # we're ignoring fill-opacity
+        return (_visible(self.fill, self.opacity)
+                or _visible(self.stroke, self.stroke_opacity))
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
