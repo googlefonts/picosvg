@@ -241,3 +241,13 @@ def test_tonanosvg(actual, expected_result):
 def test_checknanosvg(svg_file, expected_violations):
     nano_violations = SVG.parse(_test_file(svg_file)).checknanosvg()
     assert expected_violations == nano_violations
+
+@pytest.mark.parametrize(
+    "svg_string, expected_result",
+    [
+        ('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>', None),
+        ('<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12"/>', (7, 7, 12, 12)),
+    ]
+)
+def test_viewbox(svg_string, expected_result):
+    assert SVG.fromstring(svg_string).view_box() == expected_result

@@ -80,7 +80,6 @@ def from_element(el):
     }
     return data_type(**args)
 
-
 def to_element(data_obj):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
     data = dataclasses.asdict(data_obj)
@@ -119,8 +118,16 @@ class SVG:
         self.elements = elements
         return self.elements
 
-    def shapes(self):
+    def view_box(self):
+        raw_box = self.svg_root.attrib.get('viewBox', None)
+        if not raw_box:
+            return None
+        box = tuple(int(v) for v in re.split(r',|\s+', raw_box))
+        if len(box) != 4:
+            raise ValueError('Unable to parse viewBox')
+        return box
 
+    def shapes(self):
         return tuple(shape
                      for (_, shapes) in self._elements()
                      for shape in shapes)
