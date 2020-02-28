@@ -218,6 +218,7 @@ def test_strokes_to_paths(actual, expected_result):
     "actual, expected_result",
     [
         ("ungroup-before.svg", "ungroup-nano.svg"),
+        ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
         ("invisible-before.svg", "invisible-nano.svg"),
     ]

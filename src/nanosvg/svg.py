@@ -530,10 +530,11 @@ class SVG:
         self._update_etree()
 
         self.shapes_to_paths(inplace=True)
-        self.strokes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.ungroup(inplace=True)
+        # stroke after ungroup to apply group strokes properly
+        self.strokes_to_paths(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
 
         # Collect gradients; remove other defs
