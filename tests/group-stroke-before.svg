@@ -1,0 +1,7 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <g stroke="#BBB" stroke-width="2" fill="none">
+    <path d="M5,5 L10,5" />
+  </g>
+</svg>
