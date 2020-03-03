@@ -265,3 +265,23 @@ def test_checknanosvg(svg_file, expected_violations):
 )
 def test_viewbox(svg_string, expected_result):
     assert SVG.fromstring(svg_string).view_box() == expected_result
+
+@pytest.mark.parametrize(
+    "svg_string, expected_result",
+    [
+        # No change
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>', 
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>'
+        ),
+        # Drop viewBox, width, height
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12" height="7" width="11"/>',
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
+        ),
+    ]
+)
+def test_remove_sizing(svg_string, expected_result):
+    assert (SVG.fromstring(svg_string)
+            .remove_sizing()
+            .tostring()) == expected_result

@@ -61,6 +61,11 @@ def _fix_xlink_ns(tree):
 
     return tree
 
+def _del_attrs(el, *attr_names):
+    for name in attr_names:
+        if name in el.attrib:
+            del el.attrib[name]
+
 def _attr_name(field_name):
     return field_name.replace('_', '-')
 
@@ -480,6 +485,20 @@ class SVG:
             el.getparent().remove(el)
 
         self.elements = None
+
+        return self
+
+
+    def remove_sizing(self, inplace=False):
+        """Drop things like viewBox, width, height that set size of overall svg"""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_sizing(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        _del_attrs(self.svg_root, 'viewBox', 'width', 'height')
 
         return self
 
