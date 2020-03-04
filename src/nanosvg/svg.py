@@ -489,18 +489,17 @@ class SVG:
         return self
 
 
-    def remove_sizing(self, inplace=False):
+    def remove_attributes(self, names, inplace=False):
         """Drop things like viewBox, width, height that set size of overall svg"""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.remove_sizing(inplace=True)
+            svg.remove_attributes(names, inplace=True)
             return svg
 
         self._update_etree()
-
-        _del_attrs(self.svg_root, 'viewBox', 'width', 'height')
-
+        _del_attrs(self.svg_root, *names)
         return self
+
 
     def checknanosvg(self):
         """Check for nano violations, return xpaths to bad elements.

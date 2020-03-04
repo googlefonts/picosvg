@@ -267,21 +267,29 @@ def test_viewbox(svg_string, expected_result):
     assert SVG.fromstring(svg_string).view_box() == expected_result
 
 @pytest.mark.parametrize(
-    "svg_string, expected_result",
+    "svg_string, names, expected_result",
     [
         # No change
         (
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>', 
+            ('viewBox', 'width', 'height'),
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>'
         ),
         # Drop viewBox, width, height
         (
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12" height="7" width="11"/>',
+            ('viewBox', 'width', 'height'),
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
+        ),
+        # Drop width, height
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12" height="7" width="11"/>',
+            ('width', 'height'),
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12"/>',
         ),
     ]
 )
-def test_remove_sizing(svg_string, expected_result):
+def test_remove_attributes(svg_string, names, expected_result):
     assert (SVG.fromstring(svg_string)
-            .remove_sizing()
+            .remove_attributes(names)
             .tostring()) == expected_result
