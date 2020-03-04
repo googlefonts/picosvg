@@ -489,6 +489,20 @@ class SVG:
         return self
 
 
+    def set_attributes(self, name_values, inplace=False):
+        """Set root attributes"""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.set_attributes(name_values, inplace=True)
+            return svg
+
+        self._update_etree()
+        for name, value in name_values:
+            self.svg_root.attrib[name] = value
+
+        return self
+
+
     def remove_attributes(self, names, inplace=False):
         """Drop things like viewBox, width, height that set size of overall svg"""
         if not inplace:
