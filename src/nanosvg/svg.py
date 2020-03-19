@@ -168,7 +168,7 @@ class SVG:
             raise ValueError(f"Need exactly 1 match for {xpath}, got {len(els)}")
         return els[0]
 
-    def _resolve_url(self, url, el_tag):
+    def resolve_url(self, url, el_tag):
         match = re.match(r"^url[(]#([\w-]+)[)]$", url)
         if not match:
             raise ValueError(f'Unrecognized url "{url}"')
@@ -223,7 +223,7 @@ class SVG:
         return self
 
     def _resolve_clip_path(self, clip_path_url):
-        clip_path_el = self._resolve_url(clip_path_url, "clipPath")
+        clip_path_el = self.resolve_url(clip_path_url, "clipPath")
         self._resolve_use(clip_path_el)
         self._ungroup(clip_path_el)
 
@@ -317,7 +317,7 @@ class SVG:
             if clip_refs not in new_clip_paths:
                 clip_ref_urls = clip_refs.split(",")
                 old_clip_paths.extend(
-                    [self._resolve_url(ref, "clipPath") for ref in clip_ref_urls]
+                    [self.resolve_url(ref, "clipPath") for ref in clip_ref_urls]
                 )
                 clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
                 clip_path = self._combine_clip_paths(clip_paths)
