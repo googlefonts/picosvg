@@ -610,7 +610,7 @@ class SVG:
         return etree.tostring(self.toetree()).decode("utf-8")
 
     @classmethod
-    def fromstring(_, string):
+    def fromstring(cls, string):
         if isinstance(string, bytes):
             string = string.decode("utf-8")
 
@@ -621,13 +621,13 @@ class SVG:
 
         tree = etree.fromstring(string)
         tree = _fix_xlink_ns(tree)
-        return SVG(tree)
+        return cls(tree)
 
     @classmethod
-    def parse(_, file_or_path):
+    def parse(cls, file_or_path):
         if hasattr(file_or_path, "read"):
             raw_svg = file_or_path.read()
         else:
             with open(file_or_path) as f:
                 raw_svg = f.read()
-        return SVG.fromstring(raw_svg)
+        return cls.fromstring(raw_svg)

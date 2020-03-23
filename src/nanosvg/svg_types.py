@@ -178,8 +178,8 @@ class SVGPath(SVGShape):
         target.walk(move_callback)
         return target
 
-    @classmethod
-    def _relative_to_absolute(_, curr_pos, cmd, args):
+    @staticmethod
+    def _relative_to_absolute(curr_pos, cmd, args):
         x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
         if cmd.islower():
             cmd = cmd.upper()
