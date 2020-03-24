@@ -51,6 +51,9 @@ class SVGShape:
         return (_visible(self.fill, self.opacity)
                 or _visible(self.stroke, self.stroke_opacity))
 
+    def bounding_box(self):
+        pass
+
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.

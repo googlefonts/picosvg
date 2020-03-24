@@ -3,46 +3,16 @@ from lxml import etree
 import os
 import pytest
 from nanosvg.svg import SVG
-
-def _test_file(filename):
-    return os.path.join(os.path.dirname(__file__), filename)
-
-def svg_string(*els):
-    root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
-    for el in els:
-        root.append(etree.fromstring(el))
-    return etree.tostring(root)
-
-
-def _pretty_print(svg_tree):
-    def _reduce_text(text):
-        text = text.strip() if text else None
-        return text if text else None
-
-    # lxml really likes to retain whitespace
-    for e in svg_tree.iter("*"):
-        e.text = _reduce_text(e.text)
-        e.tail = _reduce_text(e.tail)
-
-    return etree.tostring(svg_tree, pretty_print=True).decode("utf-8")
-
-
-def drop_whitespace(svg):
-    svg._update_etree()
-    for el in svg.svg_root.iter("*"):
-        if el.text is not None:
-            el.text = el.text.strip()
-        if el.tail is not None:
-            el.tail = el.tail.strip()
+from svg_test_helpers import *
 
 
 def _test(actual, expected_result, op):
-    actual = op(SVG.parse(_test_file(actual)))
-    expected_result = SVG.parse(_test_file(expected_result))
+    actual = op(load_test_svg(actual))
+    expected_result = load_test_svg(expected_result)
     drop_whitespace(actual)
     drop_whitespace(expected_result)
-    print(f"A: {_pretty_print(actual.toetree())}")
-    print(f"E: {_pretty_print(expected_result.toetree())}")
+    print(f"A: {pretty_print(actual.toetree())}")
+    print(f"E: {pretty_print(expected_result.toetree())}")
     assert actual.tostring() == expected_result.tostring()
 
 
@@ -134,8 +104,8 @@ def test_shapes_to_paths(shape: str, expected_path: str):
     expected_result = SVG.fromstring(
         svg_string(f'<path {expected_path}/>')
     ).toetree()
-    print(f"A: {_pretty_print(actual)}")
-    print(f"E: {_pretty_print(expected_result)}")
+    print(f"A: {pretty_print(actual)}")
+    print(f"E: {pretty_print(expected_result)}")
     assert etree.tostring(actual) == etree.tostring(expected_result)
 
 
@@ -252,7 +222,7 @@ def test_remove_unpainted_shapes(actual, expected_result):
     ]
 )
 def test_checknanosvg(svg_file, expected_violations):
-    nano_violations = SVG.parse(_test_file(svg_file)).checknanosvg()
+    nano_violations = load_test_svg(svg_file).checknanosvg()
     assert expected_violations == nano_violations
 
 

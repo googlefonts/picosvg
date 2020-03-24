@@ -92,3 +92,13 @@ def test_expand_shorthand(path, expected_result):
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
+
+
+@pytest.mark.parametrize(
+    "shape, expected_bbox",
+    [
+        ('a', 'b')
+    ],
+)
+def test_bounding_box(shape, expected_bbox):
+    pass
