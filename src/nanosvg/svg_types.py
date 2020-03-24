@@ -1,13 +1,22 @@
 import copy
 import dataclasses
 from nanosvg import svg_meta
+from nanosvg import svg_pathops
 from nanosvg.svg_path_iter import parse_svg_path
 
 
 @dataclasses.dataclass
 class Point:
-    x: int = 0
-    y: int = 0
+    x: float = 0
+    y: float = 0
+
+
+@dataclasses.dataclass
+class Rect:
+    x: float = 0
+    y: float = 0
+    w: float = 0
+    h: float = 0
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -52,7 +61,8 @@ class SVGShape:
                 or _visible(self.stroke, self.stroke_opacity))
 
     def bounding_box(self):
-        pass
+        x1, y1, x2, y2 = svg_pathops.bounding_box(self)
+        return Rect(x1, y1, x2 - x1, y2 - y1)
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement

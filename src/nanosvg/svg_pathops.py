@@ -124,3 +124,7 @@ def stroke(shape: SVGShape):
     return svg_path(sk_path)
 
 
+def bounding_box(shape: SVGShape):
+    return skia_path(shape).bounds
+
+

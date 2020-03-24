@@ -18,6 +18,10 @@ def svg_string(*els):
     return etree.tostring(root)
 
 
+def svg(*els):
+    return SVG.fromstring(svg_string(*els))
+
+
 def pretty_print(svg_tree):
     def _reduce_text(text):
         text = text.strip() if text else None

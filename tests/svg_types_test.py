@@ -1,5 +1,6 @@
 import pytest
-from nanosvg.svg_types import SVGPath
+from nanosvg.svg_types import SVGPath, Rect
+from svg_test_helpers import *
 
 
 @pytest.mark.parametrize(
@@ -97,8 +98,20 @@ def test_expand_shorthand(path, expected_result):
 @pytest.mark.parametrize(
     "shape, expected_bbox",
     [
-        ('a', 'b')
+        # plain rect
+        (
+            '<rect x="2" y="2" width="6" height="2" />',
+            Rect(2, 2, 6, 2),
+        ),
+        # triangle
+        (
+            '<path d="m5,2 2.5,5 -5,0 z" />',
+            Rect(2.5, 2, 5, 5),
+        )
     ],
 )
 def test_bounding_box(shape, expected_bbox):
-    pass
+    actual_bbox = svg(shape).shapes()[0].bounding_box()
+    print(f"A: {actual_bbox}")
+    print(f"E: {expected_bbox}")
+    assert actual_bbox == expected_bbox
