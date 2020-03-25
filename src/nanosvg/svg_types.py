@@ -1,22 +1,9 @@
 import copy
 import dataclasses
+from nanosvg.geometric_types import Point, Rect
 from nanosvg import svg_meta
 from nanosvg import svg_pathops
 from nanosvg.svg_path_iter import parse_svg_path
-
-
-@dataclasses.dataclass
-class Point:
-    x: float = 0
-    y: float = 0
-
-
-@dataclasses.dataclass
-class Rect:
-    x: float = 0
-    y: float = 0
-    w: float = 0
-    h: float = 0
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -147,21 +134,23 @@ class SVGPath(SVGShape):
             if new_cmds:
                 prev = new_cmds[-1]
             for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
-                prev_pos = copy.copy(curr_pos)
-
                 # update current position
                 x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
+                new_x = curr_pos.x
+                new_y = curr_pos.y
                 if new_cmd.isupper():
                     if x_coord_idxs:
-                        curr_pos.x = 0
+                        new_x = 0
                     if y_coord_idxs:
-                        curr_pos.y = 0
+                        new_y = 0
 
                 if x_coord_idxs:
-                    curr_pos.x += new_cmd_args[x_coord_idxs[-1]]
+                    new_x += new_cmd_args[x_coord_idxs[-1]]
                 if y_coord_idxs:
-                    curr_pos.y += new_cmd_args[y_coord_idxs[-1]]
+                    new_y += new_cmd_args[y_coord_idxs[-1]]
 
+                prev_pos = copy.copy(curr_pos)
+                curr_pos = Point(new_x, new_y)
                 new_cmds.append((prev_pos, new_cmd, new_cmd_args))
 
         self.d = ""
