@@ -187,6 +187,16 @@ def test_strokes_to_paths(actual, expected_result):
 @pytest.mark.parametrize(
     "actual, expected_result",
     [
+        ("rotated-rect.svg", "rotated-rect-after.svg"),
+    ]
+)
+def test_transform(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.apply_transforms(inplace=True))
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
         ("ungroup-before.svg", "ungroup-nano.svg"),
         ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
@@ -235,6 +245,7 @@ def test_checknanosvg(svg_file, expected_violations):
 )
 def test_viewbox(svg_string, expected_result):
     assert SVG.fromstring(svg_string).view_box() == expected_result
+
 
 @pytest.mark.parametrize(
     "svg_string, names, expected_result",

@@ -31,6 +31,15 @@ class Transform:
       return Transform(1, 0, 0, 1, 0, 0)
 
 
+    @staticmethod
+    def fromstring(raw_transform):
+      return parse_svg_transform(raw_transform)
+
+
+    def transform(self, transform):
+      return self.matrix(*transform.tuple())
+
+
     def matrix(self, a, b, c, d, e, f):
         return Transform(
             a * self.a + b * self.c,

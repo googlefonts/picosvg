@@ -1,8 +1,8 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import functools
 import pathops
+from nanosvg.svg_transform import Transform
 from nanosvg.svg_types import SVGPath, SVGShape
-
 
 def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):
     # SVG 'sweep-flag' value is opposite the integer value of SkPath.arcTo 'sweep'.
@@ -80,7 +80,7 @@ def skia_path(shape: SVGShape):
     return sk_path
 
 
-def svg_path(skia_path: pathops.Path):
+def svg_path(skia_path: pathops.Path) -> SVGPath:
     svg_path = SVGPath()
     for cmd, points in skia_path.segments:
         if cmd not in _SKIA_CMD_TO_SVG_CMD:
@@ -89,7 +89,7 @@ def svg_path(skia_path: pathops.Path):
     return svg_path
 
 
-def _do_pathop(op, svg_shapes):
+def _do_pathop(op, svg_shapes) -> SVGShape:
     if not svg_shapes:
         return SVGPath()
 
@@ -100,15 +100,20 @@ def _do_pathop(op, svg_shapes):
     return svg_path(sk_path)
 
 
-def union(*svg_shapes):
+def union(*svg_shapes) -> SVGShape:
     return _do_pathop(pathops.PathOp.UNION, svg_shapes)
 
 
-def intersection(*svg_shapes):
+def intersection(*svg_shapes) -> SVGShape:
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
 
 
-def stroke(shape: SVGShape):
+def transform(svg_shape: SVGShape, transform: Transform) -> SVGShape:
+    path = skia_path(svg_shape)
+    raise ValueError('pathops does not expose transform yet')
+
+
+def stroke(shape: SVGShape) -> SVGShape:
     """Create a path that is shape with it's stroke applied."""
     cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
     if cap is None:

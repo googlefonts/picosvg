@@ -108,6 +108,7 @@ class SVG:
         self.svg_root = svg_root
         self.elements = None
 
+
     def _elements(self):
         if self.elements:
             return self.elements
@@ -119,6 +120,7 @@ class SVG:
         self.elements = elements
         return self.elements
 
+
     def view_box(self):
         raw_box = self.svg_root.attrib.get('viewBox', None)
         if not raw_box:
@@ -128,10 +130,12 @@ class SVG:
             raise ValueError('Unable to parse viewBox')
         return box
 
+
     def shapes(self):
         return tuple(shape
                      for (_, shapes) in self._elements()
                      for shape in shapes)
+
 
     def absolute(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
@@ -145,6 +149,7 @@ class SVG:
             self.elements[idx] = (el, (shape.absolute(),))
         return self
 
+
     def shapes_to_paths(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:
@@ -157,10 +162,12 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
+
     def _xpath(self, xpath, el=None):
         if el is None:
             el = self.svg_root
         return el.xpath(xpath, namespaces={"svg": svgns()})
+
 
     def _xpath_one(self, xpath):
         els = self._xpath(xpath)
@@ -168,11 +175,13 @@ class SVG:
             raise ValueError(f"Need exactly 1 match for {xpath}, got {len(els)}")
         return els[0]
 
+
     def resolve_url(self, url, el_tag):
         match = re.match(r"^url[(]#([\w-]+)[)]$", url)
         if not match:
             raise ValueError(f'Unrecognized url "{url}"')
         return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
+
 
     def _resolve_use(self, scope_el):
         attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
@@ -209,10 +218,11 @@ class SVG:
         for old_el, new_el in swaps:
             old_el.getparent().replace(old_el, new_el)
 
+
     def resolve_use(self, inplace=False):
         """Instantiate reused elements.
 
-    https://www.w3.org/TR/SVG11/struct.html#UseElement"""
+        https://www.w3.org/TR/SVG11/struct.html#UseElement"""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
             svg.resolve_use(inplace=True)
@@ -221,6 +231,7 @@ class SVG:
         self._update_etree()
         self._resolve_use(self.svg_root)
         return self
+
 
     def _resolve_clip_path(self, clip_path_url):
         clip_path_el = self.resolve_url(clip_path_url, "clipPath")
@@ -232,6 +243,7 @@ class SVG:
         clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
         return clip_path
 
+
     def _combine_clip_paths(self, clip_paths):
         # multiple clip paths leave behind their intersection
         if len(clip_paths) > 1:
@@ -240,6 +252,7 @@ class SVG:
             return clip_paths[0]
         return None
 
+
     def _new_id(self, tag, template):
         for i in range(100):
             potential_id = template % i
@@ -247,6 +260,7 @@ class SVG:
             if not existing:
                 return potential_id
         raise ValueError(f"No free id for {template}")
+
 
     def _inherit_group_attrib(self, group, child):
         def _inherit_copy(attrib, child, attr_name):
@@ -341,10 +355,10 @@ class SVG:
     def _compute_clip_path(self, el):
         """Resolve clip path for element, including inherited clipping.
 
-    None if there is no clipping.
+        None if there is no clipping.
 
-    https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
-    """
+        https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
+        """
         clip_paths = []
         while el is not None:
             clip_url = el.attrib.get("clip-path", None)
@@ -462,8 +476,40 @@ class SVG:
             clip_path_el.getparent().remove(clip_path_el)
 
         # destroy clip-path attributes
-        for el in self._xpath("//svg:*[@clip-path]"):
-            del el.attrib["clip-path"]
+        self.remove_attributes(['clip-path'], xpath='//svg:*[@clip-path]', inplace=True)
+
+        return self
+
+
+    def apply_transforms(self, inplace=False):
+        """Naively transforms to shapes and removes the transform attribute.
+
+        Naive: just applies any transform on a parent element.
+        """
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.apply_transforms(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        # figure out the sequence of transforms, if any, for each shape
+        new_shapes = []
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            transform = Transform.identity()
+            while el is not None:
+                if 'transform' in el.attrib:
+                    transform = transform.transform(Transform.fromstring(el.attrib['transform']))
+                el = el.getparent()
+            if transform != Transform.identity():
+                new_shapes.append((idx, shape.transform(transform)))
+
+        for idx, new_shape in new_shapes:
+            el, _ = self.elements[el_idx]
+            self.elements[el_idx] = (el, (new_shape,))
+
+        # destroy all transform attributes
+        self.remove_attributes(['transform'], xpath='//svg:*[@transform]', inplace=True)
 
         return self
 
@@ -489,29 +535,33 @@ class SVG:
         return self
 
 
-    def set_attributes(self, name_values, inplace=False):
-        """Set root attributes"""
+    def set_attributes(self, name_values, xpath='/svg:svg', inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.set_attributes(name_values, inplace=True)
+            svg.set_attributes(name_values, xpath=xpath, inplace=True)
             return svg
 
         self._update_etree()
-        for name, value in name_values:
-            self.svg_root.attrib[name] = value
+
+        for el in self._xpath(xpath):
+            for name, value in name_values:
+                el.attrib[name] = value
 
         return self
 
 
-    def remove_attributes(self, names, inplace=False):
+    def remove_attributes(self, names, xpath='/svg:svg', inplace=False):
         """Drop things like viewBox, width, height that set size of overall svg"""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.remove_attributes(names, inplace=True)
+            svg.remove_attributes(names, xpath=xpath, inplace=True)
             return svg
 
         self._update_etree()
-        _del_attrs(self.svg_root, *names)
+
+        for el in self._xpath(xpath):
+            _del_attrs(el, *names)
+
         return self
 
 
