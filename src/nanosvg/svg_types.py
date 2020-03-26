@@ -57,6 +57,10 @@ class SVGShape:
         return svg_pathops.transform(self, transform)
 
 
+    def as_path(self) -> 'SVGPath':
+        raise NotImplementedError('You should implement as_path')
+
+
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
 @dataclasses.dataclass
