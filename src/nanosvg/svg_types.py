@@ -4,7 +4,7 @@ from nanosvg.geometric_types import Point, Rect
 from nanosvg import svg_meta
 from nanosvg import svg_pathops
 from nanosvg.svg_path_iter import parse_svg_path
-from nanosvg.svg_transform import Transform
+from nanosvg.svg_transform import Affine2D
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -53,7 +53,7 @@ class SVGShape:
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
 
-    def transform(self, transform: Transform):
+    def transform(self, transform: Affine2D):
         return svg_pathops.transform(self, transform)
 
 

@@ -18,16 +18,13 @@ _SVG_ARG_FIXUPS = collections.defaultdict(
 )
 
 
-# attributes declared in order to make vector [a b c d e f]
-# when dumped as a tuple:
+# 2D affine transform.
+#
+# View as vector of 6 values or matrix:
 #
 # a   c   e
 # b   d   f
-#
-# meaning:
-#
-# 
-class Transform(NamedTuple):
+class Affine2D(NamedTuple):
     a: float
     b: float
     c: float
@@ -38,7 +35,7 @@ class Transform(NamedTuple):
 
     @staticmethod
     def identity():
-      return Transform(1, 0, 0, 1, 0, 0)
+      return Affine2D._identity
 
 
     @staticmethod
@@ -46,12 +43,12 @@ class Transform(NamedTuple):
       return parse_svg_transform(raw_transform)
 
 
-    def transform(self, transform):
-      return self.matrix(*transform)
+    def concat(self, other: 'Affine2D') -> 'Affine2D':
+      return self.matrix(*other)
 
 
     def matrix(self, a, b, c, d, e, f):
-        return Transform(
+        return Affine2D(
             a * self.a + b * self.c,
             a * self.b + b * self.d,
             c * self.a + d * self.c,
@@ -93,6 +90,9 @@ class Transform(NamedTuple):
         return self.matrix(1, tan(a), 0, 1, 0, 0)
 
 
+Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)
+
+
 def _fix_rotate(args):
     args[0] = radians(args[0])
     print('_fix_rotate')
@@ -100,7 +100,7 @@ def _fix_rotate(args):
 
 def parse_svg_transform(raw_transform: str):
     # much simpler to read if we do stages rather than a single regex
-    transform = Transform.identity()
+    transform = Affine2D.identity()
 
     svg_transforms = re.split(r'(?<=[)])\s*[,\s]\s*(?=\w)', raw_transform)
     for svg_transform in svg_transforms:

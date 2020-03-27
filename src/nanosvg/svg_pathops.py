@@ -1,7 +1,7 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import functools
 import pathops
-from nanosvg.svg_transform import Transform
+from nanosvg.svg_transform import Affine2D
 from nanosvg.svg_types import SVGPath, SVGShape
 
 def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):
@@ -108,7 +108,7 @@ def intersection(*svg_shapes) -> SVGShape:
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
 
 
-def transform(svg_shape: SVGShape, transform: Transform) -> SVGShape:
+def transform(svg_shape: SVGShape, transform: Affine2D) -> SVGShape:
     path = skia_path(svg_shape)
     raise ValueError('pathops does not expose transform yet')
 

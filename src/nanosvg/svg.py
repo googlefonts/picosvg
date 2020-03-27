@@ -496,15 +496,15 @@ class SVG:
         # figure out the sequence of transforms, if any, for each shape
         new_shapes = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            transform = Transform.identity()
+            transform = Affine2D.identity()
             while el is not None:
                 if 'transform' in el.attrib:
-                    transform = transform.transform(Transform.fromstring(el.attrib['transform']))
+                    transform = transform.concat(Affine2D.fromstring(el.attrib['transform']))
                 el = el.getparent()
-            if transform != Transform.identity():
+            if transform != Affine2D.identity():
                 new_shapes.append((idx, shape.transform(transform)))
 
-        for idx, new_shape in new_shapes:
+        for idx, new_shape in transformed_shapes:
             el, _ = self.elements[el_idx]
             self.elements[el_idx] = (el, (new_shape,))
 
