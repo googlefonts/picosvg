@@ -4,6 +4,7 @@ import re
 def svgns():
     return "http://www.w3.org/2000/svg"
 
+
 def xlinkns():
     return "http://www.w3.org/1999/xlink"
 

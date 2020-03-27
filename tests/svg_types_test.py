@@ -17,7 +17,7 @@ from svg_test_helpers import *
         # Cubic bezier
         ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6",),
         # Elliptic arc that goes haywire when stroked
-        ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4")
+        ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4"),
     ],
 )
 def test_path_absolute(path: str, expected_result: str):
@@ -99,15 +99,9 @@ def test_expand_shorthand(path, expected_result):
     "shape, expected_bbox",
     [
         # plain rect
-        (
-            '<rect x="2" y="2" width="6" height="2" />',
-            Rect(2, 2, 6, 2),
-        ),
+        ('<rect x="2" y="2" width="6" height="2" />', Rect(2, 2, 6, 2),),
         # triangle
-        (
-            '<path d="m5,2 2.5,5 -5,0 z" />',
-            Rect(2.5, 2, 5, 5),
-        )
+        ('<path d="m5,2 2.5,5 -5,0 z" />', Rect(2.5, 2, 5, 5),),
     ],
 )
 def test_bounding_box(shape, expected_bbox):

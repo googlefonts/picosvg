@@ -14,7 +14,7 @@ class SVGShape:
     clip_path: str = ""
     fill: str = "black"
     stroke: str = "none"
-    stroke_width: float = 1.
+    stroke_width: float = 1.0
     stroke_linecap: str = "butt"
     stroke_linejoin: str = "miter"
     stroke_miterlimit: float = 4
@@ -23,11 +23,21 @@ class SVGShape:
     stroke_opacity: float = 1.0
     opacity: float = 1.0
 
-    def _copy_common_fields(self, id, clip_path, fill,
-                            stroke, stroke_width, stroke_linecap,
-                            stroke_linejoin, stroke_miterlimit,
-                            stroke_dasharray, stroke_dashoffset, stroke_opacity,
-                            opacity):
+    def _copy_common_fields(
+        self,
+        id,
+        clip_path,
+        fill,
+        stroke,
+        stroke_width,
+        stroke_linecap,
+        stroke_linejoin,
+        stroke_miterlimit,
+        stroke_dasharray,
+        stroke_dashoffset,
+        stroke_opacity,
+        opacity,
+    ):
         self.id = id
         self.clip_path = clip_path
         self.fill = fill
@@ -43,22 +53,22 @@ class SVGShape:
 
     def visible(self):
         def _visible(fill, opacity):
-            return fill != 'none' and opacity != 0
+            return fill != "none" and opacity != 0
             # we're ignoring fill-opacity
-        return (_visible(self.fill, self.opacity)
-                or _visible(self.stroke, self.stroke_opacity))
+
+        return _visible(self.fill, self.opacity) or _visible(
+            self.stroke, self.stroke_opacity
+        )
 
     def bounding_box(self):
         x1, y1, x2, y2 = svg_pathops.bounding_box(self)
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
-
     def transform(self, transform: Affine2D):
         return svg_pathops.transform(self, transform)
 
-
-    def as_path(self) -> 'SVGPath':
-        raise NotImplementedError('You should implement as_path')
+    def as_path(self) -> "SVGPath":
+        raise NotImplementedError("You should implement as_path")
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
@@ -263,7 +273,9 @@ class SVGPath(SVGShape):
             new_cp = (curr_pos.x, curr_pos.y)
             if prev_cmd:
                 if prev_cmd.islower():
-                    prev_cmd, prev_args = SVGPath._relative_to_absolute(prev_pos, prev_cmd, prev_args)
+                    prev_cmd, prev_args = SVGPath._relative_to_absolute(
+                        prev_pos, prev_cmd, prev_args
+                    )
                 if prev_cmd in short_to_long.values():
                     # reflect 2nd-last x,y pair over curr_pos and make it our first arg
                     prev_cp = Point(prev_args[-4], prev_args[-3])

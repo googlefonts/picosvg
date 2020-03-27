@@ -21,8 +21,9 @@ _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.ite
 
 _XLINK_TEMP = "xlink_"
 
+
 def _xlink_href_attr_name():
-    return f'{{{xlinkns()}}}href'
+    return f"{{{xlinkns()}}}href"
 
 
 def _copy_new_nsmap(tree, nsm):
@@ -31,28 +32,30 @@ def _copy_new_nsmap(tree, nsm):
     new_tree[:] = tree[:]
     return new_tree
 
+
 def _fix_xlink_ns(tree):
     """Fix xlink namespace problems.
 
     If there are xlink temps, add namespace and fix temps.
     If we declare xlink but don't use it then remove it.
     """
-    xlink_nsmap = {'xlink': xlinkns()}
-    if 'xlink' in tree.nsmap and not len(tree.xpath('//*[@xlink:href]',
-                                                    namespaces=xlink_nsmap)):
+    xlink_nsmap = {"xlink": xlinkns()}
+    if "xlink" in tree.nsmap and not len(
+        tree.xpath("//*[@xlink:href]", namespaces=xlink_nsmap)
+    ):
         # no reason to keep xlink
         nsm = copy.copy(tree.nsmap)
-        del nsm['xlink']
+        del nsm["xlink"]
         tree = _copy_new_nsmap(tree, nsm)
 
-    elif 'xlink' not in tree.nsmap and len(tree.xpath(f'//*[@{_XLINK_TEMP}]')):
+    elif "xlink" not in tree.nsmap and len(tree.xpath(f"//*[@{_XLINK_TEMP}]")):
         # declare xlink and fix temps
         nsm = copy.copy(tree.nsmap)
-        nsm['xlink'] = xlinkns()
+        nsm["xlink"] = xlinkns()
         tree = _copy_new_nsmap(tree, nsm)
-        for el in tree.xpath(f'//*[@{_XLINK_TEMP}]'):
+        for el in tree.xpath(f"//*[@{_XLINK_TEMP}]"):
             # try to retain attrib order, unexpected when they shuffle
-            attrs = [(k, v) for k,v in el.attrib.items()]
+            attrs = [(k, v) for k, v in el.attrib.items()]
             el.attrib.clear()
             for name, value in attrs:
                 if name == _XLINK_TEMP:
@@ -61,16 +64,20 @@ def _fix_xlink_ns(tree):
 
     return tree
 
+
 def _del_attrs(el, *attr_names):
     for name in attr_names:
         if name in el.attrib:
             del el.attrib[name]
 
+
 def _attr_name(field_name):
-    return field_name.replace('_', '-')
+    return field_name.replace("_", "-")
+
 
 def _field_name(attr_name):
-    return attr_name.replace('-', '_')
+    return attr_name.replace("-", "_")
+
 
 def from_element(el):
     if el.tag not in _ELEMENT_CLASSES:
@@ -82,6 +89,7 @@ def from_element(el):
         if _attr_name(f.name) in el.attrib
     }
     return data_type(**args)
+
 
 def to_element(data_obj):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
@@ -108,7 +116,6 @@ class SVG:
         self.svg_root = svg_root
         self.elements = None
 
-
     def _elements(self):
         if self.elements:
             return self.elements
@@ -120,22 +127,17 @@ class SVG:
         self.elements = elements
         return self.elements
 
-
     def view_box(self):
-        raw_box = self.svg_root.attrib.get('viewBox', None)
+        raw_box = self.svg_root.attrib.get("viewBox", None)
         if not raw_box:
             return None
-        box = tuple(int(v) for v in re.split(r',|\s+', raw_box))
+        box = tuple(int(v) for v in re.split(r",|\s+", raw_box))
         if len(box) != 4:
-            raise ValueError('Unable to parse viewBox')
+            raise ValueError("Unable to parse viewBox")
         return box
 
-
     def shapes(self):
-        return tuple(shape
-                     for (_, shapes) in self._elements()
-                     for shape in shapes)
-
+        return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
 
     def absolute(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
@@ -149,7 +151,6 @@ class SVG:
             self.elements[idx] = (el, (shape.absolute(),))
         return self
 
-
     def shapes_to_paths(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:
@@ -162,12 +163,10 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
-
     def _xpath(self, xpath, el=None):
         if el is None:
             el = self.svg_root
         return el.xpath(xpath, namespaces={"svg": svgns()})
-
 
     def _xpath_one(self, xpath):
         els = self._xpath(xpath)
@@ -175,13 +174,11 @@ class SVG:
             raise ValueError(f"Need exactly 1 match for {xpath}, got {len(els)}")
         return els[0]
 
-
     def resolve_url(self, url, el_tag):
         match = re.match(r"^url[(]#([\w-]+)[)]$", url)
         if not match:
             raise ValueError(f'Unrecognized url "{url}"')
         return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
-
 
     def _resolve_use(self, scope_el):
         attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
@@ -218,7 +215,6 @@ class SVG:
         for old_el, new_el in swaps:
             old_el.getparent().replace(old_el, new_el)
 
-
     def resolve_use(self, inplace=False):
         """Instantiate reused elements.
 
@@ -232,7 +228,6 @@ class SVG:
         self._resolve_use(self.svg_root)
         return self
 
-
     def _resolve_clip_path(self, clip_path_url):
         clip_path_el = self.resolve_url(clip_path_url, "clipPath")
         self._resolve_use(clip_path_el)
@@ -243,7 +238,6 @@ class SVG:
         clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
         return clip_path
 
-
     def _combine_clip_paths(self, clip_paths):
         # multiple clip paths leave behind their intersection
         if len(clip_paths) > 1:
@@ -251,7 +245,6 @@ class SVG:
         elif clip_paths:
             return clip_paths[0]
         return None
-
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -261,11 +254,9 @@ class SVG:
                 return potential_id
         raise ValueError(f"No free id for {template}")
 
-
     def _inherit_group_attrib(self, group, child):
         def _inherit_copy(attrib, child, attr_name):
-            child.attrib[attr_name] = child.attrib.get(attr_name,
-                                                       attrib[attr_name])
+            child.attrib[attr_name] = child.attrib.get(attr_name, attrib[attr_name])
 
         def _inherit_multiply(attrib, child, attr_name):
             value = float(attrib[attr_name])
@@ -279,16 +270,16 @@ class SVG:
             child.attrib["clip-path"] = ",".join([c for c in clips if c])
 
         attrib_handlers = {
-            'fill': _inherit_copy,
-            'stroke': _inherit_copy,
-            'stroke-width': _inherit_copy,
-            'stroke-linecap': _inherit_copy,
-            'stroke-linejoin': _inherit_copy,
-            'stroke-miterlimit': _inherit_copy,
-            'stroke-dasharray': _inherit_copy,
-            'fill-opacity': _inherit_multiply,
-            'opacity': _inherit_multiply,
-            'clip-path': _inherit_clip_path,
+            "fill": _inherit_copy,
+            "stroke": _inherit_copy,
+            "stroke-width": _inherit_copy,
+            "stroke-linecap": _inherit_copy,
+            "stroke-linejoin": _inherit_copy,
+            "stroke-miterlimit": _inherit_copy,
+            "stroke-dasharray": _inherit_copy,
+            "fill-opacity": _inherit_multiply,
+            "opacity": _inherit_multiply,
+            "clip-path": _inherit_clip_path,
         }
 
         attrib = copy.deepcopy(group.attrib)
@@ -351,7 +342,6 @@ class SVG:
             if not self._xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
                 old_clip_path.getparent().remove(old_clip_path)
 
-
     def _compute_clip_path(self, el):
         """Resolve clip path for element, including inherited clipping.
 
@@ -368,7 +358,6 @@ class SVG:
 
         return self._combine_clip_paths(clip_paths)
 
-
     def ungroup(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -379,7 +368,6 @@ class SVG:
         self._ungroup(self.svg_root)
         return self
 
-
     def _stroke(self, shape):
         """Convert stroke to path.
 
@@ -387,15 +375,15 @@ class SVG:
         drawn on top of result[0], etc."""
 
         def stroke_pred(field):
-            return field.name.startswith('stroke')
+            return field.name.startswith("stroke")
 
         # map old fields to new dest
         _stroke_fields = {
-            'stroke': 'fill',
-            'stroke_opacity': 'opacity',
+            "stroke": "fill",
+            "stroke_opacity": "opacity",
         }
 
-        if shape.stroke == 'none':
+        if shape.stroke == "none":
             return (shape,)
 
         # make a new path that is the stroke
@@ -411,11 +399,10 @@ class SVG:
         # remove all the stroke settings
         _reset_attrs(shape, stroke_pred)
 
-        if shape.fill == 'none':
+        if shape.fill == "none":
             return (stroke,)
 
         return (shape, stroke)
-
 
     def strokes_to_paths(self, inplace=False):
         """Convert stroked shapes to equivalent filled shape + path for stroke."""
@@ -429,7 +416,7 @@ class SVG:
         # Find stroked things
         stroked = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            if shape.stroke == 'none':
+            if shape.stroke == "none":
                 continue
             stroked.append(idx)
 
@@ -442,7 +429,6 @@ class SVG:
         self._update_etree()
 
         return self
-
 
     def apply_clip_paths(self, inplace=False):
         """Apply clipping to shapes and remove the clip paths."""
@@ -476,10 +462,9 @@ class SVG:
             clip_path_el.getparent().remove(clip_path_el)
 
         # destroy clip-path attributes
-        self.remove_attributes(['clip-path'], xpath='//svg:*[@clip-path]', inplace=True)
+        self.remove_attributes(["clip-path"], xpath="//svg:*[@clip-path]", inplace=True)
 
         return self
-
 
     def apply_transforms(self, inplace=False):
         """Naively transforms to shapes and removes the transform attribute.
@@ -498,8 +483,10 @@ class SVG:
         for idx, (el, (shape,)) in enumerate(self._elements()):
             transform = Affine2D.identity()
             while el is not None:
-                if 'transform' in el.attrib:
-                    transform = transform.concat(Affine2D.fromstring(el.attrib['transform']))
+                if "transform" in el.attrib:
+                    transform = transform.concat(
+                        Affine2D.fromstring(el.attrib["transform"])
+                    )
                 el = el.getparent()
             if transform != Affine2D.identity():
                 new_shapes.append((idx, shape.transform(transform)))
@@ -509,10 +496,9 @@ class SVG:
             self.elements[el_idx] = (el, (new_shape,))
 
         # destroy all transform attributes
-        self.remove_attributes(['transform'], xpath='//svg:*[@transform]', inplace=True)
+        self.remove_attributes(["transform"], xpath="//svg:*[@transform]", inplace=True)
 
         return self
-
 
     def remove_unpainted_shapes(self, inplace=False):
         if not inplace:
@@ -534,8 +520,7 @@ class SVG:
 
         return self
 
-
-    def set_attributes(self, name_values, xpath='/svg:svg', inplace=False):
+    def set_attributes(self, name_values, xpath="/svg:svg", inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
             svg.set_attributes(name_values, xpath=xpath, inplace=True)
@@ -549,8 +534,7 @@ class SVG:
 
         return self
 
-
-    def remove_attributes(self, names, xpath='/svg:svg', inplace=False):
+    def remove_attributes(self, names, xpath="/svg:svg", inplace=False):
         """Drop things like viewBox, width, height that set size of overall svg"""
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -564,15 +548,15 @@ class SVG:
 
         return self
 
-
     def checknanosvg(self):
         """Check for nano violations, return xpaths to bad elements.
 
         If result sequence empty then this is a valid nanosvg.
         """
+
         def _strip_ns(tagname):
-            if '}' in tagname:
-                return tagname[tagname.index('}') + 1:]
+            if "}" in tagname:
+                return tagname[tagname.index("}") + 1 :]
             return tagname
 
         self._update_etree()
@@ -580,21 +564,21 @@ class SVG:
         errors = []
 
         path_whitelist = {
-            r'^/svg\[0\]$',
-            r'^/svg\[0\]/defs\[0\]$',
-            r'^/svg\[0\]/defs\[0\]/(linear|radial)Gradient\[\d+\](/stop\[\d+\])?$',
-            r'^/svg\[0\]/path\[(?!0\])\d+\]$',
+            r"^/svg\[0\]$",
+            r"^/svg\[0\]/defs\[0\]$",
+            r"^/svg\[0\]/defs\[0\]/(linear|radial)Gradient\[\d+\](/stop\[\d+\])?$",
+            r"^/svg\[0\]/path\[(?!0\])\d+\]$",
         }
 
         # Make a list of xpaths with offsets (/svg/defs[0]/..., etc)
-        frontier = [(0, self.svg_root, '')]
+        frontier = [(0, self.svg_root, "")]
         while frontier:
             el_idx, el, parent_path = frontier.pop(0)
             el_tag = _strip_ns(el.tag)
-            el_path = f'{parent_path}/{el_tag}[{el_idx}]'
+            el_path = f"{parent_path}/{el_tag}[{el_idx}]"
 
             if not any((re.match(pat, el_path) for pat in path_whitelist)):
-                errors.append(f'BadElement: {el_path}')
+                errors.append(f"BadElement: {el_path}")
 
             for child_idx, child in enumerate(el):
                 frontier.append((child_idx, child, el_path))
@@ -620,7 +604,7 @@ class SVG:
         self.remove_unpainted_shapes(inplace=True)
 
         # Collect gradients; remove other defs
-        defs = etree.Element(f'{{{svgns()}}}defs', nsmap=self.svg_root.nsmap)
+        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
         for gradient in self._xpath("//svg:linearGradient | //svg:radialGradient"):
             gradient.getparent().remove(gradient)
             defs.append(gradient)
@@ -632,7 +616,9 @@ class SVG:
 
         nano_violations = self.checknanosvg()
         if nano_violations:
-            raise ValueError('Unable to convert to nanosvg: ' + ','.join(nano_violations))
+            raise ValueError(
+                "Unable to convert to nanosvg: " + ",".join(nano_violations)
+            )
 
         return self
 
@@ -647,7 +633,7 @@ class SVG:
                 old_el.addnext(new_el)
             parent = old_el.getparent()
             if parent is None:
-                raise ValueError('Lost parent!')
+                raise ValueError("Lost parent!")
             parent.remove(old_el)
         self.elements = None
 
@@ -666,7 +652,7 @@ class SVG:
 
         # svgs are fond of not declaring xlink
         # based on https://mailman-mail5.webfaction.com/pipermail/lxml/20100323/021184.html
-        if 'xlink' in string and 'xmlns:xlink' not in string:
+        if "xlink" in string and "xmlns:xlink" not in string:
             string = string.replace("xlink:href", _XLINK_TEMP)
 
         tree = etree.fromstring(string)

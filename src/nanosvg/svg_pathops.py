@@ -4,6 +4,7 @@ import pathops
 from nanosvg.svg_transform import Affine2D
 from nanosvg.svg_types import SVGPath, SVGShape
 
+
 def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):
     # SVG 'sweep-flag' value is opposite the integer value of SkPath.arcTo 'sweep'.
     # SVG sweep-flag uses 1 for clockwise, while SkPathDirection::kCW cast to
@@ -24,15 +25,15 @@ _SVG_CMD_TO_SKIA_FN = {
 }
 
 _SVG_TO_SKIA_LINE_CAP = {
-    'butt': pathops.LineCap.BUTT_CAP,
-    'round': pathops.LineCap.ROUND_CAP,
-    'square': pathops.LineCap.SQUARE_CAP,
+    "butt": pathops.LineCap.BUTT_CAP,
+    "round": pathops.LineCap.ROUND_CAP,
+    "square": pathops.LineCap.SQUARE_CAP,
 }
 
 _SVG_TO_SKIA_LINE_JOIN = {
-    'miter': pathops.LineJoin.MITER_JOIN,
-    'round': pathops.LineJoin.ROUND_JOIN,
-    'bevel': pathops.LineJoin.BEVEL_JOIN,
+    "miter": pathops.LineJoin.MITER_JOIN,
+    "round": pathops.LineJoin.ROUND_JOIN,
+    "bevel": pathops.LineJoin.BEVEL_JOIN,
     # No arcs or miter-clip
 }
 
@@ -45,7 +46,7 @@ def _simple_skia_to_svg(svg_cmd, svg_path, points):
 
 def _qcurveto_to_svg(svg_path, points):
     for (control_pt, end_pt) in pathops.decompose_quadratic_segment(points):
-        svg_path._add_cmd('Q', *control_pt, *end_pt)
+        svg_path._add_cmd("Q", *control_pt, *end_pt)
 
 
 _SKIA_CMD_TO_SVG_CMD = {
@@ -110,26 +111,21 @@ def intersection(*svg_shapes) -> SVGShape:
 
 def transform(svg_shape: SVGShape, transform: Affine2D) -> SVGShape:
     path = skia_path(svg_shape)
-    raise ValueError('pathops does not expose transform yet')
+    raise ValueError("pathops does not expose transform yet")
 
 
 def stroke(shape: SVGShape) -> SVGShape:
     """Create a path that is shape with it's stroke applied."""
     cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
     if cap is None:
-        raise ValueError(f'Unsupported cap {shape.stroke_linecap}')
+        raise ValueError(f"Unsupported cap {shape.stroke_linecap}")
     join = _SVG_TO_SKIA_LINE_JOIN.get(shape.stroke_linejoin, None)
     if join is None:
-        raise ValueError(f'Unsupported join {shape.stroke_linejoin}')
+        raise ValueError(f"Unsupported join {shape.stroke_linejoin}")
     sk_path = skia_path(shape)
-    sk_path.stroke(shape.stroke_width,
-                   cap,
-                   join,
-                   shape.stroke_miterlimit)
+    sk_path.stroke(shape.stroke_width, cap, join, shape.stroke_miterlimit)
     return svg_path(sk_path)
 
 
 def bounding_box(shape: SVGShape):
     return skia_path(shape).bounds
-
-

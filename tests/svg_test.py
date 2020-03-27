@@ -51,15 +51,21 @@ def test_common_attrib(shape, expected_fields):
         # path: direct passthrough
         ("<path d='I love kittens'/>", 'd="I love kittens"',),
         # path no @d
-        ("<path duck='Mallard'/>", '',),
+        ("<path duck='Mallard'/>", "",),
         # line
         ('<line x1="10" x2="50" y1="110" y2="150"/>', 'd="M10,110 L50,150"',),
         # line, decimal positioning
-        ('<line x1="10.0" x2="50.5" y1="110.2" y2="150.7"/>', 'd="M10,110.2 L50.5,150.7"',),
+        (
+            '<line x1="10.0" x2="50.5" y1="110.2" y2="150.7"/>',
+            'd="M10,110.2 L50.5,150.7"',
+        ),
         # rect: minimal valid example
         ("<rect width='1' height='1'/>", 'd="M0,0 H1 V1 H0 V0 z"',),
         # rect: sharp corners
-        ("<rect x='10' y='11' width='17' height='11'/>", 'd="M10,11 H27 V22 H10 V11 z"',),
+        (
+            "<rect x='10' y='11' width='17' height='11'/>",
+            'd="M10,11 H27 V22 H10 V11 z"',
+        ),
         # rect: round corners
         (
             "<rect x='9' y='9' width='11' height='7' rx='2'/>",
@@ -101,9 +107,7 @@ def test_common_attrib(shape, expected_fields):
 )
 def test_shapes_to_paths(shape: str, expected_path: str):
     actual = SVG.fromstring(svg_string(shape)).shapes_to_paths(inplace=True).toetree()
-    expected_result = SVG.fromstring(
-        svg_string(f'<path {expected_path}/>')
-    ).toetree()
+    expected_result = SVG.fromstring(svg_string(f"<path {expected_path}/>")).toetree()
     print(f"A: {pretty_print(actual)}")
     print(f"E: {pretty_print(expected_result)}")
     assert etree.tostring(actual) == etree.tostring(expected_result)
@@ -130,9 +134,11 @@ def test_shapes_to_paths(shape: str, expected_path: str):
         # arc, negative offsets
         (
             '<path d="M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2"/>',
-            [('M', (7.0, 5.0)),
-             ('a', (3.0, 1.0, 0.0, 0.0, 0.0, 0.0, -3.0)),
-             ('a', (3.0, 3.0, 0.0, 0.0, 1.0, -4.0, 2.0))],
+            [
+                ("M", (7.0, 5.0)),
+                ("a", (3.0, 1.0, 0.0, 0.0, 0.0, 0.0, -3.0)),
+                ("a", (3.0, 3.0, 0.0, 0.0, 1.0, -4.0, 2.0)),
+            ],
         ),
     ],
 )
@@ -178,17 +184,14 @@ def test_ungroup(actual, expected_result):
     [
         ("stroke-simplepath-before.svg", "stroke-simplepath-after.svg"),
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
-    ]
+    ],
 )
 def test_strokes_to_paths(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.strokes_to_paths(inplace=True))
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result",
-    [
-        ("rotated-rect.svg", "rotated-rect-after.svg"),
-    ]
+    "actual, expected_result", [("rotated-rect.svg", "rotated-rect-after.svg"),]
 )
 def test_transform(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.apply_transforms(inplace=True))
@@ -201,17 +204,14 @@ def test_transform(actual, expected_result):
         ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
         ("invisible-before.svg", "invisible-nano.svg"),
-    ]
+    ],
 )
 def test_tonanosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.tonanosvg())
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result",
-    [
-        ("invisible-before.svg", "invisible-after.svg"),
-    ]
+    "actual, expected_result", [("invisible-before.svg", "invisible-after.svg"),]
 )
 def test_remove_unpainted_shapes(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.remove_unpainted_shapes())
@@ -221,15 +221,16 @@ def test_remove_unpainted_shapes(actual, expected_result):
     "svg_file, expected_violations",
     [
         ("good-defs-0.svg", ()),
-        ("bad-defs-0.svg", (
-            'BadElement: /svg[0]/defs[1]',
-            'BadElement: /svg[0]/donkey[2]',
-            'BadElement: /svg[0]/defs[1]/path[0]'
-        )),
-        ("bad-defs-1.svg", (
-            'BadElement: /svg[0]/path[0]',
-        )),
-    ]
+        (
+            "bad-defs-0.svg",
+            (
+                "BadElement: /svg[0]/defs[1]",
+                "BadElement: /svg[0]/donkey[2]",
+                "BadElement: /svg[0]/defs[1]/path[0]",
+            ),
+        ),
+        ("bad-defs-1.svg", ("BadElement: /svg[0]/path[0]",)),
+    ],
 )
 def test_checknanosvg(svg_file, expected_violations):
     nano_violations = load_test_svg(svg_file).checknanosvg()
@@ -240,8 +241,11 @@ def test_checknanosvg(svg_file, expected_violations):
     "svg_string, expected_result",
     [
         ('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>', None),
-        ('<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12"/>', (7, 7, 12, 12)),
-    ]
+        (
+            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12"/>',
+            (7, 7, 12, 12),
+        ),
+    ],
 )
 def test_viewbox(svg_string, expected_result):
     assert SVG.fromstring(svg_string).view_box() == expected_result
@@ -252,25 +256,25 @@ def test_viewbox(svg_string, expected_result):
     [
         # No change
         (
-            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>', 
-            ('viewBox', 'width', 'height'),
-            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>'
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
+            ("viewBox", "width", "height"),
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
         ),
         # Drop viewBox, width, height
         (
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12" height="7" width="11"/>',
-            ('viewBox', 'width', 'height'),
+            ("viewBox", "width", "height"),
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
         ),
         # Drop width, height
         (
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12" height="7" width="11"/>',
-            ('width', 'height'),
+            ("width", "height"),
             '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="7 7 12 12"/>',
         ),
-    ]
+    ],
 )
 def test_remove_attributes(svg_string, names, expected_result):
-    assert (SVG.fromstring(svg_string)
-            .remove_attributes(names)
-            .tostring()) == expected_result
+    assert (
+        SVG.fromstring(svg_string).remove_attributes(names).tostring()
+    ) == expected_result
