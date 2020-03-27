@@ -432,7 +432,7 @@ class SVG:
         # Stroke 'em
         for idx in stroked:
             el, shapes = self.elements[idx]
-            shapes = reduce(lambda t1, t2: t1 + t2, (self._stroke(s) for s in shapes))
+            shapes = sum((self._stroke(s) for s in shapes), ())
             self._set_element(idx, el, shapes)
 
         # Update the etree
