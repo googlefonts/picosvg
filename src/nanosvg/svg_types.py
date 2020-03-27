@@ -70,6 +70,11 @@ class SVGShape:
     def as_path(self) -> "SVGPath":
         raise NotImplementedError("You should implement as_path")
 
+    def absolute(self, inplace=False) -> "SVGShape":
+        """Returns equivalent path with only absolute commands."""
+        # only meaningful for path, which overrides
+        return self
+
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 # Iterable, returning each command in the path.
@@ -211,7 +216,7 @@ class SVGPath(SVGShape):
                 args[y_coord_idx] += curr_pos.y
         return (cmd, tuple(args))
 
-    def absolute(self, inplace=False):
+    def absolute(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only absolute commands."""
 
         def absolute_callback(curr_pos, cmd, args, *_):

@@ -109,9 +109,9 @@ def intersection(*svg_shapes) -> SVGShape:
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
 
 
-def transform(svg_shape: SVGShape, transform: Affine2D) -> SVGShape:
-    path = skia_path(svg_shape)
-    raise ValueError("pathops does not expose transform yet")
+def transform(svg_shape: SVGShape, affine: Affine2D) -> SVGShape:
+    sk_path = skia_path(svg_shape).transform(*affine)
+    return svg_path(sk_path)
 
 
 def stroke(shape: SVGShape) -> SVGShape:

@@ -1,7 +1,9 @@
 import copy
 import dataclasses
-from lxml import etree
+from functools import reduce
+from lxml import etree  # pytype: disable=import-error
 import re
+from typing import List, Tuple
 from nanosvg.svg_meta import ntos, svgns, xlinkns
 from nanosvg import svg_pathops
 from nanosvg.svg_types import *
@@ -112,11 +114,15 @@ def _reset_attrs(data_obj, field_pred):
 
 
 class SVG:
+
+    svg_root: etree.Element
+    elements: List[Tuple[etree.Element, Tuple[SVGShape, ...]]]
+
     def __init__(self, svg_root):
         self.svg_root = svg_root
-        self.elements = None
+        self.elements = []
 
-    def _elements(self):
+    def _elements(self) -> List[Tuple[etree.Element, Tuple[SVGShape, ...]]]:
         if self.elements:
             return self.elements
         elements = []
@@ -126,6 +132,9 @@ class SVG:
             elements.append((el, (from_element(el),)))
         self.elements = elements
         return self.elements
+
+    def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
+        self.elements[idx] = (el, shapes)
 
     def view_box(self):
         raw_box = self.svg_root.attrib.get("viewBox", None)
@@ -422,8 +431,9 @@ class SVG:
 
         # Stroke 'em
         for idx in stroked:
-            el, (shape,) = self.elements[idx]
-            self.elements[idx] = (el, self._stroke(shape))
+            el, shapes = self.elements[idx]
+            shapes = reduce(lambda t1, t2: t1 + t2, (self._stroke(s) for s in shapes))
+            self._set_element(idx, el, shapes)
 
         # Update the etree
         self._update_etree()
@@ -455,7 +465,7 @@ class SVG:
 
             target.d = svg_pathops.intersection(target, clip_path).d
             target.clip_path = ""
-            self.elements[el_idx] = (el, (target,))
+            self._set_element(el_idx, el, (target,))
 
         # destroy clip path elements
         for clip_path_el in self._xpath("//svg:clipPath"):
@@ -491,9 +501,9 @@ class SVG:
             if transform != Affine2D.identity():
                 new_shapes.append((idx, shape.transform(transform)))
 
-        for idx, new_shape in transformed_shapes:
+        for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]
-            self.elements[el_idx] = (el, (new_shape,))
+            self._set_element(el_idx, el, (new_shape,))
 
         # destroy all transform attributes
         self.remove_attributes(["transform"], xpath="//svg:*[@transform]", inplace=True)
