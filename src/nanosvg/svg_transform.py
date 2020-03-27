@@ -2,9 +2,20 @@
 
 Focuses on converting to a sequence of affine matrices.
 """
-import dataclasses
-from math import cos, sin, tan
+import collections
+from math import cos, sin, radians, tan
 import re
+from typing import NamedTuple
+
+
+_SVG_ARG_FIXUPS = collections.defaultdict(
+    lambda: lambda _: None,
+    {
+      'rotate': lambda args: _fix_rotate(args),
+      'skewx': lambda args: _fix_rotate(args),
+      'skewy': lambda args: _fix_rotate(args),
+    }
+)
 
 
 # attributes declared in order to make vector [a b c d e f]
@@ -16,8 +27,7 @@ import re
 # meaning:
 #
 # 
-@dataclasses.dataclass(frozen=True)
-class Transform:
+class Transform(NamedTuple):
     a: float
     b: float
     c: float
@@ -37,7 +47,7 @@ class Transform:
 
 
     def transform(self, transform):
-      return self.matrix(*transform.tuple())
+      return self.matrix(*transform)
 
 
     def matrix(self, a, b, c, d, e, f):
@@ -66,6 +76,7 @@ class Transform:
 
 
     # https://www.w3.org/TR/SVG11/coords.html#RotationDefined
+    # Note that rotation here is in radians
     def rotate(self, a, cx=0., cy=0.):
         return (self.translate(cx, cy)
                 .matrix(cos(a), sin(a), -sin(a), cos(a), 0, 0)
@@ -82,8 +93,9 @@ class Transform:
         return self.matrix(1, tan(a), 0, 1, 0, 0)
 
 
-    def tuple(self):
-        return dataclasses.astuple(self)
+def _fix_rotate(args):
+    args[0] = radians(args[0])
+    print('_fix_rotate')
 
 
 def parse_svg_transform(raw_transform: str):
@@ -97,8 +109,12 @@ def parse_svg_transform(raw_transform: str):
         if not match:
             raise ValueError(f'Unable to parse {raw_transform}')
 
-        args = tuple(float(p) for p in re.split(r'\s*[,\s]\s*', match.group(2)))
-        transform = getattr(transform, match.group(1).lower())(*args)
+        op = match.group(1).lower()
+        args = [float(p) for p in re.split(r'\s*[,\s]\s*', match.group(2))]
+        print(op, 'args pre-fixup', args)
+        _SVG_ARG_FIXUPS[op](args)
+        print(op, 'args post-fixup', args)
+        transform = getattr(transform, op)(*args)
 
     return transform
 
