@@ -8,7 +8,7 @@ Tool to simplify SVGs. Converts an input svg into a "nano" svg:
 *   Only gradients defined under `<defs>`
 *   Only `<path>` elements without stroke or clipping after the initial `<defs>`
 
-Clip paths and strokes are rendered into equivalent paths, `<use>` references are materialized, etc.
+Clip paths and strokes are rendered into equivalent paths using [Skia](https://skia.org/) via [skia-pathops](https://github.com/fonttools/skia-pathops), `<use>` references are materialized, etc.
 
 Some SVG features are not supported, of particular note:
 
