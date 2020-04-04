@@ -1,3 +1,7 @@
+[![Travis Build Status](https://travis-ci.org/rsheeter/nanosvg.svg)](https://travis-ci.org/rsheeter/nanosvg)
+
+# nanosvg
+
 Tool to simplify SVGs. Converts an input svg into a "nano" svg:
 
 *   Exactly 1 `<defs>` element, first child of root
