@@ -1,5 +1,6 @@
 from typing import NamedTuple
 
+
 class Point(NamedTuple):
     x: int = 0
     y: int = 0
