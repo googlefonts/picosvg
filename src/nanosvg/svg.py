@@ -530,6 +530,19 @@ class SVG:
 
         return self
 
+    def remove_comments(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_comments(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        for el in self._xpath("//comment()"):
+            el.getparent().remove(el)
+
+        return self
+
     def set_attributes(self, name_values, xpath="/svg:svg", inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -591,6 +604,8 @@ class SVG:
                 errors.append(f"BadElement: {el_path}")
 
             for child_idx, child in enumerate(el):
+                if child.tag is etree.Comment:
+                    continue
                 frontier.append((child_idx, child, el_path))
 
         # TODO paths & gradients should only have specific attributes
@@ -605,6 +620,7 @@ class SVG:
 
         self._update_etree()
 
+        self.remove_comments(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.apply_clip_paths(inplace=True)
