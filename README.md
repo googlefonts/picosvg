@@ -6,7 +6,10 @@ Tool to simplify SVGs. Converts an input svg into a "nano" svg:
 
 Clip paths and strokes are rendered into equivalent paths, `<use>` references are materialized, etc.
 
-Some SVG features are not supported. _TODO enumerate known ones_.
+Some SVG features are not supported, of particular note:
+
+*   `<filter>`
+*   `<mask>`
 
 Usage:
 
