@@ -1,14 +1,11 @@
-import dataclasses
+from typing import NamedTuple
 
-
-@dataclasses.dataclass(frozen=True)
-class Point:
+class Point(NamedTuple):
     x: int = 0
     y: int = 0
 
 
-@dataclasses.dataclass(frozen=True)
-class Rect:
+class Rect(NamedTuple):
     x: float = 0
     y: float = 0
     w: float = 0
