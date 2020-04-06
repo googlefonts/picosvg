@@ -140,6 +140,18 @@ def test_shapes_to_paths(shape: str, expected_path: str):
                 ("a", (3.0, 3.0, 0.0, 0.0, 1.0, -4.0, 2.0)),
             ],
         ),
+        # minimalist numbers, who needs spaces or commas
+        (
+            '<path d="m-1-1 0.5-.5-.5-.3.1.2.2.51.52.711"/>',
+            [
+                ("m", (-1.0, -1.0)),
+                ("l", (0.5, -0.5)),
+                ("l", (-0.5, -0.3)),
+                ("l", (0.1, 0.2)),
+                ("l", (0.2, 0.51)),
+                ("l", (0.52, 0.711)),
+            ],
+        ),
     ],
 )
 def test_iter(shape, expected_cmds):

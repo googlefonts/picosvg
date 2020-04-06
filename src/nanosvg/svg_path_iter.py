@@ -31,8 +31,23 @@ def parse_svg_path(svg_path: str, exploded=False):
     for i in range(0, len(parts), 2):
         cmd = parts[i]
         args = []
-        raw_args = [s for s in re.split(r"[, ]|(?=-)", parts[i + 1].strip()) if s]
-        for raw_arg in raw_args:
+        raw_args = parts[i + 1].strip()
+        # insert a space in front of -<whatever>
+        raw_args = re.sub(r'(?<=[\d.])(-[\d.])', r' \1', raw_args)
+        raw_args = [s for s in re.split(r"[, ]", raw_args) if s]
+        while raw_args:
+            raw_arg = raw_args.pop(0)
+            # For things like #.#.#... throw back second decimal onward
+            chain = re.match(r'([^.]*[.][^.]*)([.].*)?', raw_arg)
+            if chain:
+                raw_arg, maybe_more = chain.groups()
+                if maybe_more:
+                    raw_args.insert(0, maybe_more)
+
+            first = raw_arg.find('.')
+            if first != -1:
+                second = raw_arg.find('')
+
             try:
                 args.append(float(raw_arg))
             except ValueError as e:
