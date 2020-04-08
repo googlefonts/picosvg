@@ -88,7 +88,6 @@ Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)
 
 def _fix_rotate(args):
     args[0] = radians(args[0])
-    print("_fix_rotate")
 
 
 def parse_svg_transform(raw_transform: str):
@@ -105,9 +104,7 @@ def parse_svg_transform(raw_transform: str):
 
         op = match.group(1).lower()
         args = [float(p) for p in re.split(r"\s*[,\s]\s*", match.group(2))]
-        print(op, "args pre-fixup", args)
         _SVG_ARG_FIXUPS[op](args)
-        print(op, "args post-fixup", args)
         transform = getattr(transform, op)(*args)
 
     return transform
