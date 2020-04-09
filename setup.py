@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="nanosvg",
-    version="0.1",
+    version="0.2",
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     entry_points={
@@ -17,7 +17,7 @@ setup(
 
     # metadata to display on PyPI
     author="Rod S",
-    author_email="rsheeter",
+    author_email="rsheeter@google.com",
     description=(
         "Exploratory utility for svg simplification, "
         "meant for use playing with COLR fonts"
