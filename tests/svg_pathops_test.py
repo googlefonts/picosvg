@@ -6,6 +6,10 @@ from nanosvg.svg_types import SVGCircle, SVGPath, SVGRect
 _TEST_TOLERENCE = 0.25  # what Skia typically uses
 
 
+def _round(pt, digits):
+    return tuple(round(v, digits) for v in pt)
+
+
 @pytest.mark.parametrize(
     "shape, tolerance, expected_segments, expected_path",
     [
@@ -55,22 +59,22 @@ _TEST_TOLERENCE = 0.25  # what Skia typically uses
                 (
                     "qCurveTo",
                     (
-                        (1.0, 4.20435094833374),
-                        (1.6089637279510498, 2.734182119369507),
-                        (2.734182119369507, 1.6089637279510498),
-                        (4.20435094833374, 1.0),
-                        (5.795649528503418, 1.0),
-                        (7.265817642211914, 1.6089637279510498),
-                        (8.391036987304688, 2.734182119369507),
-                        (9.0, 4.20435094833374),
-                        (8.999999046325684, 5.79564905166626),
-                        (8.391036033630371, 7.265817165374756),
-                        (7.265817165374756, 8.391036033630371),
-                        (5.79564905166626, 8.999999046325684),
-                        (4.204349517822266, 8.999999046325684),
-                        (2.7341814041137695, 8.391036033630371),
-                        (1.6089636087417603, 7.265817165374756),
-                        (0.9999998807907104, 5.79564905166626),
+                        (1.0, 4.2044),
+                        (1.6090, 2.7342),
+                        (2.7342, 1.6090),
+                        (4.2044, 1.0),
+                        (5.7956, 1.0),
+                        (7.2658, 1.6090),
+                        (8.3910, 2.7342),
+                        (9.0, 4.2044),
+                        (9.0, 5.7956),
+                        (8.3910, 7.2658),
+                        (7.2658, 8.3910),
+                        (5.7956, 9.0),
+                        (4.2043, 9.0),
+                        (2.7342, 8.3910),
+                        (1.6090, 7.2658),
+                        (1.0, 5.7956),
                         (1.0, 5.0),
                     ),
                 ),
@@ -82,7 +86,10 @@ _TEST_TOLERENCE = 0.25  # what Skia typically uses
 )
 def test_skia_path_roundtrip(shape, tolerance, expected_segments, expected_path):
     skia_path = svg_pathops.skia_path(shape, tolerance)
-    assert tuple(skia_path.segments) == expected_segments
+    rounded_segments = list(skia_path.segments)
+    for idx, (cmd, points) in enumerate(rounded_segments):
+        rounded_segments[idx] =  (cmd, tuple(_round(pt, 4) for pt in points))
+    assert tuple(rounded_segments) == expected_segments
     assert svg_pathops.svg_path(skia_path).d == expected_path
 
 
