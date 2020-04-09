@@ -7,7 +7,7 @@ _TEST_TOLERENCE = 0.25  # what Skia typically uses
 
 
 @pytest.mark.parametrize(
-    "shape, tolerence, expected_segments, expected_path",
+    "shape, tolerance, expected_segments, expected_path",
     [
         # path
         (
@@ -31,7 +31,7 @@ _TEST_TOLERENCE = 0.25  # what Skia typically uses
             "M4,4 L10,4 L10,20 L4,20 L4,4 Z",
         ),
         # https://github.com/rsheeter/nanosvg/issues/1
-        # intolerence makes for poor circles
+        # intolerance makes for poor circles
         (
             SVGCircle(cx=5, cy=5, r=4),
             _TEST_TOLERENCE,
@@ -80,8 +80,8 @@ _TEST_TOLERENCE = 0.25  # what Skia typically uses
         ),
     ],
 )
-def test_skia_path_roundtrip(shape, tolerence, expected_segments, expected_path):
-    skia_path = svg_pathops.skia_path(shape, tolerence)
+def test_skia_path_roundtrip(shape, tolerance, expected_segments, expected_path):
+    skia_path = svg_pathops.skia_path(shape, tolerance)
     assert tuple(skia_path.segments) == expected_segments
     assert svg_pathops.svg_path(skia_path).d == expected_path
 

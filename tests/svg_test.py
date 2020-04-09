@@ -306,5 +306,5 @@ def test_remove_attributes(svg_string, names, expected_result):
         ),
     ],
 )
-def test_tolerence(svg_string, expected_result):
-    assert round(SVG.fromstring(svg_string).tolerence, 4) == expected_result
+def test_tolerance(svg_string, expected_result):
+    assert round(SVG.fromstring(svg_string).tolerance, 4) == expected_result
