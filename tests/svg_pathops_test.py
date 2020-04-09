@@ -59,22 +59,22 @@ def _round(pt, digits):
                 (
                     "qCurveTo",
                     (
-                        (1.0, 4.2044),
-                        (1.6090, 2.7342),
-                        (2.7342, 1.6090),
-                        (4.2044, 1.0),
-                        (5.7956, 1.0),
-                        (7.2658, 1.6090),
-                        (8.3910, 2.7342),
-                        (9.0, 4.2044),
-                        (9.0, 5.7956),
-                        (8.3910, 7.2658),
-                        (7.2658, 8.3910),
-                        (5.7956, 9.0),
-                        (4.2043, 9.0),
-                        (2.7342, 8.3910),
-                        (1.6090, 7.2658),
-                        (1.0, 5.7956),
+                        (1.0, 4.204),
+                        (1.609, 2.734),
+                        (2.734, 1.609),
+                        (4.204, 1.0),
+                        (5.796, 1.0),
+                        (7.266, 1.609),
+                        (8.391, 2.734),
+                        (9.0, 4.204),
+                        (9.0, 5.796),
+                        (8.391, 7.266),
+                        (7.266, 8.391),
+                        (5.796, 9.0),
+                        (4.204, 9.0),
+                        (2.734, 8.391),
+                        (1.609, 7.266),
+                        (1.0, 5.796),
                         (1.0, 5.0),
                     ),
                 ),
@@ -88,7 +88,7 @@ def test_skia_path_roundtrip(shape, tolerance, expected_segments, expected_path)
     skia_path = svg_pathops.skia_path(shape, tolerance)
     rounded_segments = list(skia_path.segments)
     for idx, (cmd, points) in enumerate(rounded_segments):
-        rounded_segments[idx] =  (cmd, tuple(_round(pt, 4) for pt in points))
+        rounded_segments[idx] = (cmd, tuple(_round(pt, 3) for pt in points))
     assert tuple(rounded_segments) == expected_segments
     assert svg_pathops.svg_path(skia_path).d == expected_path
 
