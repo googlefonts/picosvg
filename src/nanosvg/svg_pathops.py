@@ -63,9 +63,9 @@ _SKIA_CMD_TO_SVG_CMD = {
 }
 
 
-def skia_path(shape: SVGShape):
+def skia_path(shape: SVGShape, tolerence: float):
     path = (
-        shape.as_path()
+        shape.as_path(tolerence)
         .explicit_lines()  # hHvV => lL
         .expand_shorthand(inplace=True)
         .absolute(inplace=True)
@@ -77,7 +77,7 @@ def skia_path(shape: SVGShape):
             raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
         _SVG_CMD_TO_SKIA_FN[cmd](sk_path, *args)
 
-    sk_path.convertConicsToQuads()
+    sk_path.convertConicsToQuads(tolerence)
     return sk_path
 
 
@@ -90,31 +90,32 @@ def svg_path(skia_path: pathops.Path) -> SVGPath:
     return svg_path
 
 
-def _do_pathop(op, svg_shapes) -> SVGShape:
+def _do_pathop(tolerence, op, svg_shapes) -> SVGShape:
+    tolerence = float(tolerence)
     if not svg_shapes:
         return SVGPath()
 
-    sk_path = skia_path(svg_shapes[0])
+    sk_path = skia_path(svg_shapes[0], tolerence)
     for svg_shape in svg_shapes[1:]:
-        sk_path2 = skia_path(svg_shape)
+        sk_path2 = skia_path(svg_shape, tolerence)
         sk_path = pathops.op(sk_path, sk_path2, op)
     return svg_path(sk_path)
 
 
-def union(*svg_shapes) -> SVGShape:
-    return _do_pathop(pathops.PathOp.UNION, svg_shapes)
+def union(tolerence, *svg_shapes) -> SVGShape:
+    return _do_pathop(tolerence, pathops.PathOp.UNION, svg_shapes)
 
 
-def intersection(*svg_shapes) -> SVGShape:
-    return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
+def intersection(tolerence, *svg_shapes) -> SVGShape:
+    return _do_pathop(tolerence, pathops.PathOp.INTERSECTION, svg_shapes)
 
 
-def transform(svg_shape: SVGShape, affine: Affine2D) -> SVGShape:
-    sk_path = skia_path(svg_shape).transform(*affine)
+def transform(svg_shape: SVGShape, affine: Affine2D, tolerence: float) -> SVGShape:
+    sk_path = skia_path(svg_shape, tolerence).transform(*affine)
     return svg_path(sk_path)
 
 
-def stroke(shape: SVGShape) -> SVGShape:
+def stroke(shape: SVGShape, tolerence: float) -> SVGShape:
     """Create a path that is shape with it's stroke applied."""
     cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
     if cap is None:
@@ -122,10 +123,10 @@ def stroke(shape: SVGShape) -> SVGShape:
     join = _SVG_TO_SKIA_LINE_JOIN.get(shape.stroke_linejoin, None)
     if join is None:
         raise ValueError(f"Unsupported join {shape.stroke_linejoin}")
-    sk_path = skia_path(shape)
+    sk_path = skia_path(shape, tolerence)
     sk_path.stroke(shape.stroke_width, cap, join, shape.stroke_miterlimit)
     return svg_path(sk_path)
 
 
-def bounding_box(shape: SVGShape):
-    return skia_path(shape).bounds
+def bounding_box(shape: SVGShape, tolerence: float):
+    return skia_path(shape, tolerence).bounds

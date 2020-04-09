@@ -6,8 +6,10 @@ class Point(NamedTuple):
     y: int = 0
 
 
+# we boldly assume w,h to be >= 0
 class Rect(NamedTuple):
     x: float = 0
     y: float = 0
     w: float = 0
     h: float = 0
+

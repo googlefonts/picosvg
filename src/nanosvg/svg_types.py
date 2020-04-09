@@ -60,14 +60,14 @@ class SVGShape:
             self.stroke, self.stroke_opacity
         )
 
-    def bounding_box(self):
-        x1, y1, x2, y2 = svg_pathops.bounding_box(self)
+    def bounding_box(self, tolerence) -> Rect:
+        x1, y1, x2, y2 = svg_pathops.bounding_box(self, tolerence)
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
-    def transform(self, transform: Affine2D):
-        return svg_pathops.transform(self, transform)
+    def transform(self, transform: Affine2D, tolerence: float):
+        return svg_pathops.transform(self, transform, tolerence)
 
-    def as_path(self) -> "SVGPath":
+    def as_path(self, tolerence) -> "SVGPath":
         raise NotImplementedError("You should implement as_path")
 
     def absolute(self, inplace=False) -> "SVGShape":
@@ -130,7 +130,7 @@ class SVGPath(SVGShape):
     def end(self):
         self._add("z")
 
-    def as_path(self) -> "SVGPath":
+    def as_path(self, tolerence) -> "SVGPath":
         return self
 
     def __iter__(self):
@@ -302,9 +302,9 @@ class SVGCircle(SVGShape):
     cx: float = 0
     cy: float = 0
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, r, cx, cy = dataclasses.astuple(self)
-        path = SVGEllipse(rx=r, ry=r, cx=cx, cy=cy).as_path()
+        path = SVGEllipse(rx=r, ry=r, cx=cx, cy=cy).as_path(tolerence)
         path._copy_common_fields(*shape_fields)
         return path
 
@@ -317,7 +317,7 @@ class SVGEllipse(SVGShape):
     cx: float = 0
     cy: float = 0
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, rx, ry, cx, cy = dataclasses.astuple(self)
         path = SVGPath()
         # arc doesn't seem to like being a complete shape, draw two halves
@@ -336,7 +336,7 @@ class SVGLine(SVGShape):
     x2: float = 0
     y2: float = 0
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, x1, y1, x2, y2 = dataclasses.astuple(self)
         path = SVGPath()
         path.M(x1, y1)
@@ -350,7 +350,7 @@ class SVGLine(SVGShape):
 class SVGPolygon(SVGShape):
     points: str = ""
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, points = dataclasses.astuple(self)
         if self.points:
             path = SVGPath(d="M" + self.points + " z")
@@ -365,7 +365,7 @@ class SVGPolygon(SVGShape):
 class SVGPolyline(SVGShape):
     points: str = ""
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, points = dataclasses.astuple(self)
         if points:
             path = SVGPath(d="M" + self.points)
@@ -393,7 +393,7 @@ class SVGRect(SVGShape):
         self.rx = min(self.rx, self.width / 2)
         self.ry = min(self.ry, self.height / 2)
 
-    def as_path(self) -> SVGPath:
+    def as_path(self, tolerence) -> SVGPath:
         *shape_fields, x, y, w, h, rx, ry = dataclasses.astuple(self)
         path = SVGPath()
         path.M(x + rx, y)

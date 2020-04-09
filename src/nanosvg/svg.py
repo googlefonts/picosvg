@@ -24,6 +24,14 @@ _ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.ite
 _XLINK_TEMP = "xlink_"
 
 
+# How much error, as pct of viewbox max(w,h), is allowed on lossy ops
+# For example, for a Noto Emoji with a viewBox 0 0 128 128 permit error of 0.128
+_MAX_PCT_ERROR = 0.1
+
+# When you have no viewbox, use this. Absolute value in svg units.
+_DEFAULT_DEFAULT_TOLERENCE = 0.1
+
+
 def _xlink_href_attr_name():
     return f"{{{xlinkns()}}}href"
 
@@ -136,14 +144,25 @@ class SVG:
     def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
         self.elements[idx] = (el, shapes)
 
-    def view_box(self):
+    def view_box(self) -> Rect:
         raw_box = self.svg_root.attrib.get("viewBox", None)
         if not raw_box:
             return None
         box = tuple(int(v) for v in re.split(r",|\s+", raw_box))
         if len(box) != 4:
             raise ValueError("Unable to parse viewBox")
-        return box
+        return Rect(*box)
+
+    def _default_tolerence(self):
+        vbox = self.view_box()
+        # Absence of viewBox is unusual
+        if vbox is None:
+            return _DEFAULT_DEFAULT_TOLERENCE
+        return min(vbox.w, vbox.h) * _MAX_PCT_ERROR / 100
+
+    @property
+    def tolerence(self):
+        return self._default_tolerence()
 
     def shapes(self):
         return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
@@ -167,9 +186,10 @@ class SVG:
             svg.shapes_to_paths(inplace=True)
             return svg
 
+        tolerence = self.tolerence
         swaps = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            self.elements[idx] = (el, (shape.as_path(),))
+            self.elements[idx] = (el, (shape.as_path(tolerence),))
         return self
 
     def _xpath(self, xpath, el=None):
@@ -244,13 +264,14 @@ class SVG:
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
+        clip_path = svg_pathops.union(self.tolerence,
+                                      *[from_element(e) for e in clip_path_el])
         return clip_path
 
     def _combine_clip_paths(self, clip_paths):
         # multiple clip paths leave behind their intersection
         if len(clip_paths) > 1:
-            return svg_pathops.intersection(*clip_paths)
+            return svg_pathops.intersection(self.tolerence, *clip_paths)
         elif clip_paths:
             return clip_paths[0]
         return None
@@ -396,7 +417,7 @@ class SVG:
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = svg_pathops.stroke(shape)
+        stroke = svg_pathops.stroke(shape, self.tolerence)
 
         # convert some stroke attrs (e.g. stroke => fill)
         for field in dataclasses.fields(shape):
@@ -461,9 +482,9 @@ class SVG:
         # apply clip path to target
         for el_idx, clip_path in clips:
             el, (target,) = self.elements[el_idx]
-            target = target.as_path().absolute(inplace=True)
+            target = target.as_path(self.tolerence).absolute(inplace=True)
 
-            target.d = svg_pathops.intersection(target, clip_path).d
+            target.d = svg_pathops.intersection(self.tolerence, target, clip_path).d
             target.clip_path = ""
             self._set_element(el_idx, el, (target,))
 
@@ -499,7 +520,7 @@ class SVG:
                     )
                 el = el.getparent()
             if transform != Affine2D.identity():
-                new_shapes.append((idx, shape.transform(transform)))
+                new_shapes.append((idx, shape.transform(transform, self.tolerence)))
 
         for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]
