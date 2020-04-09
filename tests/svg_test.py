@@ -291,6 +291,7 @@ def test_remove_attributes(svg_string, names, expected_result):
         SVG.fromstring(svg_string).remove_attributes(names).tostring()
     ) == expected_result
 
+
 # https://github.com/rsheeter/nanosvg/issues/1
 @pytest.mark.parametrize(
     "svg_string, expected_result",

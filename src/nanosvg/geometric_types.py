@@ -12,4 +12,3 @@ class Rect(NamedTuple):
     y: float = 0
     w: float = 0
     h: float = 0
-

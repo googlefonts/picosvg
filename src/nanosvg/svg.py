@@ -3,7 +3,7 @@ import dataclasses
 from functools import reduce
 from lxml import etree  # pytype: disable=import-error
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from nanosvg.svg_meta import ntos, svgns, xlinkns
 from nanosvg import svg_pathops
 from nanosvg.svg_types import *
@@ -32,7 +32,7 @@ _MAX_PCT_ERROR = 0.1
 _DEFAULT_DEFAULT_TOLERENCE = 0.1
 
 
-def _xlink_href_attr_name():
+def _xlink_href_attr_name() -> str:
     return f"{{{xlinkns()}}}href"
 
 
@@ -144,7 +144,7 @@ class SVG:
     def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
         self.elements[idx] = (el, shapes)
 
-    def view_box(self) -> Rect:
+    def view_box(self) -> Optional[Rect]:
         raw_box = self.svg_root.attrib.get("viewBox", None)
         if not raw_box:
             return None
@@ -264,8 +264,9 @@ class SVG:
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        clip_path = svg_pathops.union(self.tolerence,
-                                      *[from_element(e) for e in clip_path_el])
+        clip_path = svg_pathops.union(
+            self.tolerence, *[from_element(e) for e in clip_path_el]
+        )
         return clip_path
 
     def _combine_clip_paths(self, clip_paths):
