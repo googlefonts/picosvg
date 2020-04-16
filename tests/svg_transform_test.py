@@ -18,10 +18,6 @@ from nanosvg.svg_transform import *
 from typing import Tuple
 
 
-def _round(transform: Affine2D, digits=2):
-    return Affine2D(*(round(v, digits) for v in transform))
-
-
 @pytest.mark.parametrize(
     "transform, expected_result",
     [
@@ -55,7 +51,57 @@ def _round(transform: Affine2D, digits=2):
     ],
 )
 def test_parse_svg_transform(transform: str, expected_result: Tuple[str, ...]):
-    actual = _round(parse_svg_transform(transform), 3)
+    actual = parse_svg_transform(transform)
     print(f"A: {actual}")
     print(f"E: {expected_result}")
-    assert actual == expected_result
+    assert actual == pytest.approx(expected_result, 3)
+
+
+class TestAffine2D:
+    def test_map_point(self):
+        t = Affine2D(2, 0, 0, 1, 10, 20)
+        p = t.map_point((-3, 4))
+
+        assert isinstance(p, Point)
+        assert p == Point(4, 24)
+
+        assert Affine2D(1, 0.5, -0.5, 1, 0, 0).map_point(Point(2, 2)) == Point(1.0, 3.0)
+
+    def test_map_vector(self):
+        v = Affine2D(2, 0, 0, -1, 0, 0).map_vector((1, 1))
+        assert isinstance(v, Vector)
+        assert v == Vector(2, -1)
+
+        # vectors are unaffected by translation
+        v = Vector(-3, 4)
+        assert Affine2D(1, 0, 0, 1, 40, -50).map_vector(v) == v
+
+    def test_determinant(self):
+        assert Affine2D(1, 2, 3, 4, 0, 0).determinant() == (1 * 4 - 2 * 3)
+
+    def test_is_degenerate(self):
+        assert not Affine2D(1, 2, 3, 4, 5, 6).is_degenerate()
+        assert Affine2D(-1, 2 / 3, 3 / 2, -1, 0, 0).is_degenerate()
+
+    def test_inverse(self):
+        t = Affine2D.identity().translate(2, 3).scale(4, 5)
+        p0 = Point(12, 34)
+        p1 = t.map_point(p0)
+        it = t.inverse()
+        p2 = it.map_point(p1)
+        assert p2 == p0
+
+        with pytest.raises(ValueError, match="non-invertible"):
+            Affine2D(1, 1, 1, 1, 0, 0).inverse()
+
+    @pytest.mark.parametrize(
+        "src, dest, expected",
+        [
+            ((0, 0, 10, 10), (0, 0, 1000, 1000), (100, 0, 0, 100, 0, 0)),
+            ((0, 10, 10, -10), (0, 0, 1000, 1000), (100, 0, 0, -100, 0, 1000)),
+            ((0, 0, 0, 0), (0, 0, 1000, 1000), (1, 0, 0, 1, 0, 0)),
+            ((0, 0, 10, 10), (0, 0, 0, 1000), (0, 0, 0, 0, 0, 0)),
+        ],
+    )
+    def test_rect_to_rect(self, src, dest, expected):
+        assert Affine2D.rect_to_rect(Rect(*src), Rect(*dest)) == Affine2D(*expected)
