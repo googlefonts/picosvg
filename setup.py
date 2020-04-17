@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="nanosvg",
-    version="0.2",
+    use_scm_version={"write_to": "src/nanosvg/_version.py"},
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     entry_points={
@@ -27,6 +27,7 @@ setup(
         ],
     },
 
+    setup_requires=["setuptools_scm"],
     install_requires=["lxml>=4.0", "skia-pathops>=0.3",],
 
     # metadata to display on PyPI
