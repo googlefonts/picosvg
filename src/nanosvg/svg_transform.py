@@ -108,7 +108,7 @@ class Affine2D(NamedTuple):
     def inverse(self):
         """Return the inverse Affine2D transformation.
 
-        Raises ValueError if it's degenerate and thus non-intertible."""
+        Raises ValueError if it's degenerate and thus non-invertible."""
         if self == self.identity():
             return self
         elif self.is_degenerate():
