@@ -338,6 +338,7 @@ class SVGEllipse(SVGShape):
         path.M(cx - rx, cy)
         path.A(rx, ry, cx + rx, cy, large_arc=1)
         path.A(rx, ry, cx - rx, cy, large_arc=1)
+        path.end()
         path._copy_common_fields(*shape_fields)
         return path
 

@@ -19,7 +19,9 @@ Focuses on converting to a sequence of affine matrices.
 import collections
 from math import cos, sin, radians, tan
 import re
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
+from sys import float_info
+from nanosvg.geometric_types import Point, Rect, Vector
 
 
 _SVG_ARG_FIXUPS = collections.defaultdict(
@@ -95,6 +97,53 @@ class Affine2D(NamedTuple):
     # https://www.w3.org/TR/SVG11/coords.html#SkewYDefined
     def skewy(self, a):
         return self.matrix(1, tan(a), 0, 1, 0, 0)
+
+    def determinant(self) -> float:
+        return self.a * self.d - self.b * self.c
+
+    def is_degenerate(self) -> bool:
+        """Return True if [a b c d] matrix is degenerate (determinant is 0)."""
+        return abs(self.determinant()) <= float_info.epsilon
+
+    def inverse(self):
+        """Return the inverse Affine2D transformation.
+
+        Raises ValueError if it's degenerate and thus non-intertible."""
+        if self == self.identity():
+            return self
+        elif self.is_degenerate():
+            raise ValueError(f"Degenerate matrix is non-invertible: {self!r}")
+        a, b, c, d, e, f = self
+        det = self.determinant()
+        a, b, c, d = d / det, -b / det, -c / det, a / det
+        e = -a * e - c * f
+        f = -b * e - d * f
+        return self.__class__(a, b, c, d, e, f)
+
+    def map_point(self, pt: Tuple[float, float]) -> Point:
+        """Return Point (x, y) multiplied by Affine2D."""
+        x, y = pt
+        return Point(self.a * x + self.c * y + self.e, self.b * x + self.d * y + self.f)
+
+    def map_vector(self, vec: Tuple[float, float]) -> Vector:
+        """Return Vector (x, y) multiplied by Affine2D, treating translation as zero."""
+        x, y = vec
+        return Vector(self.a * x + self.c * y, self.b * x + self.d * y)
+
+    @classmethod
+    def rect_to_rect(cls, src: Rect, dst: Rect) -> "Affine2D":
+        """ Return Affine2D set to scale and translate src Rect to dst Rect.
+        The mapping completely fills dst, it does not preserve aspect ratio.
+        """
+        if src.empty():
+            return cls.identity()
+        if dst.empty():
+            return cls(0, 0, 0, 0, 0, 0)
+        sx = dst.w / src.w
+        sy = dst.h / src.h
+        tx = dst.x - src.x * sx
+        ty = dst.y - src.y * sy
+        return cls(sx, 0, 0, sy, tx, ty)
 
 
 Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)
