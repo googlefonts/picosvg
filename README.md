@@ -1,4 +1,4 @@
-[![Travis Build Status](https://travis-ci.org/rsheeter/nanosvg.svg)](https://travis-ci.org/rsheeter/nanosvg)
+[![Travis Build Status](https://travis-ci.org/googlefonts/nanosvg.svg)](https://travis-ci.org/googlefonts/nanosvg)
 [![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/nanosvg/)
 
 # nanosvg
