@@ -236,7 +236,7 @@ class SVG:
 
             new_el = copy.deepcopy(target)
 
-            group = etree.Element("g")
+            group = etree.Element(f"{{{svgns()}}}g", nsmap=self.svg_root.nsmap)
             use_x = use_el.attrib.get("x", 0)
             use_y = use_el.attrib.get("y", 0)
             if use_x != 0 or use_y != 0:
@@ -659,6 +659,7 @@ class SVG:
         self.remove_comments(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
+        self.apply_transforms(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
