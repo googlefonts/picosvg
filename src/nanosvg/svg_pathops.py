@@ -83,6 +83,7 @@ def skia_path(shape: SVGShape, tolerance: float):
         .explicit_lines()  # hHvV => lL
         .expand_shorthand(inplace=True)
         .absolute(inplace=True)
+        .arcs_to_cubics(inplace=True)
     )
 
     sk_path = pathops.Path()
