@@ -1,9 +1,9 @@
-[![Travis Build Status](https://travis-ci.org/googlefonts/nanosvg.svg)](https://travis-ci.org/googlefonts/nanosvg)
-[![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/nanosvg/)
+[![Travis Build Status](https://travis-ci.org/googlefonts/nanosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
+[![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/picosvg/)
 
 # nanosvg
 
-Tool to simplify SVGs. Converts an input svg into a "nano" svg:
+Tool to simplify SVGs. Converts an input svg into a "pico" svg:
 
 *   Exactly 1 `<defs>` element, first child of root
 *   Only gradients defined under `<defs>`
@@ -20,7 +20,7 @@ Usage:
 
 ```shell
 pip install -e .
-nanosvg mysvg.svg
+picosvg mysvg.svg
 ```
 
 ## How to cut a new release
