@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nanosvg.geometric_types import Point
-from nanosvg.arc_to_cubic import arc_to_cubic
+from picosvg.geometric_types import Point
+from picosvg.arc_to_cubic import arc_to_cubic
 
 import pytest
 

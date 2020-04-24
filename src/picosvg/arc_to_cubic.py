@@ -20,8 +20,8 @@ https://github.com/chromium/chromium/blob/93831f2/third_party/blink/renderer/cor
 """
 from math import atan2, ceil, cos, fabs, isfinite, pi, radians, sin, sqrt, tan
 from typing import Iterator, NamedTuple, Optional, Tuple
-from nanosvg.geometric_types import Point, Vector
-from nanosvg.svg_transform import Affine2D
+from picosvg.geometric_types import Point, Vector
+from picosvg.svg_transform import Affine2D
 
 
 TWO_PI = 2 * pi

@@ -18,9 +18,9 @@ from functools import reduce
 from lxml import etree  # pytype: disable=import-error
 import re
 from typing import List, Optional, Tuple
-from nanosvg.svg_meta import ntos, svgns, xlinkns
-from nanosvg import svg_pathops
-from nanosvg.svg_types import *
+from picosvg.svg_meta import ntos, svgns, xlinkns
+from picosvg import svg_pathops
+from picosvg.svg_types import *
 import numbers
 
 _ELEMENT_CLASSES = {
@@ -590,10 +590,10 @@ class SVG:
 
         return self
 
-    def checknanosvg(self):
+    def checkpicosvg(self):
         """Check for nano violations, return xpaths to bad elements.
 
-        If result sequence empty then this is a valid nanosvg.
+        If result sequence empty then this is a valid picosvg.
         """
 
         def _strip_ns(tagname):
@@ -631,10 +631,10 @@ class SVG:
 
         return tuple(errors)
 
-    def tonanosvg(self, inplace=False):
+    def topicosvg(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.tonanosvg(inplace=True)
+            svg.topicosvg(inplace=True)
             return svg
 
         self._update_etree()
@@ -659,10 +659,10 @@ class SVG:
 
         self.svg_root.insert(0, defs)
 
-        nano_violations = self.checknanosvg()
+        nano_violations = self.checkpicosvg()
         if nano_violations:
             raise ValueError(
-                "Unable to convert to nanosvg: " + ",".join(nano_violations)
+                "Unable to convert to picosvg: " + ",".join(nano_violations)
             )
 
         return self

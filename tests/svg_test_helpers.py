@@ -14,7 +14,7 @@
 
 from lxml import etree
 import os
-from nanosvg.svg import SVG
+from picosvg.svg import SVG
 
 
 def _locate_test_file(filename):

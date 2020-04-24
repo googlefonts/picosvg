@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from nanosvg.svg_types import SVGPath, Rect
+from picosvg.svg_types import SVGPath, Rect
 from svg_test_helpers import *
 
 

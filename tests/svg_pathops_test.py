@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import pytest
-from nanosvg import svg_pathops
-from nanosvg.svg_types import SVGCircle, SVGPath, SVGRect
+from picosvg import svg_pathops
+from picosvg.svg_types import SVGCircle, SVGPath, SVGRect
 
 
 def _round(pt, digits):

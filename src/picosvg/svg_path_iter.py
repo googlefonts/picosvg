@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from nanosvg import svg_meta
+from picosvg import svg_meta
 
 _CMD_RE = re.compile(f'([{"".join(svg_meta.cmds())}])')
 
