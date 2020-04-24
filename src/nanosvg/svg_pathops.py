@@ -19,13 +19,6 @@ from nanosvg.svg_transform import Affine2D
 from nanosvg.svg_types import SVGPath, SVGShape
 
 
-def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):
-    # SVG 'sweep-flag' value is opposite the integer value of SkPath.arcTo 'sweep'.
-    # SVG sweep-flag uses 1 for clockwise, while SkPathDirection::kCW cast to
-    # int is zero, thus we need to negate it.
-    self.arcTo(rx, ry, xAxisRotate, largeArc, not sweep, x, y)
-
-
 # Absolutes coords assumed
 # A should never occur because we convert arcs to cubics
 # S,T should never occur because we eliminate shorthand
@@ -35,7 +28,6 @@ _SVG_CMD_TO_SKIA_FN = {
     "Q": pathops.Path.quadTo,
     "Z": pathops.Path.close,
     "C": pathops.Path.cubicTo,
-    "A": _svg_arc_to_skia_arcTo,
 }
 
 _SVG_TO_SKIA_LINE_CAP = {
@@ -77,9 +69,9 @@ _SKIA_CMD_TO_SVG_CMD = {
 }
 
 
-def skia_path(shape: SVGShape, tolerance: float):
+def skia_path(shape: SVGShape):
     path = (
-        shape.as_path(tolerance)
+        shape.as_path()
         .explicit_lines()  # hHvV => lL
         .expand_shorthand(inplace=True)
         .absolute(inplace=True)
@@ -92,7 +84,6 @@ def skia_path(shape: SVGShape, tolerance: float):
             raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
         _SVG_CMD_TO_SKIA_FN[cmd](sk_path, *args)
 
-    sk_path.convertConicsToQuads(tolerance)
     return sk_path
 
 
@@ -105,32 +96,31 @@ def svg_path(skia_path: pathops.Path) -> SVGPath:
     return svg_path
 
 
-def _do_pathop(tolerance, op, svg_shapes) -> SVGShape:
-    tolerance = float(tolerance)
+def _do_pathop(op, svg_shapes) -> SVGShape:
     if not svg_shapes:
         return SVGPath()
 
-    sk_path = skia_path(svg_shapes[0], tolerance)
+    sk_path = skia_path(svg_shapes[0])
     for svg_shape in svg_shapes[1:]:
-        sk_path2 = skia_path(svg_shape, tolerance)
+        sk_path2 = skia_path(svg_shape)
         sk_path = pathops.op(sk_path, sk_path2, op)
     return svg_path(sk_path)
 
 
-def union(tolerance, *svg_shapes) -> SVGShape:
-    return _do_pathop(tolerance, pathops.PathOp.UNION, svg_shapes)
+def union(*svg_shapes) -> SVGShape:
+    return _do_pathop(pathops.PathOp.UNION, svg_shapes)
 
 
-def intersection(tolerance, *svg_shapes) -> SVGShape:
-    return _do_pathop(tolerance, pathops.PathOp.INTERSECTION, svg_shapes)
+def intersection(*svg_shapes) -> SVGShape:
+    return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
 
 
-def transform(svg_shape: SVGShape, affine: Affine2D, tolerance: float) -> SVGShape:
-    sk_path = skia_path(svg_shape, tolerance).transform(*affine)
+def transform(svg_shape: SVGShape, affine: Affine2D) -> SVGShape:
+    sk_path = skia_path(svg_shape).transform(*affine)
     return svg_path(sk_path)
 
 
-def stroke(shape: SVGShape, tolerance: float) -> SVGShape:
+def stroke(shape: SVGShape) -> SVGShape:
     """Create a path that is shape with it's stroke applied."""
     cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
     if cap is None:
@@ -138,10 +128,10 @@ def stroke(shape: SVGShape, tolerance: float) -> SVGShape:
     join = _SVG_TO_SKIA_LINE_JOIN.get(shape.stroke_linejoin, None)
     if join is None:
         raise ValueError(f"Unsupported join {shape.stroke_linejoin}")
-    sk_path = skia_path(shape, tolerance)
+    sk_path = skia_path(shape)
     sk_path.stroke(shape.stroke_width, cap, join, shape.stroke_miterlimit)
     return svg_path(sk_path)
 
 
-def bounding_box(shape: SVGShape, tolerance: float):
-    return skia_path(shape, tolerance).bounds
+def bounding_box(shape: SVGShape):
+    return skia_path(shape).bounds

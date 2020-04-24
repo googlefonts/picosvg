@@ -167,17 +167,6 @@ class SVG:
             raise ValueError("Unable to parse viewBox")
         return Rect(*box)
 
-    def _default_tolerance(self):
-        vbox = self.view_box()
-        # Absence of viewBox is unusual
-        if vbox is None:
-            return _DEFAULT_DEFAULT_TOLERENCE
-        return min(vbox.w, vbox.h) * _MAX_PCT_ERROR / 100
-
-    @property
-    def tolerance(self):
-        return self._default_tolerance()
-
     def shapes(self):
         return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
 
@@ -200,10 +189,9 @@ class SVG:
             svg.shapes_to_paths(inplace=True)
             return svg
 
-        tolerance = self.tolerance
         swaps = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            self.elements[idx] = (el, (shape.as_path(tolerance),))
+            self.elements[idx] = (el, (shape.as_path(),))
         return self
 
     def _xpath(self, xpath, el=None):
@@ -279,14 +267,14 @@ class SVG:
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
         clip_path = svg_pathops.union(
-            self.tolerance, *[from_element(e) for e in clip_path_el]
+            *[from_element(e) for e in clip_path_el]
         )
         return clip_path
 
     def _combine_clip_paths(self, clip_paths):
         # multiple clip paths leave behind their intersection
         if len(clip_paths) > 1:
-            return svg_pathops.intersection(self.tolerance, *clip_paths)
+            return svg_pathops.intersection(*clip_paths)
         elif clip_paths:
             return clip_paths[0]
         return None
@@ -432,7 +420,7 @@ class SVG:
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = svg_pathops.stroke(shape, self.tolerance)
+        stroke = svg_pathops.stroke(shape)
 
         # convert some stroke attrs (e.g. stroke => fill)
         for field in dataclasses.fields(shape):
@@ -497,9 +485,9 @@ class SVG:
         # apply clip path to target
         for el_idx, clip_path in clips:
             el, (target,) = self.elements[el_idx]
-            target = target.as_path(self.tolerance).absolute(inplace=True)
+            target = target.as_path().absolute(inplace=True)
 
-            target.d = svg_pathops.intersection(self.tolerance, target, clip_path).d
+            target.d = svg_pathops.intersection(target, clip_path).d
             target.clip_path = ""
             self._set_element(el_idx, el, (target,))
 
@@ -535,7 +523,7 @@ class SVG:
                     )
                 el = el.getparent()
             if transform != Affine2D.identity():
-                new_shapes.append((idx, shape.transform(transform, self.tolerance)))
+                new_shapes.append((idx, shape.transform(transform)))
 
         for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]

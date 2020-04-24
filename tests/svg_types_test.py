@@ -116,7 +116,7 @@ def test_expand_shorthand(path, expected_result):
 )
 def test_bounding_box(shape, expected_bbox):
     nsvg = svg(shape)
-    actual_bbox = nsvg.shapes()[0].bounding_box(nsvg.tolerance)
+    actual_bbox = nsvg.shapes()[0].bounding_box()
     print(f"A: {actual_bbox}")
     print(f"E: {expected_bbox}")
     assert actual_bbox == expected_bbox

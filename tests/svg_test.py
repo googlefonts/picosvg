@@ -304,21 +304,3 @@ def test_remove_attributes(svg_string, names, expected_result):
     assert (
         SVG.fromstring(svg_string).remove_attributes(names).tostring()
     ) == expected_result
-
-
-# https://github.com/rsheeter/nanosvg/issues/1
-@pytest.mark.parametrize(
-    "svg_string, expected_result",
-    [
-        (
-            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12"/>',
-            0.012,
-        ),
-        (
-            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"/>',
-            0.128,
-        ),
-    ],
-)
-def test_tolerance(svg_string, expected_result):
-    assert round(SVG.fromstring(svg_string).tolerance, 4) == expected_result
