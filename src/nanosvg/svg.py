@@ -266,9 +266,7 @@ class SVG:
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        clip_path = svg_pathops.union(
-            *[from_element(e) for e in clip_path_el]
-        )
+        clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
         return clip_path
 
     def _combine_clip_paths(self, clip_paths):
@@ -411,10 +409,7 @@ class SVG:
             return field.name.startswith("stroke")
 
         # map old fields to new dest
-        _stroke_fields = {
-            "stroke": "fill",
-            "stroke_opacity": "opacity",
-        }
+        _stroke_fields = {"stroke": "fill", "stroke_opacity": "opacity"}
 
         if shape.stroke == "none":
             return (shape,)

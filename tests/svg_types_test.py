@@ -125,9 +125,15 @@ def test_bounding_box(shape, expected_bbox):
 @pytest.mark.parametrize(
     "path, expected_result",
     [
-        ("M-1,0 A1,1 0,0,0 1,0 z", "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z"),
+        (
+            "M-1,0 A1,1 0,0,0 1,0 z",
+            "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z",
+        ),
         # relative coordinates
-        ("M-1,0 a1,1 0,0,0 2,0 z", "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z"),
+        (
+            "M-1,0 a1,1 0,0,0 2,0 z",
+            "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z",
+        ),
         # degenerate arcs as straight lines
         ("M-1,0 A0,1 0,0,0 0,1 A1,0 0,0,0 1,0 z", "M-1,0 L0,1 L1,0 z"),
     ],
