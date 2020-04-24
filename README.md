@@ -1,7 +1,7 @@
 [![Travis Build Status](https://travis-ci.org/googlefonts/nanosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
 [![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/picosvg/)
 
-# nanosvg
+# picosvg
 
 Tool to simplify SVGs. Converts an input svg into a "pico" svg:
 
@@ -41,5 +41,5 @@ $ git push origin v0.4.3
 ```
 
 This will trigger the CI to build the distribution packages and upload them to the
-[Python Package Index](https://pypi.org/project/nanosvg/) automatically, if all the tests
+[Python Package Index](https://pypi.org/project/picosvg/) automatically, if all the tests
 pass successfully.
