@@ -230,6 +230,7 @@ def test_transform(actual, expected_result):
         ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
         ("invisible-before.svg", "invisible-nano.svg"),
+        ("transform-before.svg", "transform-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
