@@ -34,16 +34,16 @@ def _test(actual, expected_result, op):
     "shape, expected_fields",
     [
         # path, fill
-        ("<path d='M1,1 2,2' fill='blue' />", {"fill": "blue",}),
+        ("<path d='M1,1 2,2' fill='blue' />", {"fill": "blue"}),
         # rect, opacity
-        ("<rect x='5' y='5' width='5' height='5' opacity='0.5'/>", {"opacity": 0.5,}),
+        ("<rect x='5' y='5' width='5' height='5' opacity='0.5'/>", {"opacity": 0.5}),
         # polyline, clip-path
         (
             "<polyline points='1,1 5,5 2,2' clip-path='url(#cp)'/>",
-            {"clip_path": "url(#cp)",},
+            {"clip_path": "url(#cp)"},
         ),
         # line, stroke
-        ("<line x1='1' y1='1' x2='10' y2='10' stroke='red'/>", {"stroke": "red",}),
+        ("<line x1='1' y1='1' x2='10' y2='10' stroke='red'/>", {"stroke": "red"}),
     ],
 )
 def test_common_attrib(shape, expected_fields):
@@ -63,18 +63,18 @@ def test_common_attrib(shape, expected_fields):
     "shape, expected_path",
     [
         # path: direct passthrough
-        ("<path d='I love kittens'/>", 'd="I love kittens"',),
+        ("<path d='I love kittens'/>", 'd="I love kittens"'),
         # path no @d
-        ("<path duck='Mallard'/>", "",),
+        ("<path duck='Mallard'/>", ""),
         # line
-        ('<line x1="10" x2="50" y1="110" y2="150"/>', 'd="M10,110 L50,150"',),
+        ('<line x1="10" x2="50" y1="110" y2="150"/>', 'd="M10,110 L50,150"'),
         # line, decimal positioning
         (
             '<line x1="10.0" x2="50.5" y1="110.2" y2="150.7"/>',
             'd="M10,110.2 L50.5,150.7"',
         ),
         # rect: minimal valid example
-        ("<rect width='1' height='1'/>", 'd="M0,0 H1 V1 H0 V0 z"',),
+        ("<rect width='1' height='1'/>", 'd="M0,0 H1 V1 H0 V0 z"'),
         # rect: sharp corners
         (
             "<rect x='10' y='11' width='17' height='11'/>",
@@ -92,11 +92,11 @@ def test_common_attrib(shape, expected_fields):
             'd="M11.5,16 H22.5 V18 H11.5 V16 z"',
         ),
         # polygon
-        ("<polygon points='30,10 50,30 10,30'/>", 'd="M30,10 50,30 10,30 z"',),
+        ("<polygon points='30,10 50,30 10,30'/>", 'd="M30,10 50,30 10,30 z"'),
         # polyline
-        ("<polyline points='30,10 50,30 10,30'/>", 'd="M30,10 50,30 10,30"',),
+        ("<polyline points='30,10 50,30 10,30'/>", 'd="M30,10 50,30 10,30"'),
         # circle, minimal valid example
-        ("<circle r='1'/>", 'd="M-1,0 A1 1 0 1 1 1,0 A1 1 0 1 1 -1,0 z"',),
+        ("<circle r='1'/>", 'd="M-1,0 A1 1 0 1 1 1,0 A1 1 0 1 1 -1,0 z"'),
         # circle
         (
             "<circle cx='600' cy='200' r='100'/>",
@@ -133,12 +133,12 @@ def test_shapes_to_paths(shape: str, expected_path: str):
         # line
         (
             '<line x1="10" x2="50" y1="110" y2="150"/>',
-            [("M", (10.0, 110.0)), ("L", (50.0, 150.0)),],
+            [("M", (10.0, 110.0)), ("L", (50.0, 150.0))],
         ),
         # path explodes to show implicit commands
         (
             '<path d="m1,1 2,0 1,3"/>',
-            [("m", (1.0, 1.0)), ("l", (2.0, 0.0)), ("l", (1.0, 3.0)),],
+            [("m", (1.0, 1.0)), ("l", (2.0, 0.0)), ("l", (1.0, 3.0))],
         ),
         # vertical and horizontal movement
         (
@@ -192,14 +192,14 @@ def test_apply_clip_path(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("use-ellipse.svg", "use-ellipse-resolved.svg"),]
+    "actual, expected_result", [("use-ellipse.svg", "use-ellipse-resolved.svg")]
 )
 def test_resolve_use(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.resolve_use(inplace=True))
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("ungroup-before.svg", "ungroup-after.svg"),]
+    "actual, expected_result", [("ungroup-before.svg", "ungroup-after.svg")]
 )
 def test_ungroup(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.ungroup(inplace=True))
@@ -217,7 +217,7 @@ def test_strokes_to_paths(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("rotated-rect.svg", "rotated-rect-after.svg"),]
+    "actual, expected_result", [("rotated-rect.svg", "rotated-rect-after.svg")]
 )
 def test_transform(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.apply_transforms(inplace=True))
@@ -237,7 +237,7 @@ def test_topicosvg(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("invisible-before.svg", "invisible-after.svg"),]
+    "actual, expected_result", [("invisible-before.svg", "invisible-after.svg")]
 )
 def test_remove_unpainted_shapes(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.remove_unpainted_shapes())
