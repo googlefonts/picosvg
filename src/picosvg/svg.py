@@ -167,6 +167,17 @@ class SVG:
             raise ValueError("Unable to parse viewBox")
         return Rect(*box)
 
+    def _default_tolerance(self):
+        vbox = self.view_box()
+        # Absence of viewBox is unusual
+        if vbox is None:
+            return _DEFAULT_DEFAULT_TOLERENCE
+        return min(vbox.w, vbox.h) * _MAX_PCT_ERROR / 100
+
+    @property
+    def tolerance(self):
+        return self._default_tolerance()
+
     def shapes(self):
         return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
 
@@ -415,7 +426,7 @@ class SVG:
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = svg_pathops.stroke(shape)
+        stroke = svg_pathops.stroke(shape, self.tolerance)
 
         # convert some stroke attrs (e.g. stroke => fill)
         for field in dataclasses.fields(shape):

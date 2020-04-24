@@ -120,7 +120,7 @@ def transform(svg_shape: SVGShape, affine: Affine2D) -> SVGShape:
     return svg_path(sk_path)
 
 
-def stroke(shape: SVGShape) -> SVGShape:
+def stroke(shape: SVGShape, tolerance: float) -> SVGShape:
     """Create a path that is shape with it's stroke applied."""
     cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
     if cap is None:
@@ -130,6 +130,10 @@ def stroke(shape: SVGShape) -> SVGShape:
         raise ValueError(f"Unsupported join {shape.stroke_linejoin}")
     sk_path = skia_path(shape)
     sk_path.stroke(shape.stroke_width, cap, join, shape.stroke_miterlimit)
+
+    # nuke any conics that snuck in (e.g. with stroke-linecap="round")
+    sk_path.convertConicsToQuads(tolerance)
+
     return svg_path(sk_path)
 
 
