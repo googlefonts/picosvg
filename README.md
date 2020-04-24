@@ -1,9 +1,10 @@
-[![Travis Build Status](https://travis-ci.org/rsheeter/nanosvg.svg)](https://travis-ci.org/rsheeter/nanosvg)
-[![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/nanosvg/)
+[![Travis Build Status](https://travis-ci.org/googlefonts/picosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
+[![PyPI](https://img.shields.io/pypi/v/picosvg.svg)](https://pypi.org/project/picosvg/)
+[![pyup](https://pyup.io/repos/github/googlefonts/picosvg/shield.svg)](https://pyup.io/repos/github/googlefonts/picosvg)
 
-# nanosvg
+# picosvg
 
-Tool to simplify SVGs. Converts an input svg into a "nano" svg:
+Tool to simplify SVGs. Converts an input svg into a "pico" svg:
 
 *   Exactly 1 `<defs>` element, first child of root
 *   Only gradients defined under `<defs>`
@@ -20,7 +21,7 @@ Usage:
 
 ```shell
 pip install -e .
-nanosvg mysvg.svg
+picosvg mysvg.svg
 ```
 
 ## How to cut a new release
@@ -41,5 +42,5 @@ $ git push origin v0.4.3
 ```
 
 This will trigger the CI to build the distribution packages and upload them to the
-[Python Package Index](https://pypi.org/project/nanosvg/) automatically, if all the tests
+[Python Package Index](https://pypi.org/project/picosvg/) automatically, if all the tests
 pass successfully.

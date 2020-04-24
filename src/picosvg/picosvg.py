@@ -15,12 +15,12 @@
 """Simplify svg.
 
 Usage:
-nanosvg.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
+picosvg.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
 <simplified svg dumped to stdout>
 """
 from lxml import etree  # pytype: disable=import-error
-from nanosvg.svg import SVG
-from nanosvg.svg_meta import svgns
+from picosvg.svg import SVG
+from picosvg.svg_meta import svgns
 import sys
 
 
@@ -30,7 +30,7 @@ def _reduce_text(text):
 
 
 def main():
-    svg = SVG.parse(sys.argv[1]).tonanosvg()
+    svg = SVG.parse(sys.argv[1]).topicosvg()
 
     tree = svg.toetree()
 
