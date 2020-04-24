@@ -21,15 +21,15 @@ from svg_test_helpers import *
     "path, expected_result",
     [
         # path explodes to show implicit commands & becomes absolute
-        ("m1,1 2,0 1,3", "M1,1 L3,1 L4,4",),
+        ("m1,1 2,0 1,3", "M1,1 L3,1 L4,4"),
         # Vertical, Horizontal movement
-        ("m2,2 h2 v2 h-1 v-1 H8 V8", "M2,2 H4 V4 H3 V3 H8 V8",),
+        ("m2,2 h2 v2 h-1 v-1 H8 V8", "M2,2 H4 V4 H3 V3 H8 V8"),
         # Quadratic bezier curve
-        ("m2,2 q1,1 2,2 Q5,5 6,6", "M2,2 Q3,3 4,4 Q5,5 6,6",),
+        ("m2,2 q1,1 2,2 Q5,5 6,6", "M2,2 Q3,3 4,4 Q5,5 6,6"),
         # Elliptic arc
-        ("m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4", "M2,2 A1 1 0 0 0 5,5 A2 2 1 1 1 4,4",),
+        ("m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4", "M2,2 A1 1 0 0 0 5,5 A2 2 1 1 1 4,4"),
         # Cubic bezier
-        ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6",),
+        ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6"),
         # Elliptic arc that goes haywire when stroked
         ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4"),
     ],
@@ -45,13 +45,13 @@ def test_path_absolute(path: str, expected_result: str):
     "path, move, expected_result",
     [
         # path with implicit relative lines
-        ("m1,1 2,0 1,3", (2, 2), "M3,3 l2,0 l1,3",),
+        ("m1,1 2,0 1,3", (2, 2), "M3,3 l2,0 l1,3"),
         # path with implicit absolute lines
-        ("M1,1 2,0 1,3", (2, 2), "M3,3 L4,2 L3,5",),
+        ("M1,1 2,0 1,3", (2, 2), "M3,3 L4,2 L3,5"),
         # Vertical, Horizontal movement
-        ("m2,2 h2 v2 h-1 v-1 H8 V8", (-1, -2), "M1,0 h2 v2 h-1 v-1 H7 V6",),
+        ("m2,2 h2 v2 h-1 v-1 H8 V8", (-1, -2), "M1,0 h2 v2 h-1 v-1 H7 V6"),
         # Quadratic bezier curve
-        ("m2,2 q1,1 2,2 Q5,5 6,6", (3, 1), "M5,3 q1,1 2,2 Q8,6 9,7",),
+        ("m2,2 q1,1 2,2 Q5,5 6,6", (3, 1), "M5,3 q1,1 2,2 Q8,6 9,7"),
         # Elliptic arc
         (
             "m2,2 a1,1 0 0 0 3,3 A2,2 1 1 1 4,4",
@@ -59,11 +59,7 @@ def test_path_absolute(path: str, expected_result: str):
             "M3,5 a1 1 0 0 0 3,3 A2 2 1 1 1 5,7",
         ),
         # Cubic bezier
-        (
-            "m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6",
-            (4, 2),
-            "M6,4 c1,-1 2,4 3,3 C8,6 9,7 10,8",
-        ),
+        ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", (4, 2), "M6,4 c1,-1 2,4 3,3 C8,6 9,7 10,8"),
     ],
 )
 def test_path_move(path: str, move, expected_result: str):
@@ -113,9 +109,9 @@ def test_expand_shorthand(path, expected_result):
     "shape, expected_bbox",
     [
         # plain rect
-        ('<rect x="2" y="2" width="6" height="2" />', Rect(2, 2, 6, 2),),
+        ('<rect x="2" y="2" width="6" height="2" />', Rect(2, 2, 6, 2)),
         # triangle
-        ('<path d="m5,2 2.5,5 -5,0 z" />', Rect(2.5, 2, 5, 5),),
+        ('<path d="m5,2 2.5,5 -5,0 z" />', Rect(2.5, 2, 5, 5)),
     ],
 )
 def test_bounding_box(shape, expected_bbox):
@@ -124,3 +120,20 @@ def test_bounding_box(shape, expected_bbox):
     print(f"A: {actual_bbox}")
     print(f"E: {expected_bbox}")
     assert actual_bbox == expected_bbox
+
+
+@pytest.mark.parametrize(
+    "path, expected_result",
+    [
+        ("M-1,0 A1,1 0,0,0 1,0 z", "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z"),
+        # relative coordinates
+        ("M-1,0 a1,1 0,0,0 2,0 z", "M-1,0 C-1,0.552 -0.552,1 0,1 C0.552,1 1,0.552 1,0 z"),
+        # degenerate arcs as straight lines
+        ("M-1,0 A0,1 0,0,0 0,1 A1,0 0,0,0 1,0 z", "M-1,0 L0,1 L1,0 z"),
+    ],
+)
+def test_arcs_to_cubics(path, expected_result):
+    actual = SVGPath(d=path).arcs_to_cubics(inplace=True).d
+    print(f"A: {actual}")
+    print(f"E: {expected_result}")
+    assert actual == expected_result

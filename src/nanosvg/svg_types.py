@@ -17,6 +17,7 @@ import dataclasses
 from nanosvg.geometric_types import Point, Rect
 from nanosvg import svg_meta
 from nanosvg import svg_pathops
+from nanosvg.arc_to_cubic import arc_to_cubic
 from nanosvg.svg_path_iter import parse_svg_path
 from nanosvg.svg_transform import Affine2D
 
@@ -306,6 +307,42 @@ class SVGPath(SVGShape):
         if not inplace:
             target = copy.deepcopy(self)
         target.walk(expand_shorthand_callback)
+        return target
+
+    def arcs_to_cubics(self, inplace=False):
+        """Replace all arcs with similar cubics"""
+
+        def arc_to_cubic_callback(curr_pos, cmd, args, *_):
+            if cmd not in {"a", "A"}:
+                # no work to do
+                return ((cmd, args),)
+
+            (rx, ry, x_rotation, large, sweep, end_x, end_y) = args
+
+            if cmd == "a":
+                end_x += curr_pos.x
+                end_y += curr_pos.y
+            end_pt = Point(end_x, end_y)
+
+            result = []
+            for p1, p2, target in arc_to_cubic(
+                curr_pos, rx, ry, x_rotation, large, sweep, end_pt
+            ):
+                x, y = target
+                if p1 is not None:
+                    assert p2 is not None
+                    x1, y1 = p1
+                    x2, y2 = p2
+                    result.append(("C", (x1, y1, x2, y2, x, y)))
+                else:
+                    result.append(("L", (x, y)))
+
+            return tuple(result)
+
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        target.walk(arc_to_cubic_callback)
         return target
 
 
