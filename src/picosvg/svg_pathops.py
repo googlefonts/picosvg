@@ -15,8 +15,8 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import functools
 import pathops
-from nanosvg.svg_transform import Affine2D
-from nanosvg.svg_types import SVGPath, SVGShape
+from picosvg.svg_transform import Affine2D
+from picosvg.svg_types import SVGPath, SVGShape
 
 
 def _svg_arc_to_skia_arcTo(self, rx, ry, xAxisRotate, largeArc, sweep, x, y):

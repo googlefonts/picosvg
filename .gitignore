@@ -5,4 +5,4 @@ venv/
 build/
 dist/
 .eggs/
-src/nanosvg/_version.py
+src/picosvg/_version.py

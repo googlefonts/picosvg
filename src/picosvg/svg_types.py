@@ -14,12 +14,12 @@
 
 import copy
 import dataclasses
-from nanosvg.geometric_types import Point, Rect
-from nanosvg import svg_meta
-from nanosvg import svg_pathops
-from nanosvg.arc_to_cubic import arc_to_cubic
-from nanosvg.svg_path_iter import parse_svg_path
-from nanosvg.svg_transform import Affine2D
+from picosvg.geometric_types import Point, Rect
+from picosvg import svg_meta
+from picosvg import svg_pathops
+from picosvg.arc_to_cubic import arc_to_cubic
+from picosvg.svg_path_iter import parse_svg_path
+from picosvg.svg_transform import Affine2D
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html

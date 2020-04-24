@@ -21,7 +21,7 @@ from math import cos, sin, radians, tan
 import re
 from typing import NamedTuple, Tuple
 from sys import float_info
-from nanosvg.geometric_types import Point, Rect, Vector
+from picosvg.geometric_types import Point, Rect, Vector
 
 
 _SVG_ARG_FIXUPS = collections.defaultdict(

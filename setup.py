@@ -17,13 +17,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="nanosvg",
-    use_scm_version={"write_to": "src/nanosvg/_version.py"},
+    name="picosvg",
+    use_scm_version={"write_to": "src/picosvg/_version.py"},
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     entry_points={
         'console_scripts': [
-            'nanosvg=nanosvg.nanosvg:main',
+            'picosvg=picosvg.picosvg:main',
         ],
     },
 

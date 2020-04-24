@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import pytest
-from nanosvg import svg_pathops
-from nanosvg.svg_types import SVGCircle, SVGPath, SVGRect
+from picosvg import svg_pathops
+from picosvg.svg_types import SVGCircle, SVGPath, SVGRect
 
 
 _TEST_TOLERENCE = 0.25  # what Skia typically uses
@@ -48,7 +48,7 @@ def _round(pt, digits):
             ),
             "M4,4 L10,4 L10,20 L4,20 L4,4 Z",
         ),
-        # https://github.com/rsheeter/nanosvg/issues/1
+        # https://github.com/rsheeter/picosvg/issues/1
         # intolerance makes for poor circles
         (
             SVGCircle(cx=5, cy=5, r=4),
@@ -63,7 +63,7 @@ def _round(pt, digits):
             ),
             "M1,5 Q1,1 5,1 Q9,1 9,5 Q9,9 5,9 Q1,9 1,5 Z",
         ),
-        # https://github.com/rsheeter/nanosvg/issues/1
+        # https://github.com/rsheeter/picosvg/issues/1
         # a more tolerent circle
         (
             SVGCircle(cx=5, cy=5, r=4),

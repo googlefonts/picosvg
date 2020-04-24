@@ -14,7 +14,7 @@
 
 import pytest
 from math import degrees, pi
-from nanosvg.svg_transform import *
+from picosvg.svg_transform import *
 from typing import Tuple
 
 

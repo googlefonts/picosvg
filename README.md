@@ -1,5 +1,5 @@
-[![Travis Build Status](https://travis-ci.org/googlefonts/nanosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
-[![PyPI](https://img.shields.io/pypi/v/nanosvg.svg)](https://pypi.org/project/picosvg/)
+[![Travis Build Status](https://travis-ci.org/googlefonts/picosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
+[![PyPI](https://img.shields.io/pypi/v/picosvg.svg)](https://pypi.org/project/picosvg/)
 
 # picosvg
 

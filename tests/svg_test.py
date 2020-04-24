@@ -16,7 +16,7 @@ import dataclasses
 from lxml import etree
 import os
 import pytest
-from nanosvg.svg import SVG
+from picosvg.svg import SVG
 from svg_test_helpers import *
 
 
@@ -232,8 +232,8 @@ def test_transform(actual, expected_result):
         ("invisible-before.svg", "invisible-nano.svg"),
     ],
 )
-def test_tonanosvg(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.tonanosvg())
+def test_topicosvg(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.topicosvg())
 
 
 @pytest.mark.parametrize(
@@ -258,8 +258,8 @@ def test_remove_unpainted_shapes(actual, expected_result):
         ("bad-defs-1.svg", ("BadElement: /svg[0]/path[0]",)),
     ],
 )
-def test_checknanosvg(svg_file, expected_violations):
-    nano_violations = load_test_svg(svg_file).checknanosvg()
+def test_checkpicosvg(svg_file, expected_violations):
+    nano_violations = load_test_svg(svg_file).checkpicosvg()
     assert expected_violations == nano_violations
 
 
@@ -306,7 +306,7 @@ def test_remove_attributes(svg_string, names, expected_result):
     ) == expected_result
 
 
-# https://github.com/rsheeter/nanosvg/issues/1
+# https://github.com/rsheeter/picosvg/issues/1
 @pytest.mark.parametrize(
     "svg_string, expected_result",
     [
