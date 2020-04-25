@@ -77,7 +77,6 @@ class EllipticalArc(NamedTuple):
         square_y = transformed_mid_point.y * transformed_mid_point.y
 
         radii_scale = square_x / square_rx + square_y / square_ry
-        print(radii_scale)
         if radii_scale > 1:
             rx *= sqrt(radii_scale)
             ry *= sqrt(radii_scale)
