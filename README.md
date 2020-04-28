@@ -1,4 +1,4 @@
-[![Travis Build Status](https://travis-ci.org/googlefonts/picosvg.svg)](https://travis-ci.org/googlefonts/picosvg)
+[![Travis Build Status](https://travis-ci.org/googlefonts/picosvg.svg?branch=master)](https://travis-ci.org/googlefonts/picosvg)
 [![PyPI](https://img.shields.io/pypi/v/picosvg.svg)](https://pypi.org/project/picosvg/)
 [![pyup](https://pyup.io/repos/github/googlefonts/picosvg/shield.svg)](https://pyup.io/repos/github/googlefonts/picosvg)
 
