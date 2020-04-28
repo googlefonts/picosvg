@@ -56,18 +56,23 @@ class Affine2D(NamedTuple):
     def fromstring(raw_transform):
         return parse_svg_transform(raw_transform)
 
-    def concat(self, other: "Affine2D") -> "Affine2D":
-        return self.matrix(*other)
+    @staticmethod
+    def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
+        """Returns the product of first x second.
+
+        Order matters; meant to make that a bit more explicit.
+        """
+        return Affine2D(
+            first.a * second.a + first.b * second.c,
+            first.a * second.b + first.b * second.d,
+            first.c * second.a + first.d * second.c,
+            first.c * second.b + first.d * second.d,
+            second.a * first.e + second.c * first.f + second.e,
+            second.b * first.e + second.d * first.f + second.f,
+        )
 
     def matrix(self, a, b, c, d, e, f):
-        return Affine2D(
-            a * self.a + b * self.c,
-            a * self.b + b * self.d,
-            c * self.a + d * self.c,
-            c * self.b + d * self.d,
-            self.a * e + self.c * f + self.e,
-            self.b * e + self.d * f + self.f,
-        )
+        return Affine2D.product(Affine2D(a, b, c, d, e, f), self)
 
     # https://www.w3.org/TR/SVG11/coords.html#TranslationDefined
     def translate(self, tx, ty=0):
