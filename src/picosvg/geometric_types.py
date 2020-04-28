@@ -47,6 +47,9 @@ class Point(NamedTuple):
             return self.__class__(self.x + other.x, self.y + other.y)
         return NotImplemented
 
+    def round(self, digits: int) -> "Point":
+        return Point(round(self.x, digits), round(self.y, digits))
+
 
 class Vector(NamedTuple):
     x: float = 0

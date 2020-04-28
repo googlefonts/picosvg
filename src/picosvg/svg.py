@@ -524,8 +524,8 @@ class SVG:
             transform = Affine2D.identity()
             while el is not None:
                 if "transform" in el.attrib:
-                    transform = transform.concat(
-                        Affine2D.fromstring(el.attrib["transform"])
+                    transform = Affine2D.product(
+                        transform, Affine2D.fromstring(el.attrib["transform"])
                     )
                 el = el.getparent()
             if transform != Affine2D.identity():
