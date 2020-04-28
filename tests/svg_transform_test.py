@@ -114,10 +114,9 @@ class TestAffine2D:
         affine1 = Affine2D.identity().rotate(pi / 2)
         affine2 = Affine2D.identity().translate(1, 1)
         p0 = Point(1, 1)
-        assert (Affine2D.product(affine1, affine2).map_point(p0).round(2)
-                ==
-                affine2.map_point(affine1.map_point(p0)).round(2))
-
+        assert Affine2D.product(affine1, affine2).map_point(p0).round(
+            2
+        ) == affine2.map_point(affine1.map_point(p0)).round(2)
 
     def test_product_ordering(self):
         affine1 = Affine2D.identity().rotate(pi / 2)
