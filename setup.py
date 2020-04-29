@@ -28,7 +28,12 @@ setup(
     },
 
     setup_requires=["setuptools_scm"],
-    install_requires=["lxml>=4.0", "skia-pathops>=0.3",],
+    install_requires=[
+        "dataclasses>=0.7; python_version < '3.7'",
+        "lxml>=4.0",
+        "skia-pathops>=0.4.1",
+    ],
+    python_requires=">=3.6",
 
     # metadata to display on PyPI
     author="Rod S",
