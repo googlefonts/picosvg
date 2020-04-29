@@ -14,7 +14,9 @@
 
 language: python
 python:
-  - "3.7"      # we need dataclasses
+  - "3.6"
+  - "3.7"
+  - "3.8"
 install:
   - pip install --upgrade pip
   - pip install -r dev-requirements.txt
@@ -29,5 +31,6 @@ deploy:
     secure: iWOW4VFZkCH4WPh3kp2OSPXy9YMgZ9qg4jtVWnSWXu2qCbVYqghgwYP2wj9KqJcsNfIZLzQebVxKN7I03+9fizDE3zncDCKDVu4kMf14Yg9ir3YhQw2FWPEDqsOGmWASdEr5W2+ATZhWZvV7W4BzBAM2wfrnsNO7hdqjeipR/Q1xo/6qtFoGtmtD5yTe6g9Xazet+Vv0r5OP6L9Su8BTgyVvvwJmh+uyM3tqlPKXV7U9GUVUiX3BBP/4wuG3ZWcOmY3jUCZvYiq/bxuphBwPr8bgugPRDNvTNT3Z8HYb24A92aEF1IU9guDBk95yBEiDDXQ7Q+THqY9pXFSliZkRih1KStZ/mCL5DId/Suwz9oLatDrTSoyUeSOhQwEbqxo9pVtjEFW6SfW2wBZP1l+nhRXFc47Jnw5SX/RrXkx7vnq6TWQp15Dn8vB/rPTk56tNYtmOLpOpKHSDZ9fgkns00TPqNVkhc9B5pQbWoFNwtrjvBfLhDDbKzU5WY4+hZ8OmuzqJO1y8K1Y4UyUldi1hEJtr+6/DXexLNstBvEGe4dI5s6HEM4AxkX34a7hIjgN4UpdmDtDVnLk0Ca/vwedSoEc0a2WxcqBvsDJrCUh3DAjb6gRG6ZckZ4aaSDzAJXV/Lgj0mJ1zef0yuW6J8bXlKefuYpnrdSwAGi219Zv934M=
   on:
     tags: true
+    condition: "$TRAVIS_PYTHON_VERSION = 3.8"
   distributions: "sdist bdist_wheel"
   skip_existing: true
