@@ -322,6 +322,8 @@ class SVG:
             "fill-opacity": _inherit_multiply,
             "opacity": _inherit_multiply,
             "clip-path": _inherit_clip_path,
+            "id": lambda *_: 0,
+            "data-name": lambda *_: 0,
         }
 
         attrib = copy.deepcopy(group.attrib)
