@@ -28,4 +28,7 @@
       </g>
     </g>
   </g>
+  <g display="none">
+    <rect with="1" height="1"/>
+  </g>
 </svg>

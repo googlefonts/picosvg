@@ -339,8 +339,17 @@ class SVG:
     def _ungroup(self, scope_el):
         """Push inherited attributes from group down, then remove the group.
 
+        Drop groups that are not displayed.
+
         If result has multiple clip paths merge them.
         """
+        # nuke the groups that are not displayed
+        display_none = [e for e in self._xpath(f".//svg:g[@display='none']", scope_el)]
+        for group in display_none:
+            if group.getparent() is not None:
+                group.getparent().remove(group)
+
+        # Any groups left are displayed
         groups = [e for e in self._xpath(f".//svg:g", scope_el)]
         multi_clips = []
         for group in groups:
@@ -714,7 +723,8 @@ class SVG:
         if "xlink" in string and "xmlns:xlink" not in string:
             string = string.replace("xlink:href", _XLINK_TEMP)
 
-        tree = etree.fromstring(string)
+        # encode because fromstring dislikes xml encoding decl if input is str
+        tree = etree.fromstring(string.encode('utf-8'))
         tree = _fix_xlink_ns(tree)
         return cls(tree)
 
