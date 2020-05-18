@@ -285,7 +285,7 @@ class SVG:
         if not clip_paths:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
-            clip_paths[0]
+            return clip_paths[0]
         return svg_pathops.intersection(*clip_paths)
 
     def _new_id(self, tag, template):
