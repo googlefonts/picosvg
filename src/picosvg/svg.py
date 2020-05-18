@@ -355,7 +355,7 @@ class SVG:
         for group in groups:
             # move groups children up
             # reverse because "for each addnext" effectively reverses
-            children = [c for c in group]
+            children = list(group)
             children.reverse()
             for child in children:
                 group.remove(child)
