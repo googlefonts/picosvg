@@ -37,6 +37,7 @@ class SVGShape:
     stroke_dashoffset: float = 1.0
     stroke_opacity: float = 1.0
     opacity: float = 1.0
+    transform: str = ""
 
     def _copy_common_fields(
         self,
@@ -52,6 +53,7 @@ class SVGShape:
         stroke_dashoffset,
         stroke_opacity,
         opacity,
+        transform,
     ):
         self.id = id
         self.clip_path = clip_path
@@ -65,6 +67,7 @@ class SVGShape:
         self.stroke_dashoffset = stroke_dashoffset
         self.stroke_opacity = stroke_opacity
         self.opacity = opacity
+        self.transform = transform
 
     def visible(self):
         def _visible(fill, opacity):
@@ -79,7 +82,7 @@ class SVGShape:
         x1, y1, x2, y2 = svg_pathops.bounding_box(self)
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
-    def transform(self, transform: Affine2D):
+    def apply_transform(self, transform: Affine2D):
         return svg_pathops.transform(self, transform)
 
     def as_path(self) -> "SVGPath":
