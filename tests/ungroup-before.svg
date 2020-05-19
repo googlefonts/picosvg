@@ -24,7 +24,7 @@
   <g stroke-linecap="round">
     <g stroke-miterlimit="10">
       <g stroke-width="0.9563">
-        <use xlink:href="#r2" />
+        <use xlink:href="#r2" overflow="visible" />
       </g>
     </g>
   </g>

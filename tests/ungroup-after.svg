@@ -13,6 +13,7 @@
   <use xlink:href="#r2" clip-path="url(#merged-clip-0)"
        fill="#BBBBBB" opacity="0.25" />
   <use xlink:href="#r2"
+       overflow="visible"
        stroke-linecap="round"
        stroke-miterlimit="10"
        stroke-width="0.9563" />
