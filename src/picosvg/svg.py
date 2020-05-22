@@ -311,6 +311,11 @@ class SVG:
             )
             child.attrib["clip-path"] = ",".join([c for c in clips if c])
 
+        def _inherit_nondefault_overflow(attrib, child, attr_name):
+            value = attrib[attr_name]
+            if value != 'visible':
+                _inherit_copy(attrib, child, attr_name)
+
         attrib_handlers = {
             "fill": _inherit_copy,
             "stroke": _inherit_copy,
@@ -324,6 +329,7 @@ class SVG:
             "clip-path": _inherit_clip_path,
             "id": lambda *_: 0,
             "data-name": lambda *_: 0,
+            "overflow": _inherit_nondefault_overflow,
         }
 
         attrib = copy.deepcopy(group.attrib)
