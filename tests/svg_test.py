@@ -237,6 +237,7 @@ def test_transform(actual, expected_result):
         ("invisible-before.svg", "invisible-nano.svg"),
         ("transform-before.svg", "transform-nano.svg"),
         ("group-data-name-before.svg", "group-data-name-after.svg"),
+        ("matrix-before.svg", "matrix-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

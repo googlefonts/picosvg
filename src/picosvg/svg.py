@@ -545,7 +545,7 @@ class SVG:
                     )
                 el = el.getparent()
             if transform != Affine2D.identity():
-                new_shapes.append((idx, shape.transform(transform)))
+                new_shapes.append((idx, shape.apply_transform(transform)))
 
         for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]
