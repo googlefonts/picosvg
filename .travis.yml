@@ -25,7 +25,7 @@ install:
 script:
   - pytest -vv
   # detect issues where tests don't work except as a group
-  - for f in tests/*_test.py; do pytest -vv $f || break; done
+  - (for f in tests/*_test.py; do pytest -vv $f || exit; done)
 deploy:
   provider: pypi
   user: "__token__"
