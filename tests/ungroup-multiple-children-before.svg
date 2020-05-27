@@ -1,4 +1,5 @@
 <svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
      width="512" height="512"
      viewBox="0 0 24 24">
   <!-- I'm a comment and should go away for picosvg! -->
@@ -14,21 +15,15 @@
   <defs>
     <rect id="r2" x="5" y="5" width="10" height="10"/>
   </defs>
-  <g clip-path="url(#clip-rect1)" fill="#AAAAAA">
-    <g fill="#BBBBBB" opacity="0.5">
+  <g fill="#AAAAAA" clip-path="url(#clip-rect1)">
+    <use xlink:href="#r2" x="0" />
+    <g fill="#BBBBBB" opacity="0.5" clip-path="url(#clip-rect2)">
+      <use xlink:href="#r2" x="1" />
       <g clip-path="url(#clip-rect2)" opacity="0.5">
-        <use xlink:href="#r2" />
+        <use xlink:href="#r2" x="2" />
+        <use xlink:href="#r2" x="3" />
       </g>
+      <use xlink:href="#r2" x="4" />
     </g>
-  </g>
-  <g stroke-linecap="round">
-    <g stroke-miterlimit="10">
-      <g stroke-width="0.9563">
-        <use xlink:href="#r2" overflow="visible" />
-      </g>
-    </g>
-  </g>
-  <g display="none">
-    <rect with="1" height="1"/>
   </g>
 </svg>

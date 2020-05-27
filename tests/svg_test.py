@@ -199,7 +199,11 @@ def test_resolve_use(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("ungroup-before.svg", "ungroup-after.svg")]
+    "actual, expected_result",
+    [
+        ("ungroup-before.svg", "ungroup-after.svg"),
+        ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-after.svg"),
+    ],
 )
 def test_ungroup(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.ungroup(inplace=True))
@@ -227,10 +231,13 @@ def test_transform(actual, expected_result):
     "actual, expected_result",
     [
         ("ungroup-before.svg", "ungroup-nano.svg"),
+        ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-nano.svg"),
         ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
         ("invisible-before.svg", "invisible-nano.svg"),
         ("transform-before.svg", "transform-nano.svg"),
+        ("group-data-name-before.svg", "group-data-name-after.svg"),
+        ("matrix-before.svg", "matrix-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

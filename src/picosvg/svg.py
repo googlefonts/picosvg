@@ -280,13 +280,13 @@ class SVG:
         clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
         return clip_path
 
-    def _combine_clip_paths(self, clip_paths):
+    def _combine_clip_paths(self, clip_paths) -> SVGPath:
         # multiple clip paths leave behind their intersection
-        if len(clip_paths) > 1:
-            return svg_pathops.intersection(*clip_paths)
-        elif clip_paths:
+        if not clip_paths:
+            raise ValueError("Cannot combine no clip_paths")
+        if len(clip_paths) == 1:
             return clip_paths[0]
-        return None
+        return svg_pathops.intersection(*clip_paths)
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -311,6 +311,11 @@ class SVG:
             )
             child.attrib["clip-path"] = ",".join([c for c in clips if c])
 
+        def _inherit_nondefault_overflow(attrib, child, attr_name):
+            value = attrib[attr_name]
+            if value != 'visible':
+                _inherit_copy(attrib, child, attr_name)
+
         attrib_handlers = {
             "fill": _inherit_copy,
             "stroke": _inherit_copy,
@@ -322,6 +327,9 @@ class SVG:
             "fill-opacity": _inherit_multiply,
             "opacity": _inherit_multiply,
             "clip-path": _inherit_clip_path,
+            "id": lambda *_: 0,
+            "data-name": lambda *_: 0,
+            "overflow": _inherit_nondefault_overflow,
         }
 
         attrib = copy.deepcopy(group.attrib)
@@ -337,13 +345,25 @@ class SVG:
     def _ungroup(self, scope_el):
         """Push inherited attributes from group down, then remove the group.
 
+        Drop groups that are not displayed.
+
         If result has multiple clip paths merge them.
         """
+        # nuke the groups that are not displayed
+        display_none = [e for e in self._xpath(f".//svg:g[@display='none']", scope_el)]
+        for group in display_none:
+            if group.getparent() is not None:
+                group.getparent().remove(group)
+
+        # Any groups left are displayed
         groups = [e for e in self._xpath(f".//svg:g", scope_el)]
         multi_clips = []
         for group in groups:
             # move groups children up
-            for child in group:
+            # reverse because "for each addnext" effectively reverses
+            children = list(group)
+            children.reverse()
+            for child in children:
                 group.remove(child)
                 group.addnext(child)
 
@@ -356,24 +376,24 @@ class SVG:
             if group.getparent() is not None:
                 group.getparent().remove(group)
 
-        # if we have new combinations of clip paths materialize them
+        # if we have new combinations of clip paths dedup & materialize them
         new_clip_paths = {}
         old_clip_paths = []
         for clipped_el in multi_clips:
             clip_refs = clipped_el.attrib["clip-path"]
-            if clip_refs not in new_clip_paths:
-                clip_ref_urls = clip_refs.split(",")
-                old_clip_paths.extend(
-                    [self.resolve_url(ref, "clipPath") for ref in clip_ref_urls]
-                )
-                clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
-                clip_path = self._combine_clip_paths(clip_paths)
+            clip_ref_urls = clip_refs.split(",")
+            old_clip_paths.extend(
+                [self.resolve_url(ref, "clipPath") for ref in clip_ref_urls]
+            )
+            clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
+            clip_path = self._combine_clip_paths(clip_paths)
+            if clip_path.d not in new_clip_paths:
                 new_el = etree.SubElement(self.svg_root, "clipPath")
                 new_el.attrib["id"] = self._new_id("clipPath", "merged-clip-%d")
                 new_el.append(to_element(clip_path))
-                new_clip_paths[clip_refs] = new_el
+                new_clip_paths[clip_path.d] = new_el
 
-            new_ref_id = new_clip_paths[clip_refs].attrib["id"]
+            new_ref_id = new_clip_paths[clip_path.d].attrib["id"]
             clipped_el.attrib["clip-path"] = f"url(#{new_ref_id})"
 
         # destroy unreferenced clip paths
@@ -398,6 +418,8 @@ class SVG:
                 clip_paths.append(self._resolve_clip_path(clip_url))
             el = el.getparent()
 
+        if not clip_paths:
+            return None
         return self._combine_clip_paths(clip_paths)
 
     def ungroup(self, inplace=False):
@@ -529,7 +551,7 @@ class SVG:
                     )
                 el = el.getparent()
             if transform != Affine2D.identity():
-                new_shapes.append((idx, shape.transform(transform)))
+                new_shapes.append((idx, shape.apply_transform(transform)))
 
         for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]
@@ -712,7 +734,9 @@ class SVG:
         if "xlink" in string and "xmlns:xlink" not in string:
             string = string.replace("xlink:href", _XLINK_TEMP)
 
-        tree = etree.fromstring(string)
+        # encode because fromstring dislikes xml encoding decl if input is str
+        parser = etree.XMLParser(remove_blank_text=True)
+        tree = etree.fromstring(string.encode("utf-8"), parser)
         tree = _fix_xlink_ns(tree)
         return cls(tree)
 

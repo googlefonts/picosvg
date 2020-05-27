@@ -1,0 +1,22 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <!-- I'm a comment and should go away for picosvg! -->
+  <defs>
+    <rect id="r1" x="9" y="9" width="5" height="5"/>
+  </defs>
+  <clipPath id="clip-rect1">
+    <rect x="6" y="6" width="5" height="5"/>
+  </clipPath>
+  <defs>
+    <rect id="r2" x="5" y="5" width="10" height="10"/>
+  </defs>
+  <use xlink:href="#r2" x="0" clip-path="url(#clip-rect1)" fill="#AAAAAA" />
+  <use xlink:href="#r2" x="1" clip-path="url(#merged-clip-0)" fill="#BBBBBB" opacity="0.5" />
+  <use xlink:href="#r2" x="2" clip-path="url(#merged-clip-0)" fill="#BBBBBB" opacity="0.25" />
+  <use xlink:href="#r2" x="3" clip-path="url(#merged-clip-0)" fill="#BBBBBB" opacity="0.25" />
+  <use xlink:href="#r2" x="4" clip-path="url(#merged-clip-0)" fill="#BBBBBB" opacity="0.5" />
+  <clipPath id="merged-clip-0">
+    <path d="M9,9 L11,9 L11,11 L9,11 Z"/>
+  </clipPath>
+</svg>
