@@ -313,7 +313,7 @@ class SVG:
 
         def _inherit_nondefault_overflow(attrib, child, attr_name):
             value = attrib[attr_name]
-            if value != 'visible':
+            if value != "visible":
                 _inherit_copy(attrib, child, attr_name)
 
         attrib_handlers = {

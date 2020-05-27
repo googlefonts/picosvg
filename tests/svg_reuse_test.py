@@ -22,34 +22,26 @@ import pytest
     "s1, s2, expected_affine",
     [
         # a rect and a circle can never be the same!
-        (
-            SVGRect(width=1, height=1),
-            SVGCircle(r=1),
-            None
-        ),
+        (SVGRect(width=1, height=1), SVGCircle(r=1), None),
         # same rect in the same place ftw
-        (
-            SVGRect(width=1, height=1),
-            SVGRect(width=1, height=1),
-            Affine2D.identity()
-        ),
+        (SVGRect(width=1, height=1), SVGRect(width=1, height=1), Affine2D.identity()),
         # same rect in the same place, different id
         (
             SVGRect(id="duck", width=1, height=1),
             SVGRect(id="duck", width=1, height=1),
-            Affine2D.identity()
+            Affine2D.identity(),
         ),
         # same rect, offset
         (
             SVGRect(x=0, y=1, width=1, height=1),
             SVGRect(x=1, y=0, width=1, height=1),
-            Affine2D.identity().translate(-1, 1)
+            Affine2D.identity().translate(-1, 1),
         ),
         # circles that may happen to match the ones Noto clock emoji
         (
             SVGCircle(cx=15.89, cy=64.13, r=4),
             SVGCircle(cx=64.89, cy=16.13, r=4),
-            Affine2D.identity().translate(-49, 48)
+            Affine2D.identity().translate(-49, 48),
         ),
     ],
 )

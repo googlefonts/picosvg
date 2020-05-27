@@ -16,14 +16,14 @@
 
 import dataclasses
 from picosvg.svg_types import SVGShape, SVGPath
-from typing import Tuple
+from typing import Optional, Tuple
 from picosvg.svg_transform import Affine2D
 
 
-def _first_move(shape: SVGShape) -> Tuple[float,float]:
+def _first_move(shape: SVGShape) -> Tuple[float, float]:
     cmd, args = next(iter(shape.as_path()))
-    if cmd != 'M':
-        raise ValueError(f'Path for {s} should start with a move')
+    if cmd != "M":
+        raise ValueError(f"Path for {shape} should start with a move")
     return args
 
 
@@ -31,19 +31,19 @@ def normalize(shape: SVGShape) -> SVGShape:
     """Build a version of shape that will compare == to other shapes even if offset.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
-    shape = dataclasses.replace(shape, id='')
+    shape = dataclasses.replace(shape, id="")
     x, y = _first_move(shape)
     shape = shape.as_path().move(-x, -y, inplace=True)
     return shape
 
 
-def affine_between(s1: SVGShape, s2: SVGShape, ) -> Affine2D:
+def affine_between(s1: SVGShape, s2: SVGShape,) -> Optional[Affine2D]:
     """Returns the Affine2D to change s1 into s2 or None if no solution was found.
 
     Implementation starting *very* basic, can improve over time.
     """
-    s1 = dataclasses.replace(s1, id='')
-    s2 = dataclasses.replace(s2, id='')
+    s1 = dataclasses.replace(s1, id="")
+    s2 = dataclasses.replace(s2, id="")
 
     if s1 == s2:
         return Affine2D.identity()
