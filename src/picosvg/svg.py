@@ -313,7 +313,7 @@ class SVG:
 
         def _inherit_nondefault_overflow(attrib, child, attr_name):
             value = attrib[attr_name]
-            if value != 'visible':
+            if value != "visible":
                 _inherit_copy(attrib, child, attr_name)
 
         attrib_handlers = {
@@ -448,7 +448,16 @@ class SVG:
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = svg_pathops.stroke(shape, self.tolerance)
+        stroke = SVGPath.from_commands(
+            svg_pathops.stroke(
+                shape.as_cmd_seq(),
+                shape.stroke_linecap,
+                shape.stroke_linejoin,
+                shape.stroke_width,
+                shape.stroke_miterlimit,
+                self.tolerance,
+            )
+        )
 
         # convert some stroke attrs (e.g. stroke => fill)
         for field in dataclasses.fields(shape):

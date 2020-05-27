@@ -20,6 +20,7 @@ from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
+from typing import Generator
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -69,7 +70,7 @@ class SVGShape:
         self.opacity = opacity
         self.transform = transform
 
-    def visible(self):
+    def visible(self) -> bool:
         def _visible(fill, opacity):
             return fill != "none" and opacity != 0
             # we're ignoring fill-opacity
@@ -79,14 +80,24 @@ class SVGShape:
         )
 
     def bounding_box(self) -> Rect:
-        x1, y1, x2, y2 = svg_pathops.bounding_box(self)
+        x1, y1, x2, y2 = svg_pathops.bounding_box(self.as_cmd_seq())
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
-    def apply_transform(self, transform: Affine2D):
-        return svg_pathops.transform(self, transform)
+    def apply_transform(self, transform: Affine2D) -> "SVGPath":
+        cmds = svg_pathops.transform(self.as_cmd_seq(), transform)
+        return SVGPath.from_commands(cmds)
 
     def as_path(self) -> "SVGPath":
         raise NotImplementedError("You should implement as_path")
+
+    def as_cmd_seq(self) -> svg_meta.SVGCommandSeq:
+        return (
+            self.as_path()
+            .explicit_lines()  # hHvV => lL
+            .expand_shorthand(inplace=True)
+            .absolute(inplace=True)
+            .arcs_to_cubics(inplace=True)
+        )
 
     def absolute(self, inplace=False) -> "SVGShape":
         """Returns equivalent path with only absolute commands."""
@@ -95,9 +106,8 @@ class SVGShape:
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
-# Iterable, returning each command in the path.
 @dataclasses.dataclass
-class SVGPath(SVGShape):
+class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     d: str = ""
 
     def __init__(self, **kwargs):
@@ -347,6 +357,15 @@ class SVGPath(SVGShape):
             target = copy.deepcopy(self)
         target.walk(arc_to_cubic_callback)
         return target
+
+    @staticmethod
+    def from_commands(
+        svg_cmds: Generator[svg_meta.SVGCommand, None, None]
+    ) -> "SVGPath":
+        svg_path = SVGPath()
+        for cmd, args in svg_cmds:
+            svg_path._add_cmd(cmd, *args)
+        return svg_path
 
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
