@@ -58,12 +58,12 @@ def _round(pt, digits):
     ],
 )
 def test_skia_path_roundtrip(shape, expected_segments, expected_path):
-    skia_path = svg_pathops.skia_path(shape)
+    skia_path = svg_pathops.skia_path(shape.as_cmd_seq())
     rounded_segments = list(skia_path.segments)
     for idx, (cmd, points) in enumerate(rounded_segments):
         rounded_segments[idx] = (cmd, tuple(_round(pt, 3) for pt in points))
     assert tuple(rounded_segments) == expected_segments
-    assert svg_pathops.svg_path(skia_path).d == expected_path
+    assert SVGPath.from_commands(svg_pathops.svg_commands(skia_path)).d == expected_path
 
 
 @pytest.mark.parametrize(
@@ -80,7 +80,10 @@ def test_skia_path_roundtrip(shape, expected_segments, expected_path):
     ],
 )
 def test_pathops_union(shapes, expected_result):
-    assert svg_pathops.union(*shapes).d == expected_result
+    assert (
+        SVGPath.from_commands(svg_pathops.union(*[s.as_cmd_seq() for s in shapes])).d
+        == expected_result
+    )
 
 
 @pytest.mark.parametrize(
@@ -97,4 +100,9 @@ def test_pathops_union(shapes, expected_result):
     ],
 )
 def test_pathops_intersection(shapes, expected_result):
-    assert svg_pathops.intersection(*shapes).d == expected_result
+    assert (
+        SVGPath.from_commands(
+            svg_pathops.intersection(*[s.as_cmd_seq() for s in shapes])
+        ).d
+        == expected_result
+    )

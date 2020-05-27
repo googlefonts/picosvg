@@ -277,7 +277,9 @@ class SVG:
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        clip_path = svg_pathops.union(*[from_element(e) for e in clip_path_el])
+        clip_path = SVGPath.from_commands(
+            svg_pathops.union(*[from_element(e).as_cmd_seq() for e in clip_path_el])
+        )
         return clip_path
 
     def _combine_clip_paths(self, clip_paths) -> SVGPath:
@@ -286,7 +288,9 @@ class SVG:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return svg_pathops.intersection(*clip_paths)
+        return SVGPath.from_commands(
+            svg_pathops.intersection(*[c.as_cmd_seq() for c in clip_paths])
+        )
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -524,7 +528,9 @@ class SVG:
             el, (target,) = self.elements[el_idx]
             target = target.as_path().absolute(inplace=True)
 
-            target.d = svg_pathops.intersection(target, clip_path).d
+            target.d = SVGPath.from_commands(
+                svg_pathops.intersection(target.as_cmd_seq(), clip_path.as_cmd_seq())
+            ).d
             target.clip_path = ""
             self._set_element(el_idx, el, (target,))
 
