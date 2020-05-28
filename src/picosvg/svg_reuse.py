@@ -22,7 +22,7 @@ from picosvg.svg_transform import Affine2D
 
 def _first_move(shape: SVGShape) -> Tuple[float, float]:
     cmd, args = next(iter(shape.as_path()))
-    if cmd != "M":
+    if cmd.upper() != "M":
         raise ValueError(f"Path for {shape} should start with a move")
     return args
 
