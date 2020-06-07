@@ -358,11 +358,11 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         target.walk(arc_to_cubic_callback)
         return target
 
-    @staticmethod
+    @classmethod
     def from_commands(
-        svg_cmds: Generator[svg_meta.SVGCommand, None, None]
+        cls, svg_cmds: Generator[svg_meta.SVGCommand, None, None]
     ) -> "SVGPath":
-        svg_path = SVGPath()
+        svg_path = cls()
         for cmd, args in svg_cmds:
             svg_path._add_cmd(cmd, *args)
         return svg_path
