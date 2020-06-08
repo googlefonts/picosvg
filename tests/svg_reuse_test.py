@@ -35,13 +35,13 @@ import pytest
         (
             SVGRect(x=0, y=1, width=1, height=1),
             SVGRect(x=1, y=0, width=1, height=1),
-            Affine2D.identity().translate(-1, 1),
+            Affine2D.identity().translate(1, -1),
         ),
         # circles that may happen to match the ones Noto clock emoji
         (
             SVGCircle(cx=15.89, cy=64.13, r=4),
             SVGCircle(cx=64.89, cy=16.13, r=4),
-            Affine2D.identity().translate(-49, 48),
+            Affine2D.identity().translate(49, -48),
         ),
     ],
 )
