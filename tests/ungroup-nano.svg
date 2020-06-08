@@ -3,13 +3,11 @@
      width="512" height="512"
      viewBox="0 0 24 24">
   <defs/>
-  <path id="r2"
-        fill="#BBBBBB"
+  <path fill="#BBBBBB"
         opacity="0.25"
         d="M9,9 L11,9 L11,11 L9,11 Z"
         />
-  <path id="r2"
-        stroke-width="0.956"
+  <path stroke-width="0.956"
         stroke-linecap="round"
         stroke-miterlimit="10"
         d="M5,5 H15 V15 H5 V5 z" />

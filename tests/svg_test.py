@@ -213,6 +213,7 @@ def test_ungroup(actual, expected_result):
     "actual, expected_result",
     [
         ("stroke-simplepath-before.svg", "stroke-simplepath-after.svg"),
+        ("stroke-path-before.svg", "stroke-path-after.svg"),
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
     ],
 )
@@ -221,7 +222,11 @@ def test_strokes_to_paths(actual, expected_result):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result", [("rotated-rect.svg", "rotated-rect-after.svg")]
+    "actual, expected_result",
+    [
+        ("rotated-rect.svg", "rotated-rect-after.svg"),
+        ("translate-rect.svg", "translate-rect-after.svg"),
+    ],
 )
 def test_transform(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.apply_transforms(inplace=True))

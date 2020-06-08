@@ -234,6 +234,7 @@ class SVG:
             target = self._xpath_one(f'//svg:*[@id="{ref[1:]}"]')
 
             new_el = copy.deepcopy(target)
+            del new_el.attrib["id"]
 
             group = etree.Element(f"{{{svgns()}}}g", nsmap=self.svg_root.nsmap)
             use_x = use_el.attrib.get("x", 0)
@@ -442,17 +443,11 @@ class SVG:
         Returns sequence of shapes in draw order. That is, result[1] should be
         drawn on top of result[0], etc."""
 
-        def stroke_pred(field):
-            return field.name.startswith("stroke")
-
-        # map old fields to new dest
-        _stroke_fields = {"stroke": "fill", "stroke_opacity": "opacity"}
-
         if shape.stroke == "none":
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = SVGPath.from_commands(
+        stroke = shape.as_path().update_path(
             svg_pathops.stroke(
                 shape.as_cmd_seq(),
                 shape.stroke_linecap,
@@ -463,17 +458,15 @@ class SVG:
             )
         )
 
-        # convert some stroke attrs (e.g. stroke => fill)
-        for field in dataclasses.fields(shape):
-            dest_field = _stroke_fields.get(field.name, None)
-            if not dest_field:
-                continue
-            setattr(stroke, dest_field, getattr(shape, field.name))
+        # a few attributes move in interesting ways
+        stroke.opacity *= stroke.stroke_opacity
+        stroke.fill = stroke.stroke
 
         # remove all the stroke settings
-        _reset_attrs(shape, stroke_pred)
+        for cleanmeup in (shape, stroke):
+            _reset_attrs(cleanmeup, lambda field: field.name.startswith("stroke"))
 
-        if shape.fill == "none":
+        if not shape.visible():
             return (stroke,)
 
         return (shape, stroke)
@@ -526,12 +519,18 @@ class SVG:
         # apply clip path to target
         for el_idx, clip_path in clips:
             el, (target,) = self.elements[el_idx]
-            target = target.as_path().absolute(inplace=True)
-
-            target.d = SVGPath.from_commands(
-                svg_pathops.intersection(target.as_cmd_seq(), clip_path.as_cmd_seq())
-            ).d
+            target = (
+                target.as_path()
+                .absolute(inplace=True)
+                .update_path(
+                    svg_pathops.intersection(
+                        target.as_cmd_seq(), clip_path.as_cmd_seq()
+                    ),
+                    inplace=True,
+                )
+            )
             target.clip_path = ""
+
             self._set_element(el_idx, el, (target,))
 
         # destroy clip path elements

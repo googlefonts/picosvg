@@ -85,7 +85,10 @@ class SVGShape:
 
     def apply_transform(self, transform: Affine2D) -> "SVGPath":
         cmds = svg_pathops.transform(self.as_cmd_seq(), transform)
-        return SVGPath.from_commands(cmds)
+        target = self.as_path()
+        if target is self:
+            target = copy.deepcopy(target)
+        return target.update_path(cmds, inplace=True)
 
     def as_path(self) -> "SVGPath":
         raise NotImplementedError("You should implement as_path")
@@ -362,10 +365,19 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def from_commands(
         cls, svg_cmds: Generator[svg_meta.SVGCommand, None, None]
     ) -> "SVGPath":
-        svg_path = cls()
+        return cls().update_path(svg_cmds, inplace=True)
+
+    def update_path(
+        self, svg_cmds: Generator[svg_meta.SVGCommand, None, None], inplace=False
+    ) -> "SVGPath":
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        target.d = ""
+
         for cmd, args in svg_cmds:
-            svg_path._add_cmd(cmd, *args)
-        return svg_path
+            target._add_cmd(cmd, *args)
+        return target
 
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
