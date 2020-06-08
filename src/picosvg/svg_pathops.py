@@ -15,8 +15,9 @@
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import functools
 import pathops
+from typing import Sequence, Tuple
+from picosvg.svg_meta import SVGCommand, SVGCommandGen, SVGCommandSeq
 from picosvg.svg_transform import Affine2D
-from picosvg.svg_types import SVGPath, SVGShape
 
 
 # Absolutes coords assumed
@@ -44,15 +45,21 @@ _SVG_TO_SKIA_LINE_JOIN = {
 }
 
 
-def _simple_skia_to_svg(svg_cmd, svg_path, points):
+def _simple_skia_to_svg(svg_cmd, points) -> SVGCommandGen:
     # pathops.Path gives us sequences of points, flatten 'em
-    cmd_args = tuple(c for pt in points for c in pt)
-    svg_path._add_cmd(svg_cmd, *cmd_args)
+    yield (svg_cmd, tuple(c for pt in points for c in pt))
 
 
-def _qcurveto_to_svg(svg_path, points):
+def _qcurveto_to_svg(points) -> SVGCommandGen:
     for (control_pt, end_pt) in pathops.decompose_quadratic_segment(points):
-        svg_path._add_cmd("Q", *control_pt, *end_pt)
+        yield ("Q", control_pt + end_pt)
+
+
+def _end_path(points) -> SVGCommandGen:
+    if points:
+        raise ValueError("endPath should have no points")
+    return  # pytype: disable=bad-return-type
+    yield
 
 
 _SKIA_CMD_TO_SVG_CMD = {
@@ -65,77 +72,73 @@ _SKIA_CMD_TO_SVG_CMD = {
     # more interesting conversions
     "qCurveTo": _qcurveto_to_svg,
     # nop
-    "endPath": lambda *_: None,
+    "endPath": _end_path,
 }
 
 
-def skia_path(shape: SVGShape):
-    path = (
-        shape.as_path()
-        .explicit_lines()  # hHvV => lL
-        .expand_shorthand(inplace=True)
-        .absolute(inplace=True)
-        .arcs_to_cubics(inplace=True)
-    )
-
+def skia_path(svg_cmds: SVGCommandSeq):
     sk_path = pathops.Path()
-    for cmd, args in path:
+    for cmd, args in svg_cmds:
         if cmd not in _SVG_CMD_TO_SKIA_FN:
             raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
         _SVG_CMD_TO_SKIA_FN[cmd](sk_path, *args)
-
     return sk_path
 
 
-def svg_path(skia_path: pathops.Path) -> SVGPath:
-    svg_path = SVGPath()
+def svg_commands(skia_path: pathops.Path) -> SVGCommandGen:
     for cmd, points in skia_path.segments:
         if cmd not in _SKIA_CMD_TO_SVG_CMD:
             raise ValueError(f'No mapping to svg for "{cmd} {points}"')
-        _SKIA_CMD_TO_SVG_CMD[cmd](svg_path, points)
-    return svg_path
+        for svg_cmd, svg_args in _SKIA_CMD_TO_SVG_CMD[cmd](points):
+            yield (svg_cmd, svg_args)
 
 
-def _do_pathop(op, svg_shapes) -> SVGShape:
-    if not svg_shapes:
-        return SVGPath()
-
-    sk_path = skia_path(svg_shapes[0])
-    for svg_shape in svg_shapes[1:]:
-        sk_path2 = skia_path(svg_shape)
+def _do_pathop(op: str, svg_cmd_seqs: Sequence[SVGCommandSeq]) -> SVGCommandGen:
+    if not svg_cmd_seqs:
+        return  # pytype: disable=bad-return-type
+    sk_path = skia_path(svg_cmd_seqs[0])
+    for svg_cmds in svg_cmd_seqs[1:]:
+        sk_path2 = skia_path(svg_cmds)
         sk_path = pathops.op(sk_path, sk_path2, op)
-    return svg_path(sk_path)
+    return svg_commands(sk_path)
 
 
-def union(*svg_shapes) -> SVGShape:
-    return _do_pathop(pathops.PathOp.UNION, svg_shapes)
+def union(*svg_cmd_seqs: SVGCommandSeq) -> SVGCommandGen:
+    return _do_pathop(pathops.PathOp.UNION, svg_cmd_seqs)
 
 
-def intersection(*svg_shapes) -> SVGShape:
-    return _do_pathop(pathops.PathOp.INTERSECTION, svg_shapes)
+def intersection(*svg_cmd_seqs) -> SVGCommandGen:
+    return _do_pathop(pathops.PathOp.INTERSECTION, svg_cmd_seqs)
 
 
-def transform(svg_shape: SVGShape, affine: Affine2D) -> SVGShape:
-    sk_path = skia_path(svg_shape).transform(*affine)
-    return svg_path(sk_path)
+def transform(svg_cmds: SVGCommandSeq, affine: Affine2D) -> SVGCommandGen:
+    sk_path = skia_path(svg_cmds).transform(*affine)
+    return svg_commands(sk_path)
 
 
-def stroke(shape: SVGShape, tolerance: float) -> SVGShape:
+def stroke(
+    svg_cmds: SVGCommandSeq,
+    svg_linecap: str,
+    svg_linejoin: str,
+    stroke_width: float,
+    stroke_miterlimit: float,
+    tolerance: float,
+) -> SVGCommandGen:
     """Create a path that is shape with it's stroke applied."""
-    cap = _SVG_TO_SKIA_LINE_CAP.get(shape.stroke_linecap, None)
+    cap = _SVG_TO_SKIA_LINE_CAP.get(svg_linecap, None)
     if cap is None:
-        raise ValueError(f"Unsupported cap {shape.stroke_linecap}")
-    join = _SVG_TO_SKIA_LINE_JOIN.get(shape.stroke_linejoin, None)
+        raise ValueError(f"Unsupported cap {svg_linecap}")
+    join = _SVG_TO_SKIA_LINE_JOIN.get(svg_linejoin, None)
     if join is None:
-        raise ValueError(f"Unsupported join {shape.stroke_linejoin}")
-    sk_path = skia_path(shape)
-    sk_path.stroke(shape.stroke_width, cap, join, shape.stroke_miterlimit)
+        raise ValueError(f"Unsupported join {svg_linejoin}")
+    sk_path = skia_path(svg_cmds)
+    sk_path.stroke(stroke_width, cap, join, stroke_miterlimit)
 
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
     sk_path.convertConicsToQuads(tolerance)
 
-    return svg_path(sk_path)
+    return svg_commands(sk_path)
 
 
-def bounding_box(shape: SVGShape):
-    return skia_path(shape).bounds
+def bounding_box(svg_cmds: SVGCommandSeq):
+    return skia_path(svg_cmds).bounds

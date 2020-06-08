@@ -13,6 +13,12 @@
 # limitations under the License.
 
 import re
+from typing import Generator, Iterable, Tuple
+
+
+SVGCommand = Tuple[str, Tuple[float, ...]]
+SVGCommandSeq = Iterable[SVGCommand]
+SVGCommandGen = Generator[SVGCommand, None, None]
 
 
 def svgns():
