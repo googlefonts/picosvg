@@ -205,13 +205,13 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
-    def _xpath(self, xpath, el=None):
+    def xpath(self, xpath, el=None):
         if el is None:
             el = self.svg_root
         return el.xpath(xpath, namespaces={"svg": svgns()})
 
-    def _xpath_one(self, xpath):
-        els = self._xpath(xpath)
+    def xpath_one(self, xpath):
+        els = self.xpath(xpath)
         if len(els) != 1:
             raise ValueError(f"Need exactly 1 match for {xpath}, got {len(els)}")
         return els[0]
@@ -220,18 +220,18 @@ class SVG:
         match = re.match(r"^url[(]#([\w-]+)[)]$", url)
         if not match:
             raise ValueError(f'Unrecognized url "{url}"')
-        return self._xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
+        return self.xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
 
     def _resolve_use(self, scope_el):
         attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
 
         swaps = []
 
-        for use_el in self._xpath(".//svg:use", el=scope_el):
+        for use_el in self.xpath(".//svg:use", el=scope_el):
             ref = use_el.attrib.get(_xlink_href_attr_name(), "")
             if not ref.startswith("#"):
                 raise ValueError("Only use #fragment supported")
-            target = self._xpath_one(f'//svg:*[@id="{ref[1:]}"]')
+            target = self.xpath_one(f'//svg:*[@id="{ref[1:]}"]')
 
             new_el = copy.deepcopy(target)
 
@@ -282,6 +282,11 @@ class SVG:
         )
         return clip_path
 
+    def append_to(self, xpath, el):
+        self._update_etree()
+        self.xpath_one(xpath).append(el)
+        return el
+
     def _combine_clip_paths(self, clip_paths) -> SVGPath:
         # multiple clip paths leave behind their intersection
         if not clip_paths:
@@ -295,7 +300,7 @@ class SVG:
     def _new_id(self, tag, template):
         for i in range(100):
             potential_id = template % i
-            existing = self._xpath(f'//svg:{tag}[@id="{potential_id}"]')
+            existing = self.xpath(f'//svg:{tag}[@id="{potential_id}"]')
             if not existing:
                 return potential_id
         raise ValueError(f"No free id for {template}")
@@ -354,13 +359,13 @@ class SVG:
         If result has multiple clip paths merge them.
         """
         # nuke the groups that are not displayed
-        display_none = [e for e in self._xpath(f".//svg:g[@display='none']", scope_el)]
+        display_none = [e for e in self.xpath(f".//svg:g[@display='none']", scope_el)]
         for group in display_none:
             if group.getparent() is not None:
                 group.getparent().remove(group)
 
         # Any groups left are displayed
-        groups = [e for e in self._xpath(f".//svg:g", scope_el)]
+        groups = [e for e in self.xpath(f".//svg:g", scope_el)]
         multi_clips = []
         for group in groups:
             # move groups children up
@@ -405,7 +410,7 @@ class SVG:
             if old_clip_path.getparent() is None:
                 continue
             old_id = old_clip_path.attrib["id"]
-            if not self._xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
+            if not self.xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
                 old_clip_path.getparent().remove(old_clip_path)
 
     def _compute_clip_path(self, el):
@@ -535,7 +540,7 @@ class SVG:
             self._set_element(el_idx, el, (target,))
 
         # destroy clip path elements
-        for clip_path_el in self._xpath("//svg:clipPath"):
+        for clip_path_el in self.xpath("//svg:clipPath"):
             clip_path_el.getparent().remove(clip_path_el)
 
         # destroy clip-path attributes
@@ -605,7 +610,7 @@ class SVG:
 
         self._update_etree()
 
-        for el in self._xpath("//comment()"):
+        for el in self.xpath("//comment()"):
             el.getparent().remove(el)
 
         return self
@@ -618,7 +623,7 @@ class SVG:
 
         self._update_etree()
 
-        for el in self._xpath(xpath):
+        for el in self.xpath(xpath):
             for name, value in name_values:
                 el.attrib[name] = value
 
@@ -633,7 +638,7 @@ class SVG:
 
         self._update_etree()
 
-        for el in self._xpath(xpath):
+        for el in self.xpath(xpath):
             _del_attrs(el, *names)
 
         return self
@@ -699,11 +704,11 @@ class SVG:
 
         # Collect gradients; remove other defs
         defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
-        for gradient in self._xpath("//svg:linearGradient | //svg:radialGradient"):
+        for gradient in self.xpath("//svg:linearGradient | //svg:radialGradient"):
             gradient.getparent().remove(gradient)
             defs.append(gradient)
 
-        for def_el in [e for e in self._xpath("//svg:defs")]:
+        for def_el in [e for e in self.xpath("//svg:defs")]:
             def_el.getparent().remove(def_el)
 
         self.svg_root.insert(0, defs)

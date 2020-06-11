@@ -80,6 +80,12 @@ class Affine2D(NamedTuple):
             return self
         return self.matrix(1, 0, 0, 1, tx, ty)
 
+    def gettranslate(self) -> Tuple[float, float]:
+        return (self.e, self.f)
+
+    def getscale(self) -> Tuple[float, float]:
+        return (self.a, self.d)
+
     # https://www.w3.org/TR/SVG11/coords.html#ScalingDefined
     def scale(self, sx, sy=None):
         if sy is None:

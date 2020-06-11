@@ -132,3 +132,17 @@ class TestAffine2D:
         assert (Affine2D.product(affine1, affine2).map_point(p0).round(2)) == Point(
             0, 1
         ).round(2)
+
+    def test_gettranslate(self):
+        af = Affine2D.identity()
+        assert af.gettranslate() == (0, 0)
+        af = af.translate(1, 2)
+        assert af.gettranslate() == (1, 2)
+        af = af.translate(2, 3).rotate(pi / 2)
+        assert af.gettranslate() == (3, 5)
+
+    def test_getscale(self):
+        af = Affine2D.identity()
+        assert af.getscale() == (1, 1)
+        af = af.scale(2, 3)
+        assert af.getscale() == (2, 3)
