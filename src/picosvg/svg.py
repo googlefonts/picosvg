@@ -19,7 +19,6 @@ from lxml import etree  # pytype: disable=import-error
 import re
 from typing import List, Optional, Tuple
 from picosvg.svg_meta import ntos, svgns, xlinkns
-from picosvg import svg_pathops
 from picosvg.svg_types import *
 import numbers
 
@@ -278,10 +277,7 @@ class SVG:
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        clip_path = SVGPath.from_commands(
-            svg_pathops.union(*[from_element(e).as_cmd_seq() for e in clip_path_el])
-        )
-        return clip_path
+        return union([from_element(e) for e in clip_path_el])
 
     def append_to(self, xpath, el):
         self._update_etree()
@@ -294,9 +290,7 @@ class SVG:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return SVGPath.from_commands(
-            svg_pathops.intersection(*[c.as_cmd_seq() for c in clip_paths])
-        )
+        return intersection([c.as_cmd_seq() for c in clip_paths])
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -452,16 +446,7 @@ class SVG:
             return (shape,)
 
         # make a new path that is the stroke
-        stroke = shape.as_path().update_path(
-            svg_pathops.stroke(
-                shape.as_cmd_seq(),
-                shape.stroke_linecap,
-                shape.stroke_linejoin,
-                shape.stroke_width,
-                shape.stroke_miterlimit,
-                self.tolerance,
-            )
-        )
+        stroke = shape.as_path().update_path(shape.stroke_commands(self.tolerance))
 
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
@@ -527,12 +512,7 @@ class SVG:
             target = (
                 target.as_path()
                 .absolute(inplace=True)
-                .update_path(
-                    svg_pathops.intersection(
-                        target.as_cmd_seq(), clip_path.as_cmd_seq()
-                    ),
-                    inplace=True,
-                )
+                .update_path(intersection((target, clip_path)), inplace=True,)
             )
             target.clip_path = ""
 
