@@ -20,7 +20,7 @@ from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
-from typing import Generator
+from typing import Generator, Iterable
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -106,6 +106,16 @@ class SVGShape:
         """Returns equivalent path with only absolute commands."""
         # only meaningful for path, which overrides
         return self
+
+    def stroke_commands(self, tolerance) -> Generator[svg_meta.SVGCommand, None, None]:
+        return svg_pathops.stroke(
+            self.as_cmd_seq(),
+            self.stroke_linecap,
+            self.stroke_linejoin,
+            self.stroke_width,
+            self.stroke_miterlimit,
+            tolerance,
+        )
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
@@ -499,3 +509,13 @@ class SVGRect(SVGShape):
         path._copy_common_fields(*shape_fields)
 
         return path
+
+
+def union(shapes: Iterable[SVGShape]) -> SVGPath:
+    return SVGPath.from_commands(svg_pathops.union(*[s.as_cmd_seq() for s in shapes]))
+
+
+def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
+    return SVGPath.from_commands(
+        svg_pathops.intersection(*[s.as_cmd_seq() for s in shapes])
+    )
