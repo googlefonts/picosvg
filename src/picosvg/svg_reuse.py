@@ -56,7 +56,9 @@ def affine_between(s1: SVGShape, s2: SVGShape,) -> Optional[Affine2D]:
     dx = s2x - s1x
     dy = s2y - s1y
 
+    # move both paths to ensure we reformat d consistently
     s1.move(dx, dy, inplace=True)
+    s2.move(0, 0, inplace=True)
 
     if s1 == s2:
         return Affine2D.identity().translate(dx, dy)

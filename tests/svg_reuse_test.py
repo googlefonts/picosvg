@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from picosvg.svg_types import SVGRect, SVGCircle
+from picosvg.svg_types import SVGCircle, SVGPath, SVGRect
 from picosvg.svg_transform import Affine2D
 from picosvg.svg_reuse import normalize, affine_between
 import pytest
@@ -42,6 +42,17 @@ import pytest
             SVGCircle(cx=15.89, cy=64.13, r=4),
             SVGCircle(cx=64.89, cy=16.13, r=4),
             Affine2D.identity().translate(49, -48),
+        ),
+        # path observed in wild to normalize but not compute affine_between
+        # caused by failure to normalize equivalent d attributes in affine_between
+        (
+            SVGPath(
+                fill="#99AAB5", d="M18 12H2 c-1.104 0-2 .896-2 2h20c0-1.104-.896-2-2-2z"
+            ),
+            SVGPath(
+                fill="#99AAB5", d="M34 12H18c-1.104 0-2 .896-2 2h20c0-1.104-.896-2-2-2z"
+            ),
+            Affine2D.identity().translate(16, 0),
         ),
     ],
 )
