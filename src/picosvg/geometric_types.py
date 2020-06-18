@@ -90,13 +90,11 @@ class Vector(NamedTuple):
         return self.x * other.x + self.y * other.y
 
     def projection(self, other: "Vector") -> "Vector":
-        """Return the vector projection of self onto other vector.
-
-        Raises ValueError if other is a zero vector.
-        """
+        """Return the vector projection of self onto other vector."""
         norm = other.norm()
         if norm == 0:
-            raise ValueError(f"Can't compute projection onto zero vector: {other!r}")
+            # it is more helpful for projection onto 0 to be 0 than an error
+            return Vector()
         return self.dot(other) / norm * other.unit()
 
 
