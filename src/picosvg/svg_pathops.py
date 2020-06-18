@@ -75,9 +75,18 @@ _SKIA_CMD_TO_SVG_CMD = {
     "endPath": _end_path,
 }
 
+_SVG_FILL_RULE_TO_SKIA_FILL_TYPE = {
+    "nonzero": pathops.FillType.WINDING,
+    "evenodd": pathops.FillType.EVEN_ODD,
+}
 
-def skia_path(svg_cmds: SVGCommandSeq):
-    sk_path = pathops.Path()
+
+def skia_path(svg_cmds: SVGCommandSeq, fill_rule: str = "nonzero") -> pathops.Path:
+    try:
+        fill_type = _SVG_FILL_RULE_TO_SKIA_FILL_TYPE[fill_rule]
+    except KeyError:
+        raise ValueError(f"Invalid fill rule: {fill_rule!r}")
+    sk_path = pathops.Path(fillType=fill_type)
     for cmd, args in svg_cmds:
         if cmd not in _SVG_CMD_TO_SKIA_FN:
             raise ValueError(f'No mapping to Skia for "{cmd} {args}"')
@@ -109,6 +118,12 @@ def union(*svg_cmd_seqs: SVGCommandSeq) -> SVGCommandGen:
 
 def intersection(*svg_cmd_seqs) -> SVGCommandGen:
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_cmd_seqs)
+
+
+def remove_overlaps(svg_cmds: SVGCommandSeq, fill_rule: str) -> SVGCommandGen:
+    sk_path = skia_path(svg_cmds, fill_rule=fill_rule)
+    sk_path.simplify(fix_winding=True)
+    return svg_commands(sk_path)
 
 
 def transform(svg_cmds: SVGCommandSeq, affine: Affine2D) -> SVGCommandGen:
