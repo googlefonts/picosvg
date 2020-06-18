@@ -290,7 +290,7 @@ class SVG:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return intersection([c.as_cmd_seq() for c in clip_paths])
+        return intersection(clip_paths)
 
     def _new_id(self, tag, template):
         for i in range(100):
