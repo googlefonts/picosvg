@@ -448,6 +448,9 @@ class SVG:
         # make a new path that is the stroke
         stroke = shape.as_path().update_path(shape.stroke_commands(self.tolerance))
 
+        # skia stroker returns paths with 'nonzero' winding fill rule
+        stroke.fill_rule = stroke.clip_rule = "nonzero"
+
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
         stroke.fill = stroke.stroke
@@ -559,6 +562,17 @@ class SVG:
         # destroy all transform attributes
         self.remove_attributes(["transform"], xpath="//svg:*[@transform]", inplace=True)
 
+        return self
+
+    def evenodd_to_nonzero_winding(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.evenodd_to_nonzero_winding(inplace=True)
+            return svg
+
+        for shape in self.shapes():
+            if shape.fill_rule == "evenodd":
+                shape.remove_overlaps(inplace=True)
         return self
 
     def remove_unpainted_shapes(self, inplace=False):
@@ -679,6 +693,7 @@ class SVG:
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
         self.strokes_to_paths(inplace=True)
+        self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
 
         # Collect gradients; remove other defs
