@@ -28,7 +28,9 @@ from typing import Generator, Iterable
 class SVGShape:
     id: str = ""
     clip_path: str = ""
+    clip_rule: str = "nonzero"
     fill: str = "black"
+    fill_rule: str = "nonzero"
     stroke: str = "none"
     stroke_width: float = 1.0
     stroke_linecap: str = "butt"
@@ -44,7 +46,9 @@ class SVGShape:
         self,
         id,
         clip_path,
+        clip_rule,
         fill,
+        fill_rule,
         stroke,
         stroke_width,
         stroke_linecap,
@@ -58,7 +62,9 @@ class SVGShape:
     ):
         self.id = id
         self.clip_path = clip_path
+        self.clip_rule = clip_rule
         self.fill = fill
+        self.fill_rule = fill_rule
         self.stroke = stroke
         self.stroke_width = stroke_width
         self.stroke_linecap = stroke_linecap
@@ -173,6 +179,16 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
     def as_path(self) -> "SVGPath":
         return self
+
+    def remove_overlaps(self, inplace=False, is_clip_path=False) -> "SVGPath":
+        fill_rule = self.clip_rule if is_clip_path else self.fill_rule
+        cmds = svg_pathops.remove_overlaps(self.as_cmd_seq(), fill_rule=fill_rule)
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        # simplified paths follow the 'nonzero' winding rule
+        target.fill_rule = target.clip_rule = "nonzero"
+        return target.update_path(cmds, inplace=True)
 
     def __iter__(self):
         return parse_svg_path(self.d, exploded=True)
@@ -512,10 +528,22 @@ class SVGRect(SVGShape):
 
 
 def union(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(svg_pathops.union(*[s.as_cmd_seq() for s in shapes]))
+    return SVGPath.from_commands(
+        svg_pathops.union(
+            *[
+                s.as_path().remove_overlaps(is_clip_path=True).as_cmd_seq()
+                for s in shapes
+            ]
+        )
+    )
 
 
 def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
     return SVGPath.from_commands(
-        svg_pathops.intersection(*[s.as_cmd_seq() for s in shapes])
+        svg_pathops.intersection(
+            *[
+                s.as_path().remove_overlaps(is_clip_path=True).as_cmd_seq()
+                for s in shapes
+            ]
+        )
     )
