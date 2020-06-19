@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"
+  viewBox="0 0 10 10">
+  <!-- never put the pen down -->
+  <path d="" />
+  <path d="M5,6" />
+  
+  <!-- what a lovely rect! -->
+  <rect id="a_rect" x="1" y="1" width="1" height="1" />
+
+  <!-- sure would be a shame if someone scaled it away! -->
+  <use xlink:href="#a_rect" transform="scale(0, 2)" />
+
+</svg>

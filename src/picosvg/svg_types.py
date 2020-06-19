@@ -70,24 +70,33 @@ class SVGShape:
         self.opacity = opacity
         self.transform = transform
 
-    def visible(self) -> bool:
+    def might_paint(self) -> bool:
+        """False if we're sure this shape will not paint. True if it *might* paint."""
         def _visible(fill, opacity):
             return fill != "none" and opacity != 0
             # we're ignoring fill-opacity
 
-        return _visible(self.fill, self.opacity) or _visible(
-            self.stroke, self.stroke_opacity
-        )
+        if _visible(self.stroke, self.stroke_opacity):
+            return True
+
+        if not _visible(self.fill, self.opacity):
+            return False
+
+        # if all you do is move the pen around you can't draw
+        return any(c[0].upper() != 'M' for c in self.as_cmd_seq())
+
 
     def bounding_box(self) -> Rect:
         x1, y1, x2, y2 = svg_pathops.bounding_box(self.as_cmd_seq())
         return Rect(x1, y1, x2 - x1, y2 - y1)
 
     def apply_transform(self, transform: Affine2D) -> "SVGPath":
-        cmds = svg_pathops.transform(self.as_cmd_seq(), transform)
         target = self.as_path()
         if target is self:
             target = copy.deepcopy(target)
+        cmds = (('M', (0, 0)),)
+        if not transform.is_degenerate():
+            cmds = svg_pathops.transform(self.as_cmd_seq(), transform)
         return target.update_path(cmds, inplace=True)
 
     def as_path(self) -> "SVGPath":

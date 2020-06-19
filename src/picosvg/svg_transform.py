@@ -52,6 +52,11 @@ class Affine2D(NamedTuple):
     def identity():
         return Affine2D._identity
 
+
+    @staticmethod
+    def degenerate():
+        return Affine2D._degnerate
+
     @staticmethod
     def fromstring(raw_transform):
         return parse_svg_transform(raw_transform)
@@ -119,11 +124,11 @@ class Affine2D(NamedTuple):
     def inverse(self):
         """Return the inverse Affine2D transformation.
 
-        Raises ValueError if it's degenerate and thus non-invertible."""
+        The inverse of a degenerate Affine2D is itself degenerate."""
         if self == self.identity():
             return self
         elif self.is_degenerate():
-            raise ValueError(f"Degenerate matrix is non-invertible: {self!r}")
+            return Affine2D.degenerate()
         a, b, c, d, e, f = self
         det = self.determinant()
         a, b, c, d = d / det, -b / det, -c / det, a / det
@@ -158,6 +163,7 @@ class Affine2D(NamedTuple):
 
 
 Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)
+Affine2D._degnerate = Affine2D(0, 0, 0, 0, 0, 0)
 
 
 def _fix_rotate(args):
