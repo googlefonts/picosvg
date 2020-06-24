@@ -243,6 +243,7 @@ def test_transform(actual, expected_result):
         ("transform-before.svg", "transform-nano.svg"),
         ("group-data-name-before.svg", "group-data-name-after.svg"),
         ("matrix-before.svg", "matrix-nano.svg"),
+        ("degenerate-before.svg", "degenerate-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
