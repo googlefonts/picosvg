@@ -52,7 +52,6 @@ class Affine2D(NamedTuple):
     def identity():
         return Affine2D._identity
 
-
     @staticmethod
     def degenerate():
         return Affine2D._degnerate

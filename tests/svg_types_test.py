@@ -156,11 +156,7 @@ def test_arcs_to_cubics(path, expected_result):
             "M3,2 L4,2 L4,3 L3,3 Z",
         ),
         # same shape as above under a degenerate transform
-        (
-            "M1,1 L2,1 L2,2 L1,2 Z",
-            Affine2D.degenerate(),
-            "M0,0",
-        ),
+        ("M1,1 L2,1 L2,2 L1,2 Z", Affine2D.degenerate(), "M0,0",),
     ],
 )
 def test_apply_basic_transform(path, transform, expected_result):
@@ -173,23 +169,11 @@ def test_apply_basic_transform(path, transform, expected_result):
 @pytest.mark.parametrize(
     "path, expected_result",
     [
-        (
-            SVGRect(width=1, height=1),
-            True
-        ),
+        (SVGRect(width=1, height=1), True),
         # we see paths with move and nothing else in the wild
-        (
-            SVGPath(d="M1,2"),
-            False
-        ),
-        (
-            SVGPath(d="M1,2 M3,4"),
-            False
-        ),
-        (
-            SVGPath(d="M1,2 L3,4 Z"),
-            True
-        ),
+        (SVGPath(d="M1,2"), False),
+        (SVGPath(d="M1,2 M3,4"), False),
+        (SVGPath(d="M1,2 L3,4 Z"), True),
     ],
 )
 def test_might_paint(path, expected_result):

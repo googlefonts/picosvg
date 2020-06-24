@@ -84,7 +84,14 @@ class TestAffine2D:
         assert not Affine2D.identity().is_degenerate()
         assert Affine2D.degenerate().is_degenerate()
         assert Affine2D(-1, 2 / 3, 3 / 2, -1, 0, 0).is_degenerate()
-        assert Affine2D(float_info.epsilon, float_info.epsilon, float_info.epsilon, float_info.epsilon, 0, 0).is_degenerate()
+        assert Affine2D(
+            float_info.epsilon,
+            float_info.epsilon,
+            float_info.epsilon,
+            float_info.epsilon,
+            0,
+            0,
+        ).is_degenerate()
 
     def test_scale_0_is_degenerate(self):
         assert not Affine2D.identity().scale(1, 1).is_degenerate()
@@ -156,4 +163,3 @@ class TestAffine2D:
         assert af.getscale() == (1, 1)
         af = af.scale(2, 3)
         assert af.getscale() == (2, 3)
-
