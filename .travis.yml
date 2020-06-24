@@ -26,6 +26,7 @@ script:
   - pytest -vv
   # detect issues where tests don't work except as a group
   - (for f in tests/*_test.py; do pytest -vv $f || exit; done)
+# Push to PyPi
 deploy:
   provider: pypi
   user: "__token__"
@@ -36,3 +37,15 @@ deploy:
     condition: "$TRAVIS_PYTHON_VERSION = 3.8"
   distributions: "sdist bdist_wheel"
   skip_existing: true
+
+# Make a note in GH releases
+deploy:
+  provider: releases
+  api_key:
+    secure: XVAzDhuJzOZ4mWS659FZXIDgJlSrs45z8FZCJ7TYUgW7rFuVfwjjPplNzPcbgNLPRF7uT3/zr+D2m1CD+oEudsCqQnAQ5GQcBHUzACXKym+gj8W3C/YX4ZvUjZdRjWUg1IcZK2r55fbXiks/9AzMsODD88Q4J07xKQgysBmZtiUrXFe9U93Em9kA0Z2lT5jba5WUrRitdv+ajNh4ENkDxl82swXjbhO1KXQvmONBDu7jBQ1m0VC8r5Q7phU7Zm8czK9OXYY6ykIw+pUPQywR09Uy34dy4AzD1NV2/XgW5BVcmD4mcKZLLREltr8HCs3rdy0T9gPkAo6HseJTlFfQJPDSZyWCO4wX/OOIULlZbqdyZxvq7diZ7M9A7iQQYBAKMb1whthbgaXsrq3fvLp00povpPY+p1tQKQmdvnvXSdi6j4PtpO0VQe43pjeGkZYI8b0Wc3buG0NwHjOxaVQGJ8jvp+EF5ST9nlsswTCIx9l9R5r36TTs5r4GiLSJklfMWUsVJbqOePB7g3zNZSsdfL3zbiMOJZ4bGxFlerSY2/ivNtec9HzAJSUmEJcZliYkyI48cbpMxelqfaq0nLAoCyCPHEJZDCPyEj0PfpjtyBjupxuT5c4nN8RSNMPQv0U3D6nJm6kWst6RJod77voAn0DDy1kG87nkuBD2eBRXf3c=
+  file: release_placeholder.txt
+  on:
+    tags: true
+    repo: googlefonts/picosvg
+    condition: "$TRAVIS_PYTHON_VERSION = 3.8"
+  skip_cleanup: 'true'
