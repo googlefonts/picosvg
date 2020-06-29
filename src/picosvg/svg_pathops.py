@@ -121,6 +121,18 @@ def intersection(*svg_cmd_seqs) -> SVGCommandGen:
 
 
 def remove_overlaps(svg_cmds: SVGCommandSeq, fill_rule: str) -> SVGCommandGen:
+    """Create a simplified path filled using the "nonzero" winding rule.
+
+    This uses skia-pathops simplify method to create a new path containing
+    non-overlapping contours that describe the same area as the original path.
+    The fill_rule ("evenodd" or "nonzero") of the original path determines
+    what is inside or outside the path.
+    After simplification, the winding order of the sub-paths is such that the
+    path looks the same no matter what fill rule is used to render it.
+
+    References:
+        https://oreillymedia.github.io/Using_SVG/extras/ch06-fill-rule.html
+    """
     sk_path = skia_path(svg_cmds, fill_rule=fill_rule)
     sk_path.simplify(fix_winding=True)
     return svg_commands(sk_path)
