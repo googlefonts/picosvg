@@ -528,17 +528,18 @@ class SVGRect(SVGShape):
         return path
 
 
+def _bool_op_clip_paths(shapes: Iterable[SVGShape]) -> Generator[SVGPath, None, None]:
+    for shape in shapes:
+        path = shape.as_cmd_seq()
+        if shape.clip_rule == "evenodd":
+            yield path.remove_overlaps(fill_rule="evenodd", inplace=True)
+        else:
+            yield path
+
+
 def union(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(
-        svg_pathops.union(
-            *[s.as_path().remove_overlaps(fill_rule=s.clip_rule, inplace=True) for s in shapes]
-        )
-    )
+    return SVGPath.from_commands(svg_pathops.union(*_bool_op_clip_paths(shapes)))
 
 
 def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(
-        svg_pathops.intersection(
-            *[s.as_path().remove_overlaps(fill_rule=s.clip_rule, inplace=True) for s in shapes]
-        )
-    )
+    return SVGPath.from_commands(svg_pathops.intersection(*_bool_op_clip_paths(shapes)))
