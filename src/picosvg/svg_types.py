@@ -180,8 +180,9 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def as_path(self) -> "SVGPath":
         return self
 
-    def remove_overlaps(self, inplace=False, is_clip_path=False) -> "SVGPath":
-        fill_rule = self.clip_rule if is_clip_path else self.fill_rule
+    def remove_overlaps(self, fill_rule=None, inplace=False) -> "SVGPath":
+        if fill_rule is None:
+            fill_rule = self.fill_rule
         cmds = svg_pathops.remove_overlaps(self.as_cmd_seq(), fill_rule=fill_rule)
         target = self
         if not inplace:
@@ -530,10 +531,7 @@ class SVGRect(SVGShape):
 def union(shapes: Iterable[SVGShape]) -> SVGPath:
     return SVGPath.from_commands(
         svg_pathops.union(
-            *[
-                s.as_path().remove_overlaps(is_clip_path=True).as_cmd_seq()
-                for s in shapes
-            ]
+            *[s.as_path().remove_overlaps(fill_rule=s.clip_rule, inplace=True) for s in shapes]
         )
     )
 
@@ -541,9 +539,6 @@ def union(shapes: Iterable[SVGShape]) -> SVGPath:
 def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
     return SVGPath.from_commands(
         svg_pathops.intersection(
-            *[
-                s.as_path().remove_overlaps(is_clip_path=True).as_cmd_seq()
-                for s in shapes
-            ]
+            *[s.as_path().remove_overlaps(fill_rule=s.clip_rule, inplace=True) for s in shapes]
         )
     )
