@@ -81,7 +81,23 @@ class TestAffine2D:
 
     def test_is_degenerate(self):
         assert not Affine2D(1, 2, 3, 4, 5, 6).is_degenerate()
+        assert not Affine2D.identity().is_degenerate()
+        assert Affine2D.degenerate().is_degenerate()
         assert Affine2D(-1, 2 / 3, 3 / 2, -1, 0, 0).is_degenerate()
+        assert Affine2D(
+            float_info.epsilon,
+            float_info.epsilon,
+            float_info.epsilon,
+            float_info.epsilon,
+            0,
+            0,
+        ).is_degenerate()
+
+    def test_scale_0_is_degenerate(self):
+        assert not Affine2D.identity().scale(1, 1).is_degenerate()
+        assert Affine2D.identity().scale(0, 1).is_degenerate()
+        assert Affine2D.identity().scale(1, 0).is_degenerate()
+        assert Affine2D.identity().scale(0, 0).is_degenerate()
 
     def test_inverse(self):
         t = Affine2D.identity().translate(2, 3).scale(4, 5)
@@ -91,8 +107,9 @@ class TestAffine2D:
         p2 = it.map_point(p1)
         assert p2 == p0
 
-        with pytest.raises(ValueError, match="non-invertible"):
-            Affine2D(1, 1, 1, 1, 0, 0).inverse()
+        assert Affine2D.degenerate().inverse() == Affine2D.degenerate()
+        t = Affine2D(1, 1, 1, 1, 0, 0).inverse()
+        assert t.is_degenerate()
 
     @pytest.mark.parametrize(
         "src, dest, expected",

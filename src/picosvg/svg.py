@@ -229,7 +229,7 @@ class SVG:
         for use_el in self.xpath(".//svg:use", el=scope_el):
             ref = use_el.attrib.get(_xlink_href_attr_name(), "")
             if not ref.startswith("#"):
-                raise ValueError("Only use #fragment supported")
+                raise ValueError(f"Only use #fragment supported, reject {ref}")
             target = self.xpath_one(f'//svg:*[@id="{ref[1:]}"]')
 
             new_el = copy.deepcopy(target)
@@ -459,7 +459,7 @@ class SVG:
         for cleanmeup in (shape, stroke):
             _reset_attrs(cleanmeup, lambda field: field.name.startswith("stroke"))
 
-        if not shape.visible():
+        if not shape.might_paint():
             return (stroke,)
 
         return (shape, stroke)
@@ -552,8 +552,9 @@ class SVG:
                         transform, Affine2D.fromstring(el.attrib["transform"])
                     )
                 el = el.getparent()
-            if transform != Affine2D.identity():
-                new_shapes.append((idx, shape.apply_transform(transform)))
+            if transform == Affine2D.identity():
+                continue
+            new_shapes.append((idx, shape.apply_transform(transform)))
 
         for el_idx, new_shape in new_shapes:
             el, _ = self.elements[el_idx]
@@ -585,7 +586,7 @@ class SVG:
 
         remove = []
         for (el, (shape,)) in self._elements():
-            if not shape.visible():
+            if not shape.might_paint():
                 remove.append(el)
 
         for el in remove:
