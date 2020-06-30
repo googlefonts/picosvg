@@ -185,6 +185,7 @@ def test_iter(shape, expected_cmds):
         ("clip-multirect.svg", "clip-multirect-clipped.svg"),
         ("clip-groups.svg", "clip-groups-clipped.svg"),
         ("clip-use.svg", "clip-use-clipped.svg"),
+        ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped.svg"),
     ],
 )
 def test_apply_clip_path(actual, expected_result):
@@ -203,6 +204,7 @@ def test_resolve_use(actual, expected_result):
     [
         ("ungroup-before.svg", "ungroup-after.svg"),
         ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-after.svg"),
+        ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-after-ungroup.svg"),
     ],
 )
 def test_ungroup(actual, expected_result):
@@ -244,6 +246,8 @@ def test_transform(actual, expected_result):
         ("group-data-name-before.svg", "group-data-name-after.svg"),
         ("matrix-before.svg", "matrix-nano.svg"),
         ("degenerate-before.svg", "degenerate-nano.svg"),
+        ("fill-rule-evenodd-before.svg", "fill-rule-evenodd-nano.svg"),
+        ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

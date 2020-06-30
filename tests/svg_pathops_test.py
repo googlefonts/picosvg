@@ -55,10 +55,11 @@ def _round(pt, digits):
             ),
             "M1,5 C1,2.791 2.791,1 5,1 C7.209,1 9,2.791 9,5 C9,7.209 7.209,9 5,9 C2.791,9 1,7.209 1,5 Z",
         ),
+        # TODO: round-trip SVGPath with fill_rule="evenodd"
     ],
 )
 def test_skia_path_roundtrip(shape, expected_segments, expected_path):
-    skia_path = svg_pathops.skia_path(shape.as_cmd_seq())
+    skia_path = svg_pathops.skia_path(shape.as_cmd_seq(), shape.fill_rule)
     rounded_segments = list(skia_path.segments)
     for idx, (cmd, points) in enumerate(rounded_segments):
         rounded_segments[idx] = (cmd, tuple(_round(pt, 3) for pt in points))
@@ -81,7 +82,11 @@ def test_skia_path_roundtrip(shape, expected_segments, expected_path):
 )
 def test_pathops_union(shapes, expected_result):
     assert (
-        SVGPath.from_commands(svg_pathops.union(*[s.as_cmd_seq() for s in shapes])).d
+        SVGPath.from_commands(
+            svg_pathops.union(
+                [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+            )
+        ).d
         == expected_result
     )
 
@@ -102,7 +107,9 @@ def test_pathops_union(shapes, expected_result):
 def test_pathops_intersection(shapes, expected_result):
     assert (
         SVGPath.from_commands(
-            svg_pathops.intersection(*[s.as_cmd_seq() for s in shapes])
+            svg_pathops.intersection(
+                [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+            )
         ).d
         == expected_result
     )

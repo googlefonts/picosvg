@@ -290,7 +290,7 @@ class SVG:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return intersection([c.as_cmd_seq() for c in clip_paths])
+        return intersection(clip_paths)
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -321,7 +321,9 @@ class SVG:
                 _inherit_copy(attrib, child, attr_name)
 
         attrib_handlers = {
+            "clip-rule": _inherit_copy,
             "fill": _inherit_copy,
+            "fill-rule": _inherit_copy,
             "stroke": _inherit_copy,
             "stroke-width": _inherit_copy,
             "stroke-linecap": _inherit_copy,
@@ -448,6 +450,9 @@ class SVG:
         # make a new path that is the stroke
         stroke = shape.as_path().update_path(shape.stroke_commands(self.tolerance))
 
+        # skia stroker returns paths with 'nonzero' winding fill rule
+        stroke.fill_rule = stroke.clip_rule = "nonzero"
+
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
         stroke.fill = stroke.stroke
@@ -560,6 +565,17 @@ class SVG:
         # destroy all transform attributes
         self.remove_attributes(["transform"], xpath="//svg:*[@transform]", inplace=True)
 
+        return self
+
+    def evenodd_to_nonzero_winding(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.evenodd_to_nonzero_winding(inplace=True)
+            return svg
+
+        for shape in self.shapes():
+            if shape.fill_rule == "evenodd":
+                shape.remove_overlaps(inplace=True)
         return self
 
     def remove_unpainted_shapes(self, inplace=False):
@@ -680,6 +696,7 @@ class SVG:
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
         self.strokes_to_paths(inplace=True)
+        self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
 
         # Collect gradients; remove other defs
