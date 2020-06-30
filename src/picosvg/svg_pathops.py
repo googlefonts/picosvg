@@ -81,7 +81,7 @@ _SVG_FILL_RULE_TO_SKIA_FILL_TYPE = {
 }
 
 
-def skia_path(svg_cmds: SVGCommandSeq, fill_rule: str = "nonzero") -> pathops.Path:
+def skia_path(svg_cmds: SVGCommandSeq, fill_rule: str) -> pathops.Path:
     try:
         fill_type = _SVG_FILL_RULE_TO_SKIA_FILL_TYPE[fill_rule]
     except KeyError:
@@ -102,22 +102,30 @@ def svg_commands(skia_path: pathops.Path) -> SVGCommandGen:
             yield (svg_cmd, svg_args)
 
 
-def _do_pathop(op: str, svg_cmd_seqs: Sequence[SVGCommandSeq]) -> SVGCommandGen:
+def _do_pathop(
+    op: str, svg_cmd_seqs: Sequence[SVGCommandSeq], fill_rules: Sequence[str]
+) -> SVGCommandGen:
     if not svg_cmd_seqs:
         return  # pytype: disable=bad-return-type
-    sk_path = skia_path(svg_cmd_seqs[0])
-    for svg_cmds in svg_cmd_seqs[1:]:
-        sk_path2 = skia_path(svg_cmds)
-        sk_path = pathops.op(sk_path, sk_path2, op)
+    assert len(svg_cmd_seqs) == len(fill_rules)
+    sk_path = skia_path(svg_cmd_seqs[0], fill_rules[0])
+    for svg_cmds, fill_rule in zip(svg_cmd_seqs[1:], fill_rules[1:]):
+        sk_path2 = skia_path(svg_cmds, fill_rule)
+        sk_path = pathops.op(sk_path, sk_path2, op, fix_winding=True)
+        assert sk_path.fillType == pathops.FillType.WINDING
     return svg_commands(sk_path)
 
 
-def union(*svg_cmd_seqs: SVGCommandSeq) -> SVGCommandGen:
-    return _do_pathop(pathops.PathOp.UNION, svg_cmd_seqs)
+def union(
+    svg_cmd_seqs: Sequence[SVGCommandSeq], fill_rules: Sequence[str]
+) -> SVGCommandGen:
+    return _do_pathop(pathops.PathOp.UNION, svg_cmd_seqs, fill_rules)
 
 
-def intersection(*svg_cmd_seqs) -> SVGCommandGen:
-    return _do_pathop(pathops.PathOp.INTERSECTION, svg_cmd_seqs)
+def intersection(
+    svg_cmd_seqs: Sequence[SVGCommandSeq], fill_rules: Sequence[str]
+) -> SVGCommandGen:
+    return _do_pathop(pathops.PathOp.INTERSECTION, svg_cmd_seqs, fill_rules)
 
 
 def remove_overlaps(svg_cmds: SVGCommandSeq, fill_rule: str) -> SVGCommandGen:
@@ -135,11 +143,12 @@ def remove_overlaps(svg_cmds: SVGCommandSeq, fill_rule: str) -> SVGCommandGen:
     """
     sk_path = skia_path(svg_cmds, fill_rule=fill_rule)
     sk_path.simplify(fix_winding=True)
+    assert sk_path.fillType == pathops.FillType.WINDING
     return svg_commands(sk_path)
 
 
 def transform(svg_cmds: SVGCommandSeq, affine: Affine2D) -> SVGCommandGen:
-    sk_path = skia_path(svg_cmds).transform(*affine)
+    sk_path = skia_path(svg_cmds, fill_rule="nonzero").transform(*affine)
     return svg_commands(sk_path)
 
 
@@ -158,7 +167,7 @@ def stroke(
     join = _SVG_TO_SKIA_LINE_JOIN.get(svg_linejoin, None)
     if join is None:
         raise ValueError(f"Unsupported join {svg_linejoin}")
-    sk_path = skia_path(svg_cmds)
+    sk_path = skia_path(svg_cmds, fill_rule="nonzero")
     sk_path.stroke(stroke_width, cap, join, stroke_miterlimit)
 
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
@@ -168,4 +177,4 @@ def stroke(
 
 
 def bounding_box(svg_cmds: SVGCommandSeq):
-    return skia_path(svg_cmds).bounds
+    return skia_path(svg_cmds, fill_rule="nonzero").bounds

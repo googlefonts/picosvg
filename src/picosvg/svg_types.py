@@ -188,10 +188,8 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def as_path(self) -> "SVGPath":
         return self
 
-    def remove_overlaps(self, fill_rule=None, inplace=False) -> "SVGPath":
-        if fill_rule is None:
-            fill_rule = self.fill_rule
-        cmds = svg_pathops.remove_overlaps(self.as_cmd_seq(), fill_rule=fill_rule)
+    def remove_overlaps(self, inplace=False) -> "SVGPath":
+        cmds = svg_pathops.remove_overlaps(self.as_cmd_seq(), fill_rule=self.fill_rule)
         target = self
         if not inplace:
             target = copy.deepcopy(self)
@@ -536,18 +534,17 @@ class SVGRect(SVGShape):
         return path
 
 
-def _bool_op_clip_paths(shapes: Iterable[SVGShape]) -> Generator[SVGPath, None, None]:
-    for shape in shapes:
-        path = shape.as_cmd_seq()
-        if shape.clip_rule == "evenodd":
-            yield path.remove_overlaps(fill_rule="evenodd", inplace=True)
-        else:
-            yield path
-
-
 def union(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(svg_pathops.union(*_bool_op_clip_paths(shapes)))
+    return SVGPath.from_commands(
+        svg_pathops.union(
+            [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+        )
+    )
 
 
 def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(svg_pathops.intersection(*_bool_op_clip_paths(shapes)))
+    return SVGPath.from_commands(
+        svg_pathops.intersection(
+            [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+        )
+    )
