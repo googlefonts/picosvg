@@ -160,19 +160,27 @@ def stroke(
     stroke_miterlimit: float,
     tolerance: float,
 ) -> SVGCommandGen:
-    """Create a path that is shape with it's stroke applied."""
+    """Create a path that is a shape with its stroke applied.
+
+    The result may contain self-intersecting paths, thus it should be filled
+    using "nonzero" winding rule (otherwise with "evenodd" one may see gaps
+    where the sub-paths overlap).
+    """
     cap = _SVG_TO_SKIA_LINE_CAP.get(svg_linecap, None)
     if cap is None:
         raise ValueError(f"Unsupported cap {svg_linecap}")
     join = _SVG_TO_SKIA_LINE_JOIN.get(svg_linejoin, None)
     if join is None:
         raise ValueError(f"Unsupported join {svg_linejoin}")
+    # the input path's fill_rule doesn't affect the stroked result so for
+    # simplicity here we assume 'nonzero'
     sk_path = skia_path(svg_cmds, fill_rule="nonzero")
     sk_path.stroke(stroke_width, cap, join, stroke_miterlimit)
 
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
     sk_path.convertConicsToQuads(tolerance)
 
+    assert sk_path.fillType == pathops.FillType.WINDING
     return svg_commands(sk_path)
 
 
