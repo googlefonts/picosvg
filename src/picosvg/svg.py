@@ -321,7 +321,9 @@ class SVG:
                 _inherit_copy(attrib, child, attr_name)
 
         attrib_handlers = {
+            "clip-rule": _inherit_copy,
             "fill": _inherit_copy,
+            "fill-rule": _inherit_copy,
             "stroke": _inherit_copy,
             "stroke-width": _inherit_copy,
             "stroke-linecap": _inherit_copy,
