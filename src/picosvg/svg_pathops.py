@@ -112,7 +112,9 @@ def _do_pathop(
     for svg_cmds, fill_rule in zip(svg_cmd_seqs[1:], fill_rules[1:]):
         sk_path2 = skia_path(svg_cmds, fill_rule)
         sk_path = pathops.op(sk_path, sk_path2, op, fix_winding=True)
-        assert sk_path.fillType == pathops.FillType.WINDING
+    else:
+        sk_path.simplify(fix_winding=True)
+    assert sk_path.fillType == pathops.FillType.WINDING
     return svg_commands(sk_path)
 
 
