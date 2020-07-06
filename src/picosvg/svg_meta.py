@@ -12,8 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-from typing import Generator, Iterable, Tuple
+from typing import (
+    Any,
+    Container,
+    Generator,
+    Iterable,
+    MutableMapping,
+    Optional,
+    Tuple,
+)
 
 
 SVGCommand = Tuple[str, Tuple[float, ...]]
@@ -108,3 +115,41 @@ def path_segment(cmd, *args):
             combined_args.append(args[i])
             i += 1
     return cmd + " ".join(combined_args)
+
+
+def parse_css_declarations(
+    style: str,
+    output: MutableMapping[str, Any],
+    property_names: Optional[Container[str]] = None,
+) -> str:
+    """ Parse CSS declaration list into {property: value} dict.
+
+    Args:
+        style: CSS declaration list without the enclosing braces,
+            as found in an SVG element's "style" attribute.
+        output: a dictionary where to store the parsed properties.
+        property_names: optional set of property names to limit the declarations
+            to be parsed; if not provided, all will be parsed.
+
+    Returns:
+        A string containing the unparsed style declarations, if any.
+
+    Raises:
+        ValueError if CSS declaration is invalid and can't be parsed.
+
+    References:
+    https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
+    https://www.w3.org/TR/2013/REC-css-style-attr-20131107/#syntax
+    """
+    unparsed = []
+    for declaration in style.split(";"):
+        if declaration.count(":") == 1:
+            property_name, value = declaration.split(":")
+            property_name = property_name.strip()
+            if property_names is None or property_name in property_names:
+                output[property_name] = value.strip()
+            else:
+                unparsed.append(declaration.strip())
+        elif declaration.strip():
+            raise ValueError("Invalid CSS declaration syntax: {declaration}")
+    return "; ".join(unparsed) + ";" if unparsed else ""

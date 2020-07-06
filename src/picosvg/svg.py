@@ -15,10 +15,11 @@
 import copy
 import dataclasses
 from functools import reduce
+import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
 from typing import List, Optional, Tuple
-from picosvg.svg_meta import ntos, svgns, xlinkns
+from picosvg.svg_meta import ntos, svgns, xlinkns, parse_css_declarations
 from picosvg.svg_types import *
 import numbers
 
@@ -204,6 +205,25 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
+    def apply_style_attributes(self, inplace=False):
+        """Converts inlined CSS "style" attributes to equivalent SVG attributes."""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.apply_style_attributes(inplace=True)
+            return svg
+
+        if self.elements:
+            # if we already parsed the SVG shapes, apply style attrs and sync tree
+            for shape in self.shapes():
+                shape.apply_style_attribute(inplace=True)
+            self._update_etree()
+
+        # parse all remaining style attributes (e.g. in gradients or root svg element)
+        for el in itertools.chain((self.svg_root,), self.xpath("//svg:*[@style]")):
+            parse_css_declarations(el.attrib.pop("style", ""), el.attrib)
+
+        return self
+
     def xpath(self, xpath, el=None):
         if el is None:
             el = self.svg_root
@@ -324,6 +344,7 @@ class SVG:
             "clip-rule": _inherit_copy,
             "fill": _inherit_copy,
             "fill-rule": _inherit_copy,
+            "style": _inherit_copy,
             "stroke": _inherit_copy,
             "stroke-width": _inherit_copy,
             "stroke-linecap": _inherit_copy,
@@ -517,7 +538,7 @@ class SVG:
             target = (
                 target.as_path()
                 .absolute(inplace=True)
-                .update_path(intersection((target, clip_path)), inplace=True,)
+                .update_path(intersection((target, clip_path)), inplace=True)
             )
             target.clip_path = ""
 
@@ -689,6 +710,7 @@ class SVG:
         self._update_etree()
 
         self.remove_comments(inplace=True)
+        self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.apply_transforms(inplace=True)

@@ -41,6 +41,7 @@ class SVGShape:
     stroke_opacity: float = 1.0
     opacity: float = 1.0
     transform: str = ""
+    style: str = ""
 
     def _copy_common_fields(
         self,
@@ -59,6 +60,7 @@ class SVGShape:
         stroke_opacity,
         opacity,
         transform,
+        style,
     ):
         self.id = id
         self.clip_path = clip_path
@@ -75,6 +77,7 @@ class SVGShape:
         self.stroke_opacity = stroke_opacity
         self.opacity = opacity
         self.transform = transform
+        self.style = style
 
     def might_paint(self) -> bool:
         """False if we're sure this shape will not paint. True if it *might* paint."""
@@ -130,6 +133,30 @@ class SVGShape:
             self.stroke_miterlimit,
             tolerance,
         )
+
+    def apply_style_attribute(self, inplace=False) -> "SVGShape":
+        """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
+
+        Unsupported attributes for which no corresponding field exists in SVGShape
+        dataclass are kept as text in the "style" attribute.
+        """
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        if target.style:
+            attr_types = {
+                f.name.replace("_", "-"): f.type for f in dataclasses.fields(self)
+            }
+            raw_attrs = {}
+            unparsed_style = svg_meta.parse_css_declarations(
+                target.style, raw_attrs, property_names=attr_types.keys()
+            )
+            for attr_name, attr_value in raw_attrs.items():
+                field_name = attr_name.replace("-", "_")
+                field_value = attr_types[attr_name](attr_value)
+                setattr(target, field_name, field_value)
+            target.style = unparsed_style
+        return target
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
