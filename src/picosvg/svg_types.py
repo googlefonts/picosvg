@@ -421,27 +421,11 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
     # FontTools Pens API (using camelCase for consistency with that)
 
-    def getPen(self, *, glyphSet=None):
-        """Return a FontTools Segment Pen that draws onto self.
-
-        Args:
-            glyphSet: optional mapping {glyph_name: glyph} for resolving component
-                references.
-        """
+    def getPen(self):
+        """Return a FontTools Segment Pen that draws onto self."""
         from picosvg.svg_path_pen import SVGPathPen
 
-        return SVGPathPen(glyphSet or {}, self)
-
-    def getPointPen(self, *, glyphSet=None):
-        """Return a FontTools Point Pen that draws onto self.
-
-        Args:
-            glyphSet: optional mapping {glyph_name: glyph} for resolving component
-                references.
-        """
-        from fontTools.pens.pointPen import PointToSegmentPen
-
-        return PointToSegmentPen(self.getPen(glyphSet=glyphSet))
+        return SVGPathPen(self)
 
     _SVG_CMD_TO_PEN_METHOD = {
         "M": "moveTo",
@@ -475,12 +459,6 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
         if not closed:
             pen.endPath()
-
-    def drawPoints(self, pointPen):
-        """Draw SVGPath using a FontTools Point Pen."""
-        from fontTools.pens.pointPen import SegmentToPointPen
-
-        return self.draw(SegmentToPointPen(pointPen))
 
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement

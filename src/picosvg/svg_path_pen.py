@@ -1,6 +1,5 @@
 import itertools
-from typing import Any, Mapping, Optional
-from fontTools.pens.basePen import DecomposingPen
+from typing import Optional
 from picosvg.svg_types import SVGPath
 from picosvg.svg_pathops import _qcurveto_to_svg
 
@@ -8,30 +7,19 @@ from picosvg.svg_pathops import _qcurveto_to_svg
 # NOTE: the FontTools Pens API uses camelCase for the method names
 
 
-class SVGPathPen(DecomposingPen):
+class SVGPathPen:
     """A FontTools Pen that draws onto a picosvg SVGPath.
 
-    The pen automatically decomposes components using the provided `glyphSet`
-    mapping.
+    NOTE: The `addComponent` method is not supported and will raise TypeError.
+    You should decompose components before drawing a UFO or TrueType glyph with the
+    SVGPathPen (e.g.  using fontTools.recordingPen.DecomposingRecordingPen).
 
     Args:
-        glyphSet: a mapping of {glyph_name: glyph} to be used for resolving
-            component references when the pen's `addComponent` method is called.
-            (inherited from super-class). Can be set to empty dict if drawing
-            simple contours without any components.
         path: an existing SVGPath to extend with drawing commands. If None, a new
             SVGPath is created by default, accessible with the `path` attribute.
     """
 
-    # makes DecomposingPen raise 'KeyError' when component base is missing
-    skipMissingComponents = False
-
-    def __init__(
-        self,
-        glyphSet: Mapping[str, Any],
-        path: Optional[SVGPath] = None,
-    ):
-        super().__init__(glyphSet)
+    def __init__(self, path: Optional[SVGPath] = None):
         self.path = path or SVGPath()
 
     def moveTo(self, pt):
@@ -54,3 +42,6 @@ class SVGPathPen(DecomposingPen):
 
     def endPath(self):
         pass
+
+    def addComponent(self, glyphName, transformation):
+        raise TypeError("Can't add component to SVGPath; should decompose it first")
