@@ -14,6 +14,7 @@
 
 import copy
 import dataclasses
+import itertools
 from picosvg.geometric_types import Point, Rect
 from picosvg import svg_meta
 from picosvg import svg_pathops
@@ -417,6 +418,69 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         for cmd, args in svg_cmds:
             target._add_cmd(cmd, *args)
         return target
+
+    # FontTools Pens API (using camelCase for consistency with that)
+
+    def getPen(self, *, glyphSet=None):
+        """Return a FontTools Segment Pen that draws onto self.
+
+        Args:
+            glyphSet: optional mapping {glyph_name: glyph} for resolving component
+                references.
+        """
+        from picosvg.svg_path_pen import SVGPathPen
+
+        return SVGPathPen(glyphSet or {}, self)
+
+    def getPointPen(self, *, glyphSet=None):
+        """Return a FontTools Point Pen that draws onto self.
+
+        Args:
+            glyphSet: optional mapping {glyph_name: glyph} for resolving component
+                references.
+        """
+        from fontTools.pens.pointPen import PointToSegmentPen
+
+        return PointToSegmentPen(self.getPen(glyphSet=glyphSet))
+
+    _SVG_CMD_TO_PEN_METHOD = {
+        "M": "moveTo",
+        "L": "lineTo",
+        "C": "curveTo",
+        "Q": "qCurveTo",
+        "Z": "closePath",
+    }
+
+    def draw(self, pen):
+        """Draw SVGPath using a FontTools Segment Pen."""
+        # In SVG sub-paths are implicitly open when they don't end with "Z"; in FT pens
+        # the end of each sub-path must be marked explicitly with either pen.endPath()
+        # for open paths or closePath() for closed ones.
+        closed = True
+        for cmd, args in self.as_cmd_seq():
+            if cmd == "M":
+                if not closed:
+                    pen.endPath()
+                closed = False
+
+            # pens expect args as 2-tuples; we use the 'grouper' itertools recipe
+            # https://docs.python.org/3.8/library/itertools.html#recipes
+            assert len(args) % 2 == 0
+            points = itertools.zip_longest(*([iter(args)] * 2))
+
+            getattr(pen, self._SVG_CMD_TO_PEN_METHOD[cmd])(*points)
+
+            if cmd == "Z":
+                closed = True
+
+        if not closed:
+            pen.endPath()
+
+    def drawPoints(self, pointPen):
+        """Draw SVGPath using a FontTools Point Pen."""
+        from fontTools.pens.pointPen import SegmentToPointPen
+
+        return self.draw(SegmentToPointPen(pointPen))
 
 
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement

@@ -178,3 +178,29 @@ def test_apply_basic_transform(path, transform, expected_result):
 )
 def test_might_paint(path, expected_result):
     assert path.might_paint() == expected_result, path
+
+
+_TEST_PATHS = [
+    "M0,0 L0,10 L10,10 L10,0 Z",
+    "M0,0 L0,10 L10,10 L10,0",
+    "M0,0 L0,10 L10,10 L10,0 Z M12,0 L12,10 L22,10 L22,0",
+    "M0,0 L0,10 L10,10 L10,0 M12,0 L12,10 L22,10 L22,0 Z",
+    "M0,0 C0,3 2,5 5,5 C8,5 10,3 10,0 C10,-3 8,-5 5,-5 C2,-5 0,-3 0,0 Z",
+    "M0,0 Q0,10 10,10 Q20,10 20,0 Z"
+]
+
+
+@pytest.mark.parametrize("path", _TEST_PATHS)
+def test_roundtrip_path_with_pen(path):
+    original = SVGPath(d=path)
+    new = SVGPath()
+    original.draw(new.getPen())
+    assert new.d == original.d
+
+
+@pytest.mark.parametrize("path", _TEST_PATHS)
+def test_roundtrip_path_with_point_pen(path):
+    original = SVGPath(d=path)
+    new = SVGPath()
+    original.drawPoints(new.getPointPen())
+    assert new.d == original.d
