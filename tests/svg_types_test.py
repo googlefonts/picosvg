@@ -156,7 +156,7 @@ def test_arcs_to_cubics(path, expected_result):
             "M3,2 L4,2 L4,3 L3,3 Z",
         ),
         # same shape as above under a degenerate transform
-        ("M1,1 L2,1 L2,2 L1,2 Z", Affine2D.degenerate(), "M0,0",),
+        ("M1,1 L2,1 L2,2 L1,2 Z", Affine2D.degenerate(), "M0,0"),
     ],
 )
 def test_apply_basic_transform(path, transform, expected_result):
@@ -178,3 +178,30 @@ def test_apply_basic_transform(path, transform, expected_result):
 )
 def test_might_paint(path, expected_result):
     assert path.might_paint() == expected_result, path
+
+
+@pytest.mark.parametrize(
+    "shape, expected",
+    [
+        (
+            SVGRect(width=10, height=10, style="fill:red;opacity:0.5;"),
+            SVGRect(width=10, height=10, fill="red", opacity=0.5),
+        ),
+        (
+            SVGPath(
+                d="M0,0 L10,0 L10,10 L0,10 Z",
+                style="stroke:blue;stroke-opacity:0.8;filter:url(#x);",
+            ),
+            SVGPath(
+                d="M0,0 L10,0 L10,10 L0,10 Z",
+                stroke="blue",
+                stroke_opacity=0.8,
+                style="filter:url(#x);",
+            ),
+        ),
+    ],
+)
+def test_apply_style_attribute(shape, expected):
+    actual = shape.apply_style_attribute()
+    assert actual == expected
+    assert shape.apply_style_attribute(inplace=True) == expected

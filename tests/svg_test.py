@@ -17,6 +17,7 @@ from lxml import etree
 import os
 import pytest
 from picosvg.svg import SVG
+from picosvg import svg_meta
 from svg_test_helpers import *
 
 
@@ -248,6 +249,7 @@ def test_transform(actual, expected_result):
         ("degenerate-before.svg", "degenerate-nano.svg"),
         ("fill-rule-evenodd-before.svg", "fill-rule-evenodd-nano.svg"),
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-nano.svg"),
+        ("inline-css-style-before.svg", "inline-css-style-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -340,3 +342,51 @@ def test_remove_attributes(svg_string, names, expected_result):
 )
 def test_tolerance(svg_string, expected_result):
     assert round(SVG.fromstring(svg_string).tolerance, 4) == expected_result
+
+
+@pytest.mark.parametrize(
+    "style, property_names, expected_output, expected_unparsed",
+    [
+        ("fill:none", None, {"fill": "none"}, ""),
+        ("fill: url(#grad1)", None, {"fill": "url(#grad1)"}, ""),
+        (
+            " stroke  : blue   ; stroke-width :4;   ",
+            None,
+            {"stroke": "blue", "stroke-width": "4"},
+            "",
+        ),
+        (
+            "enable-background:new 0 0 128 128; foo:abc; bar:123;",
+            {"enable-background"},
+            {"enable-background": "new 0 0 128 128"},
+            "foo:abc; bar:123;",
+        ),
+    ],
+)
+def test_parse_css_declarations(
+    style, property_names, expected_output, expected_unparsed
+):
+    output = {}
+    unparsed = svg_meta.parse_css_declarations(style, output, property_names)
+    assert output == expected_output
+    assert unparsed == expected_unparsed
+
+
+@pytest.mark.parametrize("style", ["foo;bar;", "foo:bar:baz;"])
+def test_parse_css_declarations_invalid(style):
+    with pytest.raises(ValueError, match="Invalid CSS declaration syntax"):
+        svg_meta.parse_css_declarations(style, {})
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [("inline-css-style-before.svg", "inline-css-style-after.svg")],
+)
+def test_apply_style_attributes(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.apply_style_attributes())
+    # check we get the same output even if shapes were already parsed
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.shapes() and svg.apply_style_attributes(),
+    )
