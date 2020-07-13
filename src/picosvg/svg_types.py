@@ -209,6 +209,12 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def l(self, *args):
         self._add_cmd("L", *args)
 
+    def C(self, *args):
+        self._add_cmd("C", *args)
+
+    def Q(self, *args):
+        self._add_cmd("Q", *args)
+
     def end(self):
         self._add("z")
 
