@@ -20,6 +20,10 @@ from typing import Optional, Tuple
 from picosvg.svg_transform import Affine2D
 
 
+# Number of decimal digits to round floats when normalizing or comparing
+DEFAULT_TOLERANCE = 9
+
+
 def _first_move(shape: SVGShape) -> Tuple[float, float]:
     cmd, args = next(iter(shape.as_path()))
     if cmd.upper() != "M":
@@ -27,17 +31,21 @@ def _first_move(shape: SVGShape) -> Tuple[float, float]:
     return args
 
 
-def normalize(shape: SVGShape) -> SVGShape:
+def normalize(shape: SVGShape, tolerance: int = DEFAULT_TOLERANCE) -> SVGShape:
     """Build a version of shape that will compare == to other shapes even if offset.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
     shape = dataclasses.replace(shape, id="")
     x, y = _first_move(shape)
-    shape = shape.as_path().move(-x, -y, inplace=True)
+    shape = (
+        shape.as_path().move(-x, -y, inplace=True).round_floats(tolerance, inplace=True)
+    )
     return shape
 
 
-def affine_between(s1: SVGShape, s2: SVGShape,) -> Optional[Affine2D]:
+def affine_between(
+    s1: SVGShape, s2: SVGShape, tolerance: int = DEFAULT_TOLERANCE
+) -> Optional[Affine2D]:
     """Returns the Affine2D to change s1 into s2 or None if no solution was found.
 
     Implementation starting *very* basic, can improve over time.
@@ -45,7 +53,7 @@ def affine_between(s1: SVGShape, s2: SVGShape,) -> Optional[Affine2D]:
     s1 = dataclasses.replace(s1, id="")
     s2 = dataclasses.replace(s2, id="")
 
-    if s1 == s2:
+    if s1.almost_equals(s2, tolerance):
         return Affine2D.identity()
 
     s1 = s1.as_path()
@@ -56,11 +64,9 @@ def affine_between(s1: SVGShape, s2: SVGShape,) -> Optional[Affine2D]:
     dx = s2x - s1x
     dy = s2y - s1y
 
-    # move both paths to ensure we reformat d consistently
     s1.move(dx, dy, inplace=True)
-    s2.move(0, 0, inplace=True)
 
-    if s1 == s2:
+    if s1.almost_equals(s2, tolerance):
         return Affine2D.identity().translate(dx, dy)
 
     return None

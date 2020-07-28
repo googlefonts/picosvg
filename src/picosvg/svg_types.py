@@ -158,6 +158,21 @@ class SVGShape:
             target.style = unparsed_style
         return target
 
+    def round_floats(self, ndigits: int, inplace=False) -> "SVGShape":
+        """Round all floats in SVGShape to given decimal digits."""
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        for field in dataclasses.fields(target):
+            field_value = getattr(self, field.name)
+            if isinstance(field_value, float):
+                setattr(target, field.name, round(field_value, ndigits))
+        return target
+
+    def almost_equals(self, other: "SVGShape", tolerance: int) -> bool:
+        assert isinstance(other, SVGShape)
+        return self.round_floats(tolerance) == other.round_floats(tolerance)
+
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 @dataclasses.dataclass
@@ -443,6 +458,19 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
         for cmd, args in svg_cmds:
             target._add_cmd(cmd, *args)
+        return target
+
+    def round_floats(self, ndigits: int, inplace=False) -> "SVGPath":
+        """Round all floats in SVGPath to given decimal digits.
+
+        Also reformat the SVGPath.d string floats with the same rounding.
+        """
+        target: SVGPath = super().round_floats(ndigits, inplace=inplace)
+
+        d, target.d = target.d, ""
+        for cmd, args in parse_svg_path(d):
+            target._add_cmd(cmd, *(round(n, ndigits) for n in args))
+
         return target
 
 

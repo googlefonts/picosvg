@@ -95,25 +95,28 @@ def cmd_coords(cmd):
     return _CMD_COORDS[cmd]
 
 
-def ntos(n):
-    # %f likes to add unnecessary 0's, %g isn't consistent about # decimals
-    return ("%.3f" % n).rstrip("0").rstrip(".")
+def ntos(n: float) -> str:
+    # strip superflous .0 decimals
+    return str(int(n)) if isinstance(n, float) and n.is_integer() else str(n)
 
 
 def path_segment(cmd, *args):
     # put commas between coords, spaces otherwise, author readability pref
-    cmd_args = check_cmd(cmd, args)
+    args_per_cmd = check_cmd(cmd, args)
     args = [ntos(a) for a in args]
     combined_args = []
     xy_coords = set(zip(*_CMD_COORDS[cmd]))
-    i = 0
-    while i < len(args):
-        if (i, i + 1) in xy_coords:
-            combined_args.append(f"{args[i]},{args[i+1]}")
-            i += 2
-        else:
-            combined_args.append(args[i])
-            i += 1
+    if args_per_cmd:
+        for n in range(len(args) // args_per_cmd):
+            sub_args = args[n * args_per_cmd : (n + 1) * args_per_cmd]
+            i = 0
+            while i < len(sub_args):
+                if (i, i + 1) in xy_coords:
+                    combined_args.append(f"{sub_args[i]},{sub_args[i+1]}")
+                    i += 2
+                else:
+                    combined_args.append(sub_args[i])
+                    i += 1
     return cmd + " ".join(combined_args)
 
 
