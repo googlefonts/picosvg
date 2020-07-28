@@ -64,7 +64,12 @@ def test_skia_path_roundtrip(shape, expected_segments, expected_path):
     for idx, (cmd, points) in enumerate(rounded_segments):
         rounded_segments[idx] = (cmd, tuple(_round(pt, 3) for pt in points))
     assert tuple(rounded_segments) == expected_segments
-    assert SVGPath.from_commands(svg_pathops.svg_commands(skia_path)).d == expected_path
+    assert (
+        SVGPath.from_commands(svg_pathops.svg_commands(skia_path))
+        .round_floats(3, inplace=True)
+        .d
+        == expected_path
+    )
 
 
 @pytest.mark.parametrize(

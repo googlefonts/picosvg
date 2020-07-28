@@ -190,7 +190,11 @@ def test_iter(shape, expected_cmds):
     ],
 )
 def test_apply_clip_path(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.apply_clip_paths(inplace=True))
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.apply_clip_paths(inplace=True).round_floats(3, inplace=True),
+    )
 
 
 @pytest.mark.parametrize(
@@ -221,7 +225,11 @@ def test_ungroup(actual, expected_result):
     ],
 )
 def test_strokes_to_paths(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.strokes_to_paths(inplace=True))
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.strokes_to_paths(inplace=True).round_floats(3, inplace=True),
+    )
 
 
 @pytest.mark.parametrize(
@@ -232,7 +240,11 @@ def test_strokes_to_paths(actual, expected_result):
     ],
 )
 def test_transform(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.apply_transforms(inplace=True))
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.apply_transforms(inplace=True).round_floats(3, inplace=True),
+    )
 
 
 @pytest.mark.parametrize(

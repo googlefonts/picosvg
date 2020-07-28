@@ -100,7 +100,9 @@ def test_path_move(path: str, move, expected_result: str):
     ],
 )
 def test_expand_shorthand(path, expected_result):
-    actual = SVGPath(d=path).expand_shorthand(inplace=True).d
+    actual = (
+        SVGPath(d=path).expand_shorthand(inplace=True).round_floats(3, inplace=True).d
+    )
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
@@ -140,7 +142,9 @@ def test_bounding_box(shape, expected_bbox):
     ],
 )
 def test_arcs_to_cubics(path, expected_result):
-    actual = SVGPath(d=path).arcs_to_cubics(inplace=True).d
+    actual = (
+        SVGPath(d=path).arcs_to_cubics(inplace=True).round_floats(3, inplace=True).d
+    )
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
@@ -160,7 +164,7 @@ def test_arcs_to_cubics(path, expected_result):
     ],
 )
 def test_apply_basic_transform(path, transform, expected_result):
-    actual = SVGPath(d=path).apply_transform(transform).d
+    actual = SVGPath(d=path).apply_transform(transform).round_floats(3).d
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
