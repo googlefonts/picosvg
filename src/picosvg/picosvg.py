@@ -30,7 +30,15 @@ def _reduce_text(text):
 
 
 def main():
-    svg = SVG.parse(sys.argv[1]).topicosvg()
+    try:
+        input_file = sys.argv[1]
+    except IndexError:
+        input_file = None
+
+    if input_file:
+        svg = SVG.parse(input_file).topicosvg()
+    else:
+        svg = SVG.fromstring(sys.stdin.read()).topicosvg()
 
     tree = svg.toetree()
 
