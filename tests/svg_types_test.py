@@ -64,6 +64,13 @@ def test_sub_paths(path, expected_result):
             "C68,25.68 66.3,23.98 64.2,23.98 H63.8 C61.7,23.98 60,25.68 60,27.78 "
             "V60.18 C60,62.28 61.7,63.98 63.8,63.98 Z",
         ),
+        # relative 'm' in sub-path following a closed sub-path.
+        # The current position is not the previous last point, but the previous move
+        # https://github.com/googlefonts/picosvg/issues/70
+        (
+            "m0,0 l0,10 l10,0 z m10,10 l0,10 l10,0 z",
+            "M0,0 L0,10 L10,10 Z M10,10 L10,20 L20,20 Z",
+        ),
     ],
 )
 def test_path_absolute(path: str, expected_result: str):

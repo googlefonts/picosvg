@@ -310,18 +310,22 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 ):
                     # update current position
                     x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
-                    new_x = curr_pos.x
-                    new_y = curr_pos.y
-                    if new_cmd.isupper():
-                        if x_coord_idxs:
-                            new_x = 0
-                        if y_coord_idxs:
-                            new_y = 0
+                    if new_cmd in ("Z", "z"):
+                        # on close path, the current pos is restored to initial move
+                        new_x, new_y = move_pos
+                    else:
+                        new_x = curr_pos.x
+                        new_y = curr_pos.y
+                        if new_cmd.isupper():
+                            if x_coord_idxs:
+                                new_x = 0
+                            if y_coord_idxs:
+                                new_y = 0
 
-                    if x_coord_idxs:
-                        new_x += new_cmd_args[x_coord_idxs[-1]]
-                    if y_coord_idxs:
-                        new_y += new_cmd_args[y_coord_idxs[-1]]
+                        if x_coord_idxs:
+                            new_x += new_cmd_args[x_coord_idxs[-1]]
+                        if y_coord_idxs:
+                            new_y += new_cmd_args[y_coord_idxs[-1]]
 
                     prev_pos = copy.copy(curr_pos)
                     curr_pos = Point(new_x, new_y)
