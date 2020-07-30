@@ -14,13 +14,15 @@
 
 import copy
 import dataclasses
-from picosvg.geometric_types import Point, Rect
+from math import isclose
+import re
+from picosvg.geometric_types import Point, Rect, Vector
 from picosvg import svg_meta
 from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
-from typing import Generator, Iterable
+from typing import Generator, Iterable, List
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -253,51 +255,99 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
         https://www.w3.org/TR/SVG11/paths.html
 
-        def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
-          prev_* None if there was no previous
-          returns sequence of (new_cmd, new_args) that replace cmd, args
+        def callback(
+            curr_pos: Point,
+            cmd: str,
+            args: Tuple[float, ...],
+            *,  # the rest of the parameters are keyword-only
+            # prev_* are None if there was no previous command
+            prev_pos: Optional[Point],
+            prev_cmd: Optional[str],
+            prev_args: Optional[Tuple[float, ...]],
+            move_pos: Point,  # initial point of current sub-path
+            is_closed: bool,  # whether current sub-path ends with Z or z
+            is_last_pos: bool,  # whether cmd is the last in sub-path (excluding Z)
+            **kwargs,  # unused keywords that should be ignored
+        ) -> svg_meta.SVGCommandSeq
+
+        The callback must return a sequence of (new_cmd, new_args) that will
+        replace the input (cmd, args).
         """
-        curr_pos = Point()
+        curr_pos = move_pos = Point()
         new_cmds = []
 
-        # iteration gives us exploded commands
-        for idx, (cmd, args) in enumerate(self):
-            svg_meta.check_cmd(cmd, args)
-            if idx == 0 and cmd == "m":
-                cmd = "M"
+        for path_idx, sub_path in enumerate(
+            list(parse_svg_path(path, exploded=True)) for path in self.sub_paths
+        ):
+            is_closed = sub_path[-1][0] in ("Z", "z")
+            num_cmds = len(sub_path)
+            last_pos_idx = num_cmds - 2 if is_closed else num_cmds - 1
+            for cmd_idx, (cmd, args) in enumerate(sub_path):
+                svg_meta.check_cmd(cmd, args)
+                if path_idx == 0 and cmd == "m":
+                    cmd = "M"
 
-            prev = (None, None, None)
-            if new_cmds:
-                prev = new_cmds[-1]
-            for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
-                # update current position
-                x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
-                new_x = curr_pos.x
-                new_y = curr_pos.y
-                if new_cmd.isupper():
+                if cmd == "m":
+                    move_pos = curr_pos + Vector(*args)
+                elif cmd == "M":
+                    move_pos = Point(*args)
+
+                is_last_pos = cmd_idx == last_pos_idx
+
+                prev_pos, prev_cmd, prev_args = (None, None, None)
+                if new_cmds:
+                    prev_pos, prev_cmd, prev_args = new_cmds[-1]
+                for (new_cmd, new_cmd_args) in callback(
+                    curr_pos,
+                    cmd,
+                    args,
+                    prev_pos=prev_pos,
+                    prev_cmd=prev_cmd,
+                    prev_args=prev_args,
+                    move_pos=move_pos,
+                    is_closed=is_closed,
+                    is_last_pos=is_last_pos,
+                ):
+                    # update current position
+                    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
+                    new_x = curr_pos.x
+                    new_y = curr_pos.y
+                    if new_cmd.isupper():
+                        if x_coord_idxs:
+                            new_x = 0
+                        if y_coord_idxs:
+                            new_y = 0
+
                     if x_coord_idxs:
-                        new_x = 0
+                        new_x += new_cmd_args[x_coord_idxs[-1]]
                     if y_coord_idxs:
-                        new_y = 0
+                        new_y += new_cmd_args[y_coord_idxs[-1]]
 
-                if x_coord_idxs:
-                    new_x += new_cmd_args[x_coord_idxs[-1]]
-                if y_coord_idxs:
-                    new_y += new_cmd_args[y_coord_idxs[-1]]
-
-                prev_pos = copy.copy(curr_pos)
-                curr_pos = Point(new_x, new_y)
-                new_cmds.append((prev_pos, new_cmd, new_cmd_args))
+                    prev_pos = copy.copy(curr_pos)
+                    curr_pos = Point(new_x, new_y)
+                    new_cmds.append((prev_pos, new_cmd, new_cmd_args))
 
         self.d = ""
         for _, cmd, args in new_cmds:
             self._add_cmd(cmd, *args)
 
+    @property
+    def sub_paths(self) -> List[str]:
+        """Split d attribute into separate contours beginning with 'M' or 'm'."""
+        parts = re.split(r"([Mm])", self.d)
+        prefix = parts.pop(0).strip()
+        result = [prefix] if prefix else []
+        if parts:
+            result.extend(
+                parts[i] + parts[i + 1].rstrip() for i in range(0, len(parts), 2)
+            )
+        return result
+
     # TODO replace with a proper transform
     def move(self, dx, dy, inplace=False):
         """Returns a new path that is this one shifted."""
 
-        def move_callback(_, cmd, args, *_unused):
+        def move_callback(_, cmd, args, **kwargs):
             # Paths must start with an absolute moveto. Relative bits are ... relative.
             # Shift the absolute parts and call it a day.
             if cmd.islower():
@@ -317,7 +367,9 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         return target
 
     @staticmethod
-    def _relative_to_absolute(curr_pos, cmd, args):
+    def _relative_to_absolute(
+        curr_pos, cmd, args, *, move_pos, is_closed, is_last_pos, **kwargs
+    ):
         x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
         if cmd.islower():
             cmd = cmd.upper()
@@ -326,13 +378,27 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 args[x_coord_idx] += curr_pos.x
             for y_coord_idx in y_coord_idxs:
                 args[y_coord_idx] += curr_pos.y
+
+        if is_closed and is_last_pos:
+            # if the last point in a closed path is *almost* equal to the move point
+            # (within 1e-9 tolerance) make it equal to avoid implicit closing lineTo;
+            # this can occur when absolutizing relative float coordinates.
+            for i, coord_idxs in enumerate((x_coord_idxs, y_coord_idxs)):
+                if coord_idxs:
+                    last_coord_idx = coord_idxs[-1]
+                    if args[last_coord_idx] != move_pos[i] and isclose(
+                        args[last_coord_idx], move_pos[i]
+                    ):
+                        if not isinstance(args, list):
+                            args = list(args)
+                        args[last_coord_idx] = move_pos[i]
         return (cmd, tuple(args))
 
     def absolute(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only absolute commands."""
 
-        def absolute_callback(curr_pos, cmd, args, *_):
-            return (SVGPath._relative_to_absolute(curr_pos, cmd, args),)
+        def absolute_callback(curr_pos, cmd, args, **kwargs):
+            return (SVGPath._relative_to_absolute(curr_pos, cmd, args, **kwargs),)
 
         target = self
         if not inplace:
@@ -343,7 +409,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def explicit_lines(self, inplace=False):
         """Replace all vertical/horizontal lines with line to (x,y)."""
 
-        def explicit_line_callback(curr_pos, cmd, args, *_):
+        def explicit_line_callback(curr_pos, cmd, args, **kwargs):
             if cmd == "v":
                 args = (0, args[0])
             elif cmd == "V":
@@ -377,21 +443,21 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         """
 
         def expand_shorthand_callback(
-            curr_pos, cmd, args, prev_pos, prev_cmd, prev_args
+            curr_pos, cmd, args, prev_pos, prev_cmd, prev_args, **kwargs
         ):
             short_to_long = {"S": "C", "T": "Q"}
             if not cmd.upper() in short_to_long:
                 return ((cmd, args),)
 
             if cmd.islower():
-                cmd, args = SVGPath._relative_to_absolute(curr_pos, cmd, args)
+                cmd, args = SVGPath._relative_to_absolute(curr_pos, cmd, args, **kwargs)
 
             # if there is no prev, or a bad prev, control point coincident current
             new_cp = (curr_pos.x, curr_pos.y)
             if prev_cmd:
                 if prev_cmd.islower():
                     prev_cmd, prev_args = SVGPath._relative_to_absolute(
-                        prev_pos, prev_cmd, prev_args
+                        prev_pos, prev_cmd, prev_args, **kwargs
                     )
                 if prev_cmd in short_to_long.values():
                     # reflect 2nd-last x,y pair over curr_pos and make it our first arg
@@ -409,7 +475,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def arcs_to_cubics(self, inplace=False):
         """Replace all arcs with similar cubics"""
 
-        def arc_to_cubic_callback(curr_pos, cmd, args, *_):
+        def arc_to_cubic_callback(curr_pos, cmd, args, **kwargs):
             if cmd not in {"a", "A"}:
                 # no work to do
                 return ((cmd, args),)
