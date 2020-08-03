@@ -162,6 +162,7 @@ def _arc_to_cubic(arc: EllipticalArc) -> Iterator[Tuple[Point, Point, Point]]:
         point2 = point_transform.map_point(point2)
 
         # by definition, the last bezier's end point == the arc end point
+        # by directly taking the end point we avoid floating point imprecision
         if i == num_segments - 1:
             end_point = arc.end_point
         else:
