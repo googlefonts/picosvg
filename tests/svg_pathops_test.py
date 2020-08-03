@@ -47,26 +47,27 @@ def _round(pt, digits):
             SVGCircle(cx=5, cy=5, r=4),
             (
                 ("moveTo", ((1.0, 5.0),)),
-                ("curveTo", ((1.0, 2.791), (2.791, 1.0), (5.0, 1.0))),
-                ("curveTo", ((7.209, 1.0), (9.0, 2.791), (9.0, 5.0))),
-                ("curveTo", ((9.0, 7.209), (7.209, 9.0), (5.0, 9.0))),
-                ("curveTo", ((2.791, 9.0), (1.0, 7.209), (1.0, 5.0))),
+                ("curveTo", ((1.0, 2.7909), (2.7909, 1.0), (5.0, 1.0))),
+                ("curveTo", ((7.2091, 1.0), (9.0, 2.7909), (9.0, 5.0))),
+                ("curveTo", ((9.0, 7.2091), (7.2091, 9.0), (5.0, 9.0))),
+                ("curveTo", ((2.7909, 9.0), (1.0, 7.2091), (1.0, 5.0))),
                 ("closePath", ()),
             ),
-            "M1,5 C1,2.791 2.791,1 5,1 C7.209,1 9,2.791 9,5 C9,7.209 7.209,9 5,9 C2.791,9 1,7.209 1,5 Z",
+            "M1,5 C1,2.7909 2.7909,1 5,1 C7.2091,1 9,2.7909 9,5 C9,7.2091 7.2091,9 5,9 C2.7909,9 1,7.2091 1,5 Z",
         ),
         # TODO: round-trip SVGPath with fill_rule="evenodd"
     ],
 )
 def test_skia_path_roundtrip(shape, expected_segments, expected_path):
+    # We round to 4 decimal places to confirm custom value works
     skia_path = svg_pathops.skia_path(shape.as_cmd_seq(), shape.fill_rule)
     rounded_segments = list(skia_path.segments)
     for idx, (cmd, points) in enumerate(rounded_segments):
-        rounded_segments[idx] = (cmd, tuple(_round(pt, 3) for pt in points))
+        rounded_segments[idx] = (cmd, tuple(_round(pt, 4) for pt in points))
     assert tuple(rounded_segments) == expected_segments
     assert (
         SVGPath.from_commands(svg_pathops.svg_commands(skia_path))
-        .round_floats(3, inplace=True)
+        .round_floats(4, inplace=True)
         .d
         == expected_path
     )
