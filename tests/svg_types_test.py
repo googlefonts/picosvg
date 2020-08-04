@@ -21,29 +21,6 @@ from svg_test_helpers import *
 @pytest.mark.parametrize(
     "path, expected_result",
     [
-        # empty path, no sub-paths
-        ("", []),
-        (" ", []),
-        # split at either M or m
-        ("M1,2 m3,4", ["M1,2", "m3,4"]),
-        # strip leading/trailing whitespace, or in between sub-paths
-        ("  M1,2 L3,4   ", ["M1,2 L3,4"]),
-        (
-            "M0,0 v10 h10 z     m10,10 v10 h10 z",
-            ["M0,0 v10 h10 z", "m10,10 v10 h10 z"],
-        ),
-        # gracefully handle (invalid?) paths that don't start with [Mm]
-        ("L0,0 L1,2", ["L0,0 L1,2"]),
-        ("C3,4 5,6 7,8 M9,10 Z", ["C3,4 5,6 7,8", "M9,10 Z"]),
-    ],
-)
-def test_sub_paths(path, expected_result):
-    assert SVGPath(d=path).sub_paths == expected_result
-
-
-@pytest.mark.parametrize(
-    "path, expected_result",
-    [
         # path explodes to show implicit commands & becomes absolute
         ("m1,1 2,0 1,3", "M1,1 L3,1 L4,4"),
         # Vertical, Horizontal movement
@@ -64,12 +41,17 @@ def test_sub_paths(path, expected_result):
             "C68,25.68 66.3,23.98 64.2,23.98 H63.8 C61.7,23.98 60,25.68 60,27.78 "
             "V60.18 C60,62.28 61.7,63.98 63.8,63.98 Z",
         ),
-        # relative 'm' in sub-path following a closed sub-path.
-        # The current position is not the previous last point, but the previous move
+        # Relative 'm' in sub-path following a closed sub-path.
+        # Confirms z updates currend position correctly.
         # https://github.com/googlefonts/picosvg/issues/70
         (
             "m0,0 l0,10 l10,0 z m10,10 l0,10 l10,0 z",
             "M0,0 L0,10 L10,10 Z M10,10 L10,20 L20,20 Z",
+        ),
+        # Further adventures of z; it's a single backref not a stack
+        (
+            "M3,3 M1,1 l0,10 l4,0 z Z z l8,2 0,2 z m4,4 1,1 -2,0 z",
+            "M3,3 M1,1 L1,11 L5,11 Z Z Z L9,3 L9,5 Z M5,5 L6,6 L4,6 Z",
         ),
     ],
 )
