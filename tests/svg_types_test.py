@@ -21,6 +21,29 @@ from svg_test_helpers import *
 @pytest.mark.parametrize(
     "path, expected_result",
     [
+        # empty path, no sub-paths
+        ("", []),
+        (" ", []),
+        # split at either M or m
+        ("M1,2 m3,4", ["M1,2", "m3,4"]),
+        # strip leading/trailing whitespace, or in between sub-paths
+        ("  M1,2 L3,4   ", ["M1,2 L3,4"]),
+        (
+            "M0,0 v10 h10 z     m10,10 v10 h10 z",
+            ["M0,0 v10 h10 z", "m10,10 v10 h10 z"],
+        ),
+        # gracefully handle (invalid?) paths that don't start with [Mm]
+        ("L0,0 L1,2", ["L0,0 L1,2"]),
+        ("C3,4 5,6 7,8 M9,10 Z", ["C3,4 5,6 7,8", "M9,10 Z"]),
+    ],
+)
+def test_sub_paths(path, expected_result):
+    assert SVGPath(d=path).sub_paths == expected_result
+
+
+@pytest.mark.parametrize(
+    "path, expected_result",
+    [
         # path explodes to show implicit commands & becomes absolute
         ("m1,1 2,0 1,3", "M1,1 L3,1 L4,4"),
         # Vertical, Horizontal movement
@@ -33,10 +56,25 @@ from svg_test_helpers import *
         ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6"),
         # Elliptic arc that goes haywire when stroked
         ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4"),
+        # clock hand's path in which the last point must be == start point when absolutized
+        (
+            "m63.8 63.98h0.4c2.1 0 3.8-1.7 3.8-3.8v-32.4c0-2.1-1.7-3.8-3.8-3.8h-0.4"
+            "c-2.1 0-3.8 1.7-3.8 3.8v32.4c0 2.1 1.7 3.8 3.8 3.8z",
+            "M63.8,63.98 H64.2 C66.3,63.98 68,62.28 68,60.18 V27.78 "
+            "C68,25.68 66.3,23.98 64.2,23.98 H63.8 C61.7,23.98 60,25.68 60,27.78 "
+            "V60.18 C60,62.28 61.7,63.98 63.8,63.98 Z",
+        ),
+        # relative 'm' in sub-path following a closed sub-path.
+        # The current position is not the previous last point, but the previous move
+        # https://github.com/googlefonts/picosvg/issues/70
+        (
+            "m0,0 l0,10 l10,0 z m10,10 l0,10 l10,0 z",
+            "M0,0 L0,10 L10,10 Z M10,10 L10,20 L20,20 Z",
+        ),
     ],
 )
 def test_path_absolute(path: str, expected_result: str):
-    actual = SVGPath(d=path).absolute(inplace=True).d
+    actual = SVGPath(d=path).absolute(inplace=True).round_floats(3, inplace=True).d
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
