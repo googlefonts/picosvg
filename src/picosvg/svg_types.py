@@ -293,7 +293,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 prev_pos = copy.copy(curr_pos)
                 curr_pos = Point(new_x, new_y)
                 if new_cmd.upper() == "M":
-                    return_pos = copy.copy(curr_pos)
+                    return_pos = curr_pos
                 new_cmds.append((prev_pos, new_cmd, new_cmd_args))
 
         self.d = ""
