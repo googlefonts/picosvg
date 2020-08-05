@@ -23,6 +23,61 @@ from picosvg.svg_transform import Affine2D
 from typing import Generator, Iterable
 
 
+def _explicit_lines_callback(curr_pos, cmd, args, *_):
+    if cmd == "v":
+        args = (0, args[0])
+    elif cmd == "V":
+        args = (curr_pos.x, args[0])
+    elif cmd == "h":
+        args = (args[0], 0)
+    elif cmd == "H":
+        args = (args[0], curr_pos.y)
+    else:
+        return ((cmd, args),)  # nothing changes
+
+    if cmd.islower():
+        cmd = "l"
+    else:
+        cmd = "L"
+
+    return ((cmd, args),)
+
+
+def _next_pos(curr_pos, cmd, cmd_args):
+    # update current position
+    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    new_x, new_y = curr_pos
+    if cmd.isupper():
+        if x_coord_idxs:
+            new_x = 0
+        if y_coord_idxs:
+            new_y = 0
+
+    if x_coord_idxs:
+        new_x += cmd_args[x_coord_idxs[-1]]
+    if y_coord_idxs:
+        new_y += cmd_args[y_coord_idxs[-1]]
+
+    return Point(new_x, new_y)
+
+
+def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
+    # we need to be able to alter both axes
+    ((cmd, cmd_args),) = _explicit_lines_callback(curr_pos, cmd, cmd_args)
+
+    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    cmd_args = list(cmd_args)  # we'd like to mutate
+    new_x, new_y = new_endpoint
+    if cmd.islower():
+        new_x = new_x - curr_pos.x
+        new_y = new_y - curr_pos.y
+
+    cmd_args[x_coord_idxs[-1]] = new_x
+    cmd_args[y_coord_idxs[-1]] = new_y
+
+    return cmd, cmd_args
+
+
 # Subset of https://www.w3.org/TR/SVG11/painting.html
 @dataclasses.dataclass
 class SVGShape:
@@ -251,6 +306,8 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def walk(self, callback):
         """Walk path and call callback to build potentially new commands.
 
+        Walk may tweak the path even if callback is a nop.
+
         https://www.w3.org/TR/SVG11/paths.html
 
         def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
@@ -271,24 +328,22 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
             if new_cmds:
                 prev = new_cmds[-1]
             for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
-                # update current position
-                x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
-                new_x, new_y = curr_pos
-                if new_cmd.isupper():
-                    if x_coord_idxs:
-                        new_x = 0
-                    if y_coord_idxs:
-                        new_y = 0
+                if new_cmd.lower() != "z":
+                    next_pos = _next_pos(curr_pos, new_cmd, new_cmd_args)
+                else:
+                    next_pos = subpath_start_pos
 
-                if x_coord_idxs:
-                    new_x += new_cmd_args[x_coord_idxs[-1]]
-                if y_coord_idxs:
-                    new_y += new_cmd_args[y_coord_idxs[-1]]
+                # if we pass *very* close to subpath start snap to it
+                # eliminates issues with not-quite-closed shapes due float imprecision
+                if next_pos != subpath_start_pos and next_pos.tolerent_equals(
+                    subpath_start_pos
+                ):
+                    new_cmd, new_cmd_args = _move_endpoint(
+                        curr_pos, new_cmd, new_cmd_args, subpath_start_pos
+                    )
+                    next_pos = subpath_start_pos
 
-                if new_cmd.lower() == "z":
-                    new_x, new_y = subpath_start_pos
-
-                prev_pos, curr_pos = curr_pos, Point(new_x, new_y)
+                prev_pos, curr_pos = curr_pos, next_pos
                 if new_cmd.upper() == "M":
                     subpath_start_pos = curr_pos
                 new_cmds.append((prev_pos, new_cmd, new_cmd_args))
@@ -329,6 +384,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 args[x_coord_idx] += curr_pos.x
             for y_coord_idx in y_coord_idxs:
                 args[y_coord_idx] += curr_pos.y
+
         return (cmd, tuple(args))
 
     def absolute(self, inplace=False) -> "SVGPath":
@@ -345,30 +401,10 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
     def explicit_lines(self, inplace=False):
         """Replace all vertical/horizontal lines with line to (x,y)."""
-
-        def explicit_line_callback(curr_pos, cmd, args, *_):
-            if cmd == "v":
-                args = (0, args[0])
-            elif cmd == "V":
-                args = (curr_pos.x, args[0])
-            elif cmd == "h":
-                args = (args[0], 0)
-            elif cmd == "H":
-                args = (args[0], curr_pos.y)
-            else:
-                return ((cmd, args),)  # nothing changes
-
-            if cmd.islower():
-                cmd = "l"
-            else:
-                cmd = "L"
-
-            return ((cmd, args),)
-
         target = self
         if not inplace:
             target = copy.deepcopy(self)
-        target.walk(explicit_line_callback)
+        target.walk(_explicit_lines_callback)
         return target
 
     def expand_shorthand(self, inplace=False):

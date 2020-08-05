@@ -53,6 +53,12 @@ from svg_test_helpers import *
             "M3,3 M1,1 l0,10 l4,0 z Z z l8,2 0,2 z m4,4 1,1 -2,0 z",
             "M3,3 M1,1 L1,11 L5,11 Z Z Z L9,3 L9,5 Z M5,5 L6,6 L4,6 Z",
         ),
+        # Points very near subpath origin should collapse to that origin, test 1
+        # Make sure to test a command with only a single coordinate (h)
+        (
+            "M0,0 L0,5 L5,5 L1e-10,0 Z l5,-1 0,1 H-1e-9 z",
+            "M0,0 L0,5 L5,5 L0,0 Z L5,-1 L5,0 L0,0 Z",
+        ),
     ],
 )
 def test_path_absolute(path: str, expected_result: str):
