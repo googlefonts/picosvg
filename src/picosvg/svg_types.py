@@ -273,8 +273,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
             for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
                 # update current position
                 x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(new_cmd)
-                new_x = curr_pos.x
-                new_y = curr_pos.y
+                new_x, new_y = curr_pos
                 if new_cmd.isupper():
                     if x_coord_idxs:
                         new_x = 0
@@ -289,8 +288,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 if new_cmd.lower() == "z":
                     new_x, new_y = subpath_start_pos
 
-                prev_pos = curr_pos
-                curr_pos = Point(new_x, new_y)
+                prev_pos, curr_pos = curr_pos, Point(new_x, new_y)
                 if new_cmd.upper() == "M":
                     subpath_start_pos = curr_pos
                 new_cmds.append((prev_pos, new_cmd, new_cmd_args))
