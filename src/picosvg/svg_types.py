@@ -258,7 +258,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
           returns sequence of (new_cmd, new_args) that replace cmd, args
         """
         curr_pos = Point()
-        return_pos = curr_pos  # where a z will take you
+        subpath_start_pos = curr_pos  # where a z will take you
         new_cmds = []
 
         # iteration gives us exploded commands
@@ -286,14 +286,13 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
                 if y_coord_idxs:
                     new_y += new_cmd_args[y_coord_idxs[-1]]
 
-                # z takes the pen to the return_pos
                 if new_cmd.lower() == "z":
-                    new_x, new_y = return_pos
+                    new_x, new_y = subpath_start_pos
 
-                prev_pos = copy.copy(curr_pos)
+                prev_pos = curr_pos
                 curr_pos = Point(new_x, new_y)
                 if new_cmd.upper() == "M":
-                    return_pos = curr_pos
+                    subpath_start_pos = curr_pos
                 new_cmds.append((prev_pos, new_cmd, new_cmd_args))
 
         self.d = ""
