@@ -730,6 +730,7 @@ class SVG:
         self.strokes_to_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
+        self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
 
         # Collect gradients; remove other defs
