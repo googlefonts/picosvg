@@ -50,7 +50,7 @@ class Point(NamedTuple):
     def round(self, digits: int) -> "Point":
         return Point(round(self.x, digits), round(self.y, digits))
 
-    def tolerent_equals(
+    def almost_equals(
         self, other: "Point", tolerence=_DEFAULT_ALMOST_EQUAL_TOLERENCE
     ) -> bool:
         return abs(self.x - other.x) <= tolerence and abs(self.y - other.y) <= tolerence

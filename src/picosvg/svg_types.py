@@ -23,7 +23,8 @@ from picosvg.svg_transform import Affine2D
 from typing import Generator, Iterable
 
 
-def _explicit_lines_callback(curr_pos, cmd, args, *_):
+def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
+    del subpath_start
     if cmd == "v":
         args = (0, args[0])
     elif cmd == "V":
@@ -41,6 +42,19 @@ def _explicit_lines_callback(curr_pos, cmd, args, *_):
         cmd = "L"
 
     return ((cmd, args),)
+
+
+def _relative_to_absolute(curr_pos, cmd, args):
+    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    if cmd.islower():
+        cmd = cmd.upper()
+        args = list(args)  # we'd like to mutate 'em
+        for x_coord_idx in x_coord_idxs:
+            args[x_coord_idx] += curr_pos.x
+        for y_coord_idx in y_coord_idxs:
+            args[y_coord_idx] += curr_pos.y
+
+    return (cmd, tuple(args))
 
 
 def _next_pos(curr_pos, cmd, cmd_args):
@@ -63,7 +77,7 @@ def _next_pos(curr_pos, cmd, cmd_args):
 
 def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
     # we need to be able to alter both axes
-    ((cmd, cmd_args),) = _explicit_lines_callback(curr_pos, cmd, cmd_args)
+    ((cmd, cmd_args),) = _explicit_lines_callback(None, curr_pos, cmd, cmd_args)
 
     x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
     cmd_args = list(cmd_args)  # we'd like to mutate
@@ -306,11 +320,9 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def walk(self, callback):
         """Walk path and call callback to build potentially new commands.
 
-        Walk may tweak the path even if callback is a nop.
-
         https://www.w3.org/TR/SVG11/paths.html
 
-        def callback(curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
+        def callback(subpath_start, curr_xy, cmd, args, prev_xy, prev_cmd, prev_args)
           prev_* None if there was no previous
           returns sequence of (new_cmd, new_args) that replace cmd, args
         """
@@ -327,20 +339,12 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
             prev = (None, None, None)
             if new_cmds:
                 prev = new_cmds[-1]
-            for (new_cmd, new_cmd_args) in callback(curr_pos, cmd, args, *prev):
+            for (new_cmd, new_cmd_args) in callback(
+                subpath_start_pos, curr_pos, cmd, args, *prev
+            ):
                 if new_cmd.lower() != "z":
                     next_pos = _next_pos(curr_pos, new_cmd, new_cmd_args)
                 else:
-                    next_pos = subpath_start_pos
-
-                # if we pass *very* close to subpath start snap to it
-                # eliminates issues with not-quite-closed shapes due float imprecision
-                if next_pos != subpath_start_pos and next_pos.tolerent_equals(
-                    subpath_start_pos
-                ):
-                    new_cmd, new_cmd_args = _move_endpoint(
-                        curr_pos, new_cmd, new_cmd_args, subpath_start_pos
-                    )
                     next_pos = subpath_start_pos
 
                 prev_pos, curr_pos = curr_pos, next_pos
@@ -355,7 +359,9 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def move(self, dx, dy, inplace=False):
         """Returns a new path that is this one shifted."""
 
-        def move_callback(_, cmd, args, *_unused):
+        def move_callback(subpath_start, curr_pos, cmd, args, *_unused):
+            del subpath_start
+            del curr_pos
             # Paths must start with an absolute moveto. Relative bits are ... relative.
             # Shift the absolute parts and call it a day.
             if cmd.islower():
@@ -374,24 +380,20 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         target.walk(move_callback)
         return target
 
-    @staticmethod
-    def _relative_to_absolute(curr_pos, cmd, args):
-        x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
-        if cmd.islower():
-            cmd = cmd.upper()
-            args = list(args)  # we'd like to mutate 'em
-            for x_coord_idx in x_coord_idxs:
-                args[x_coord_idx] += curr_pos.x
-            for y_coord_idx in y_coord_idxs:
-                args[y_coord_idx] += curr_pos.y
-
-        return (cmd, tuple(args))
-
     def absolute(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only absolute commands."""
 
-        def absolute_callback(curr_pos, cmd, args, *_):
-            return (SVGPath._relative_to_absolute(curr_pos, cmd, args),)
+        def absolute_callback(subpath_start, curr_pos, cmd, args, *_):
+            new_cmd, new_cmd_args = _relative_to_absolute(curr_pos, cmd, args)
+
+            # if we modified cmd to pass *very* close to subpath start snap to it
+            # eliminates issues with not-quite-closed shapes due float imprecision
+            next_pos = _next_pos(curr_pos, new_cmd, new_cmd_args)
+            if next_pos != subpath_start and next_pos.almost_equals(subpath_start):
+                new_cmd, new_cmd_args = _move_endpoint(
+                    curr_pos, new_cmd, new_cmd_args, subpath_start
+                )
+            return ((new_cmd, new_cmd_args),)
 
         target = self
         if not inplace:
@@ -416,20 +418,20 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         """
 
         def expand_shorthand_callback(
-            curr_pos, cmd, args, prev_pos, prev_cmd, prev_args
+            _, curr_pos, cmd, args, prev_pos, prev_cmd, prev_args
         ):
             short_to_long = {"S": "C", "T": "Q"}
             if not cmd.upper() in short_to_long:
                 return ((cmd, args),)
 
             if cmd.islower():
-                cmd, args = SVGPath._relative_to_absolute(curr_pos, cmd, args)
+                cmd, args = _relative_to_absolute(curr_pos, cmd, args)
 
             # if there is no prev, or a bad prev, control point coincident current
             new_cp = (curr_pos.x, curr_pos.y)
             if prev_cmd:
                 if prev_cmd.islower():
-                    prev_cmd, prev_args = SVGPath._relative_to_absolute(
+                    prev_cmd, prev_args = _relative_to_absolute(
                         prev_pos, prev_cmd, prev_args
                     )
                 if prev_cmd in short_to_long.values():
@@ -448,7 +450,8 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
     def arcs_to_cubics(self, inplace=False):
         """Replace all arcs with similar cubics"""
 
-        def arc_to_cubic_callback(curr_pos, cmd, args, *_):
+        def arc_to_cubic_callback(subpath_start, curr_pos, cmd, args, *_):
+            del subpath_start
             if cmd not in {"a", "A"}:
                 # no work to do
                 return ((cmd, args),)
