@@ -599,6 +599,16 @@ class SVG:
                 shape.remove_overlaps(inplace=True)
         return self
 
+    def round_floats(self, ndigits: int, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.round_floats(ndigits, inplace=True)
+            return svg
+
+        for shape in self.shapes():
+            shape.round_floats(ndigits, inplace=True)
+        return self
+
     def remove_unpainted_shapes(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -701,7 +711,7 @@ class SVG:
 
         return tuple(errors)
 
-    def topicosvg(self, inplace=False):
+    def topicosvg(self, *, ndigits=3, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
             svg.topicosvg(inplace=True)
@@ -720,6 +730,8 @@ class SVG:
         self.strokes_to_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
+        self.absolute(inplace=True)
+        self.round_floats(ndigits, inplace=True)
 
         # Collect gradients; remove other defs
         defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
