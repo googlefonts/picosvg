@@ -33,10 +33,36 @@ from svg_test_helpers import *
         ("m2,2 c1,-1 2,4 3,3 C4 4 5 5 6 6", "M2,2 C3,1 4,6 5,5 C4,4 5,5 6,6"),
         # Elliptic arc that goes haywire when stroked
         ("M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2", "M7,5 A3 1 0 0 0 7,2 A3 3 0 0 1 3,4"),
+        # clock hand's path in which the last point must be == start point when absolutized
+        (
+            "m63.8 63.98h0.4c2.1 0 3.8-1.7 3.8-3.8v-32.4c0-2.1-1.7-3.8-3.8-3.8h-0.4"
+            "c-2.1 0-3.8 1.7-3.8 3.8v32.4c0 2.1 1.7 3.8 3.8 3.8z",
+            "M63.8,63.98 H64.2 C66.3,63.98 68,62.28 68,60.18 V27.78 "
+            "C68,25.68 66.3,23.98 64.2,23.98 H63.8 C61.7,23.98 60,25.68 60,27.78 "
+            "V60.18 C60,62.28 61.7,63.98 63.8,63.98 Z",
+        ),
+        # Relative 'm' in sub-path following a closed sub-path.
+        # Confirms z updates currend position correctly.
+        # https://github.com/googlefonts/picosvg/issues/70
+        (
+            "m0,0 l0,10 l10,0 z m10,10 l0,10 l10,0 z",
+            "M0,0 L0,10 L10,10 Z M10,10 L10,20 L20,20 Z",
+        ),
+        # Further adventures of z; it's a single backref not a stack
+        (
+            "M3,3 M1,1 l0,10 l4,0 z Z z l8,2 0,2 z m4,4 1,1 -2,0 z",
+            "M3,3 M1,1 L1,11 L5,11 Z Z Z L9,3 L9,5 Z M5,5 L6,6 L4,6 Z",
+        ),
+        # Points very near subpath origin should collapse to that origin, test 1
+        # Make sure to test a command with only a single coordinate (h)
+        (
+            "M0,0 L0,5 L5,5 L1e-10,0 Z l5,-1 0,1 H-1e-9 z",
+            "M0,0 L0,5 L5,5 L0,0 Z L5,-1 L5,0 L0,0 Z",
+        ),
     ],
 )
 def test_path_absolute(path: str, expected_result: str):
-    actual = SVGPath(d=path).absolute(inplace=True).d
+    actual = SVGPath(d=path).absolute(inplace=True).round_floats(3, inplace=True).d
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
