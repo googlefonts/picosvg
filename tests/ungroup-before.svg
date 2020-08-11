@@ -22,8 +22,8 @@
     </g>
   </g>
   <g stroke-linecap="round">
-    <g stroke-miterlimit="10">
-      <g stroke-width="0.9563">
+    <g stroke-miterlimit="10" style="enable-background:new    ;">
+      <g stroke-width="0.9563" enable-background="new">
         <use xlink:href="#r2" overflow="visible" />
       </g>
     </g>

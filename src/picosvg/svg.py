@@ -205,6 +205,9 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
+    def _apply_styles(self, el: etree.Element):
+        parse_css_declarations(el.attrib.pop("style", ""), el.attrib)
+
     def apply_style_attributes(self, inplace=False):
         """Converts inlined CSS "style" attributes to equivalent SVG attributes."""
         if not inplace:
@@ -220,7 +223,7 @@ class SVG:
 
         # parse all remaining style attributes (e.g. in gradients or root svg element)
         for el in itertools.chain((self.svg_root,), self.xpath("//svg:*[@style]")):
-            parse_css_declarations(el.attrib.pop("style", ""), el.attrib)
+            self._apply_styles(el)
 
         return self
 
@@ -356,6 +359,7 @@ class SVG:
             "clip-path": _inherit_clip_path,
             "id": lambda *_: 0,
             "data-name": lambda *_: 0,
+            "enable-background": lambda *_: 0,
             "overflow": _inherit_nondefault_overflow,
         }
 
@@ -386,6 +390,9 @@ class SVG:
         groups = [e for e in self.xpath(f".//svg:g", scope_el)]
         multi_clips = []
         for group in groups:
+            # sneaky little styles, we hates it precious
+            self._apply_styles(group)
+
             # move groups children up
             # reverse because "for each addnext" effectively reverses
             children = list(group)
