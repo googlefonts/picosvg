@@ -262,6 +262,7 @@ def test_transform(actual, expected_result):
         ("fill-rule-evenodd-before.svg", "fill-rule-evenodd-nano.svg"),
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-nano.svg"),
         ("inline-css-style-before.svg", "inline-css-style-nano.svg"),
+        ("clipped-strokes-before.svg", "clipped-strokes-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
