@@ -300,7 +300,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         self._add_cmd("Q", *args)
 
     def end(self):
-        self._add("z")
+        self._add("Z")
 
     def as_path(self) -> "SVGPath":
         return self
@@ -575,7 +575,7 @@ class SVGPolygon(SVGShape):
     def as_path(self) -> SVGPath:
         *shape_fields, points = dataclasses.astuple(self)
         if self.points:
-            path = SVGPath(d="M" + self.points + " z")
+            path = SVGPath(d="M" + self.points + " Z")
         else:
             path = SVGPath()
         path._copy_common_fields(*shape_fields)
