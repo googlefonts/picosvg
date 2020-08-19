@@ -422,7 +422,9 @@ class SVG:
             clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
             clip_path = self._combine_clip_paths(clip_paths)
             if clip_path.d not in new_clip_paths:
-                new_el = etree.SubElement(self.svg_root, "clipPath")
+                new_el = etree.SubElement(
+                    self.svg_root, f"{{{svgns()}}}clipPath", nsmap=self.svg_root.nsmap
+                )
                 new_el.attrib["id"] = self._new_id("clipPath", "merged-clip-%d")
                 new_el.append(to_element(clip_path))
                 new_clip_paths[clip_path.d] = new_el
@@ -731,10 +733,10 @@ class SVG:
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.apply_transforms(inplace=True)
-        self.apply_clip_paths(inplace=True)
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
         self.strokes_to_paths(inplace=True)
+        self.apply_clip_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
         self.absolute(inplace=True)
