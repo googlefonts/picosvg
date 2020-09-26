@@ -37,9 +37,15 @@ def normalize(shape: SVGShape, tolerance: int = DEFAULT_TOLERANCE) -> SVGShape:
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
     shape = dataclasses.replace(shape, id="")
     x, y = _first_move(shape)
+
+    # Shape is now entirely relative, with first coord at 0,0
     shape = (
-        shape.as_path().move(-x, -y, inplace=True).round_floats(tolerance, inplace=True)
+        shape.as_path()
+        .relative(inplace=True)
+        .move(-x, -y, inplace=True)
+        .round_floats(tolerance, inplace=True)
     )
+
     return shape
 
 

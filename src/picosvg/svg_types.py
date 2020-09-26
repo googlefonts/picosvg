@@ -53,17 +53,30 @@ def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
     return ((cmd, args),)
 
 
-def _relative_to_absolute(curr_pos, cmd, args):
-    x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
-    if cmd.islower():
-        cmd = cmd.upper()
+def _rewrite_coords(cmd_converter, coord_converter, curr_pos, cmd, args):
+    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    desired_cmd = cmd_converter(cmd)
+    if cmd != desired_cmd:
+        cmd = desired_cmd
         args = list(args)  # we'd like to mutate 'em
         for x_coord_idx in x_coord_idxs:
-            args[x_coord_idx] += curr_pos.x
+            args[x_coord_idx] += coord_converter(curr_pos.x)
         for y_coord_idx in y_coord_idxs:
-            args[y_coord_idx] += curr_pos.y
+            args[y_coord_idx] += coord_converter(curr_pos.y)
 
     return (cmd, tuple(args))
+
+
+def _relative_to_absolute(curr_pos, cmd, args):
+    return _rewrite_coords(
+        lambda cmd: cmd.upper(), lambda curr_scaler: curr_scaler, curr_pos, cmd, args
+    )
+
+
+def _absolute_to_relative(curr_pos, cmd, args):
+    return _rewrite_coords(
+        lambda cmd: cmd.lower(), lambda curr_scaler: -curr_scaler, curr_pos, cmd, args
+    )
 
 
 def _next_pos(curr_pos, cmd, cmd_args):
@@ -389,11 +402,9 @@ class SVGPath(SVGShape, SVGCommandSeq):
         target.walk(move_callback)
         return target
 
-    def absolute(self, inplace=False) -> "SVGPath":
-        """Returns equivalent path with only absolute commands."""
-
-        def absolute_callback(subpath_start, curr_pos, cmd, args, *_):
-            new_cmd, new_cmd_args = _relative_to_absolute(curr_pos, cmd, args)
+    def _rewrite_path(self, rewrite_fn, inplace) -> "SVGPath":
+        def rewrite_callback(subpath_start, curr_pos, cmd, args, *_):
+            new_cmd, new_cmd_args = rewrite_fn(curr_pos, cmd, args)
 
             # if we modified cmd to pass *very* close to subpath start snap to it
             # eliminates issues with not-quite-closed shapes due float imprecision
@@ -407,8 +418,16 @@ class SVGPath(SVGShape, SVGCommandSeq):
         target = self
         if not inplace:
             target = copy.deepcopy(self)
-        target.walk(absolute_callback)
+        target.walk(rewrite_callback)
         return target
+
+    def absolute(self, inplace=False) -> "SVGPath":
+        """Returns equivalent path with only absolute commands."""
+        return self._rewrite_path(_relative_to_absolute, inplace)
+
+    def relative(self, inplace=False) -> "SVGPath":
+        """Returns equivalent path with only relative commands."""
+        return self._rewrite_path(_absolute_to_relative, inplace)
 
     def explicit_lines(self, inplace=False):
         """Replace all vertical/horizontal lines with line to (x,y)."""
