@@ -54,6 +54,37 @@ import pytest
             ),
             Affine2D.identity().translate(16, 0),
         ),
+        # Triangles facing one another, same size
+        (
+            SVGPath(
+                d="m60,64 -50,-32 0,30 z"
+            ),
+            SVGPath(
+                d="m68,64 50,-32 0,30 z"
+            ),
+            Affine2D(-1.0, 0.0, 0.0, 1.0, 128.0, -0.0),
+        ),
+        # Triangles, different rotation, different size
+        (
+            SVGPath(
+                d="m50,100 -48,-75 81,0 z"
+            ),
+            SVGPath(
+                d="m70,64 50,-32 0,54 z"
+            ),
+            Affine2D(a=-0.0, b=0.6667, c=-0.6667, d=-0.0, e=136.6667, f=30.6667),
+        ),
+        # Top heart, bottom heart from https://rsheeter.github.io/android_fonts/emoji.html?q=u:1f970
+        # The heart is actually several parts, here just the main outline
+        (
+            SVGPath(
+                d="M110.78,1.22c-7.06,2.83-7.68,10.86-7.68,10.86s-4.63-5.01-10.9-2.9c-7.53,2.54-11.32,10.62-5.22,19.34c6.98,9.97,29.38,12.81,29.38,12.81s12.53-16.37,10.79-29.35C125.74,1.43,116.12-0.92,110.78,1.22z"
+            ),
+            SVGPath(
+                d="M116.31,96.26c-6.38-4.14-13.3-0.02-13.3-0.02s1.43-6.67-3.91-10.58c-6.41-4.7-15.2-3.13-18.81,6.88c-4.13,11.45,6.46,31.39,6.46,31.39s20.6,0.81,30.2-8.09C124.76,108.61,121.13,99.39,116.31,96.26z"
+            ),
+            Affine2D(-1.0, 0.0, 0.0, 1.0, 128.0, -0.0),
+        ),
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine):
@@ -63,4 +94,9 @@ def test_svg_reuse(s1, s2, expected_affine):
     else:
         assert normalize(s1) != normalize(s2)
 
-    assert affine_between(s1, s2) == expected_affine
+    affine = affine_between(s1, s2)
+    if expected_affine:
+        assert affine
+        # Round because we've seen issues with different test environments when overly fine
+        affine = affine.round(4)
+    assert affine == expected_affine

@@ -58,6 +58,7 @@ def _rewrite_coords(cmd_converter, coord_converter, curr_pos, cmd, args):
     desired_cmd = cmd_converter(cmd)
     if cmd != desired_cmd:
         cmd = desired_cmd
+        #if x_coord_idxs or y_coord_idxs:
         args = list(args)  # we'd like to mutate 'em
         for x_coord_idx in x_coord_idxs:
             args[x_coord_idx] += coord_converter(curr_pos.x)
@@ -79,7 +80,7 @@ def _absolute_to_relative(curr_pos, cmd, args):
     )
 
 
-def _next_pos(curr_pos, cmd, cmd_args):
+def _next_pos(curr_pos, cmd, cmd_args) -> Point:
     # update current position
     x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     new_x, new_y = curr_pos
@@ -102,16 +103,17 @@ def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
     ((cmd, cmd_args),) = _explicit_lines_callback(None, curr_pos, cmd, cmd_args)
 
     x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
-    cmd_args = list(cmd_args)  # we'd like to mutate
-    new_x, new_y = new_endpoint
-    if cmd.islower():
-        new_x = new_x - curr_pos.x
-        new_y = new_y - curr_pos.y
+    if x_coord_idxs or y_coord_idxs:
+        cmd_args = list(cmd_args)  # we'd like to mutate
+        new_x, new_y = new_endpoint
+        if cmd.islower():
+            new_x = new_x - curr_pos.x
+            new_y = new_y - curr_pos.y
 
-    cmd_args[x_coord_idxs[-1]] = new_x
-    cmd_args[y_coord_idxs[-1]] = new_y
+        cmd_args[x_coord_idxs[-1]] = new_x
+        cmd_args[y_coord_idxs[-1]] = new_y
 
-    return cmd, cmd_args
+    return cmd, tuple(cmd_args)
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html

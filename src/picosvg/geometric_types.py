@@ -15,8 +15,13 @@
 import math
 from typing import NamedTuple, Optional, Union
 
+
 _DEFAULT_ALMOST_EQUAL_TOLERENCE = 1e-9
 _PointOrVec = Union["Point", "Vector"]
+
+
+def almost_equal(c1, c2, tolerence=_DEFAULT_ALMOST_EQUAL_TOLERENCE) -> bool:
+    return abs(c1 - c2) <= tolerence
 
 
 class Point(NamedTuple):
@@ -53,7 +58,7 @@ class Point(NamedTuple):
     def almost_equals(
         self, other: "Point", tolerence=_DEFAULT_ALMOST_EQUAL_TOLERENCE
     ) -> bool:
-        return abs(self.x - other.x) <= tolerence and abs(self.y - other.y) <= tolerence
+        return almost_equal(self.x, other.x, tolerence) and almost_equal(self.y, other.y, tolerence)
 
 
 class Vector(NamedTuple):
