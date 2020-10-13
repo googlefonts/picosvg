@@ -20,7 +20,7 @@ import collections
 from functools import reduce
 from math import cos, sin, radians, tan
 import re
-from typing import Iterable, NamedTuple, Tuple
+from typing import NamedTuple, Sequence, Tuple
 from sys import float_info
 from picosvg.geometric_types import Point, Rect, Vector
 
@@ -151,21 +151,21 @@ class Affine2D(NamedTuple):
         return Vector(self.a * x + self.c * y, self.b * x + self.d * y)
 
     @classmethod
-    def compose_ltr(cls, affines: Iterable["Affine2D"]) -> "Affine2D":
+    def compose_ltr(cls, affines: Sequence["Affine2D"]) -> "Affine2D":
         """Creates merged transform equivalent to applying transforms left-to-right order.
 
         Affines apply like functions - f(g(x)) - so we merge them in reverse order.
         """
-        return reduce(lambda acc, a: cls.product(a, acc), reversed(affines), cls.identity())
-
+        return reduce(
+            lambda acc, a: cls.product(a, acc), reversed(affines), cls.identity()
+        )
 
     def round(self, digits: int) -> "Affine2D":
         return Affine2D(*(round(v, digits) for v in self))
 
-
     @classmethod
     def rect_to_rect(cls, src: Rect, dst: Rect) -> "Affine2D":
-        """ Return Affine2D set to scale and translate src Rect to dst Rect.
+        """Return Affine2D set to scale and translate src Rect to dst Rect.
         The mapping completely fills dst, it does not preserve aspect ratio.
         """
         if src.empty():

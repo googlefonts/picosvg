@@ -16,10 +16,11 @@
 
 import copy
 import dataclasses
+from itertools import islice
 from math import atan2
 from picosvg.geometric_types import Vector, almost_equal
 from picosvg.svg_types import SVGShape, SVGPath
-from typing import Optional, Tuple
+from typing import Generator, Iterable, Optional, Tuple
 from picosvg import svg_meta
 from picosvg.svg_transform import Affine2D
 
@@ -28,6 +29,7 @@ from picosvg.svg_transform import Affine2D
 # TODO: hard to get #s to line up well with high tolerance
 # TODO: maybe the input svgs should have higher precision? - only 2 decimals on hearts
 _DEFAULT_TOLERANCE = 6
+_DEFAULT_LEVEL = 2
 _ROUND_RANGE = range(3, 13)  # range of rounds to try
 
 
@@ -38,19 +40,69 @@ def _first_move(path: SVGPath) -> Tuple[float, float]:
     return args
 
 
-def _vectors(path: SVGPath) -> Vector:
+def normalize(
+    shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE, level: int = _DEFAULT_LEVEL
+) -> SVGShape:
+    return globals()[f"normalize{level}"](shape, tolerance)
+
+
+def affine_between(
+    s1: SVGShape,
+    s2: SVGShape,
+    tolerance: int = _DEFAULT_TOLERANCE,
+    level: int = _DEFAULT_LEVEL,
+) -> Optional[Affine2D]:
+    return globals()[f"affine_between{level}"](s1, s2, tolerance)
+
+
+def normalize1(shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE) -> SVGShape:
+    """Build a version of shape that will compare == to other shapes even if offset.
+    Intended use is to normalize multiple shapes to identify opportunity for reuse."""
+    shape = dataclasses.replace(shape, id="")
+    path = shape.as_path()
+    x, y = _first_move(path)
+    return path.move(-x, -y, inplace=True).round_floats(tolerance, inplace=True)
+
+
+def affine_between1(
+    s1: SVGShape, s2: SVGShape, tolerance: int = _DEFAULT_TOLERANCE
+) -> Optional[Affine2D]:
+    """Returns the Affine2D to change s1 into s2 or None if no solution was found.
+    Implementation starting *very* basic, can improve over time.
+    """
+    s1 = dataclasses.replace(s1, id="")
+    s2 = dataclasses.replace(s2, id="")
+
+    if s1.almost_equals(s2, tolerance):
+        return Affine2D.identity()
+
+    s1 = s1.as_path()
+    s2 = s2.as_path()
+
+    s1x, s1y = _first_move(s1)
+    s2x, s2y = _first_move(s2)
+    dx = s2x - s1x
+    dy = s2y - s1y
+
+    s1.move(dx, dy, inplace=True)
+
+    if s1.almost_equals(s2, tolerance):
+        return Affine2D.identity().translate(dx, dy)
+
+    return None
+
+
+def _vectors(path: SVGPath) -> Generator[Vector, None, None]:
     for cmd, args in path:
         x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
         if cmd.lower() == "z":
-            return Vector(0., 0.)
-        yield Vector(args[x_coord_idxs[-1]], args[y_coord_idxs[-1]])
+            yield Vector(0.0, 0.0)
+        else:
+            yield Vector(args[x_coord_idxs[-1]], args[y_coord_idxs[-1]])
 
 
 def _nth_vector(path: SVGPath, n: int) -> Vector:
-    vectors = _vectors(path)
-    for _ in range(n):
-        next(vectors)
-    return next(vectors)
+    return next(islice(_vectors(path), n, n + 1))
 
 
 def _angle(v: Vector) -> float:
@@ -67,11 +119,20 @@ def _affine_vec2vec(initial: Vector, target: Vector) -> Affine2D:
     vec = affine.map_vector(initial)
 
     # scale to target magnitude
-    s = target.norm() / vec.norm()
+    s = 0
+    if vec.norm() != 0:
+        s = target.norm() / vec.norm()
 
-    affine = Affine2D.product(Affine2D.identity().scale(s, s), affine)
+    affine = Affine2D.compose_ltr((affine, Affine2D.identity().scale(s, s)))
 
     return affine
+
+
+def _first_y(vectors: Iterable[Vector]) -> Optional[Vector]:
+    for idx, vec in enumerate(vectors):
+        if idx > 0 and abs(vec.y) > 0.1:
+            return vec
+    return None
 
 
 # Makes a shape safe for a walk with _affine_callback
@@ -79,10 +140,11 @@ def _affine_friendly(shape: SVGShape) -> SVGPath:
     path = shape.as_path()
     if shape is path:
         path = copy.deepcopy(path)
-    return (path
-        .relative(inplace=True)
+    return (
+        path.relative(inplace=True)
         .explicit_lines(inplace=True)
-        .expand_shorthand(inplace=True))
+        .expand_shorthand(inplace=True)
+    )
 
 
 # Transform all coords in an affine-friendly path
@@ -109,7 +171,7 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     return ((cmd, args),)
 
 
-def normalize(shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE) -> SVGShape:
+def normalize2(shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE) -> SVGShape:
     """Build a version of shape that will compare == to other shapes even if offset.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
@@ -120,30 +182,26 @@ def normalize(shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE) -> SVGShape:
     x, y = _first_move(path)
     path.move(-x, -y, inplace=True)
 
-    # By normalizing vector 1 to [1 0] and making first move off y positive we
-    # normalize away rotation, scale and shear.
+    # Normlize vector 1 to [1 0]; eliminates rotation and uniform scaling
     vec1 = _nth_vector(path, 1)  # ignore M 0,0
-    path.walk(lambda *args: _affine_callback(_affine_vec2vec(vec1, Vector(1, 0)), *args))
+    affine1 = _affine_vec2vec(vec1, Vector(1, 0))
+    path.walk(lambda *args: _affine_callback(affine1, *args))
 
-    # TODO instead of flipping normalize vec2 to [0 1]?
-    # Would be nice to avoid destroying the initial [1 0]
-    # If we just compute another affine it probably will wreck that
-    flip = False
-    for vec in _vectors(path):
-        if vec.y != 0:
-            flip = vec.y < 0
-            break
-
-    if flip:
-        path.walk(lambda *args: _affine_callback(Affine2D.flip_y(), *args))
+    # Scale first y movement to 1.0
+    vecy = _first_y(_vectors(path))
+    if vecy and not almost_equal(vecy.y, 1.0):
+        affine2 = Affine2D.identity().scale(1, 1 / vecy.y)
+        path.walk(lambda *args: _affine_callback(affine2, *args))
 
     # TODO: what if shapes are the same but different start point
+    # TODO: what if shapes are the same but different drawing cmds
+    # This DOES happen in Noto; extent unclear
 
     path.round_floats(tolerance, inplace=True)
     return path
 
 
-def affine_between(
+def affine_between2(
     s1: SVGShape, s2: SVGShape, tolerance: int = _DEFAULT_TOLERANCE
 ) -> Optional[Affine2D]:
     """Returns the Affine2D to change s1 into s2 or None if no solution was found.
@@ -152,10 +210,14 @@ def affine_between(
     are the same, in which case finding a solution is typical
 
     """
+
+    def _apply_affine(affine, s):
+        s_prime = copy.deepcopy(s)
+        s_prime.walk(lambda *args: _affine_callback(affine, *args))
+        return s_prime
+
     def _try_affine(affine, s1, s2):
-        maybe_match = copy.deepcopy(s1)
-        maybe_match.walk(lambda *args: _affine_callback(affine, *args))
-        return maybe_match.almost_equals(s2, tolerance)
+        return _apply_affine(affine, s1).almost_equals(s2, tolerance)
 
     def _round(affine, s1, s2):
         # TODO bsearch?
@@ -181,44 +243,61 @@ def affine_between(
     if _try_affine(affine, s1, s2):
         return affine
 
-    # TODO how to share code with normalize?
-
-    # Normalize first edge. This may leave s1 as the mirror of s2 over that edge.
+    # Normalize first edge.
+    # Fixes rotation, x-scale, and uniform scaling.
     s1_vec1 = _nth_vector(s1, 1)
     s2_vec1 = _nth_vector(s2, 1)
 
-    transforms = [
-        # Move to 0,0
-        Affine2D.identity().translate(-s1x, -s1y),
-        # Normalize vector1
-        _affine_vec2vec(s1_vec1, s2_vec1),
-        # Move to s2 start
-        Affine2D.identity().translate(s2x, s2y)
-    ]
-    affine = Affine2D.compose_ltr(transforms)
+    s1_to_origin = Affine2D.identity().translate(-s1x, -s1y)
+    s2_to_origin = Affine2D.identity().translate(-s2x, -s2y)
+    s1_vec1_to_s2_vec2 = _affine_vec2vec(s1_vec1, s2_vec1)
 
-    # TODO if that doesn't fix vec1 we can give up
-    # TODO just testing vec2 would tell us if we should try mirroring
+    # Move to s2 start
+    origin_to_s2 = Affine2D.identity().translate(s2x, s2y)
+
+    affine = Affine2D.compose_ltr((s1_to_origin, s1_vec1_to_s2_vec2, origin_to_s2))
     if _try_affine(affine, s1, s2):
         return _round(affine, s1, s2)
 
-    # Last chance, try to mirror
-    transforms = (
-        # Normalize vector 1
-        transforms[:-1]
-        + [
-            # Rotate first edge to lie on y axis
-            Affine2D.identity().rotate(-_angle(s2_vec1)),
-            Affine2D.flip_y(),
-            # Rotate back into position
-            Affine2D.identity().rotate(_angle(s2_vec1)),
-        ]
-        # Move to s2's start point
-        + transforms[-1:])
+    # Could be non-uniform scaling or mirroring
+    # Try to match up the first y movement
 
-    affine = Affine2D.compose_ltr(transforms)
-    if _try_affine(affine, s1, s2):
-        return _round(affine, s1, s2)
+    # Could be non-uniform scaling and/or mirroring
+    # Scale first y movement (after matching up vec1) to match
+
+    # Rotate first edge to lie on x axis
+    s2_vec1_angle = _angle(s2_vec1)
+    rotate_s2vec1_onto_x = Affine2D.identity().rotate(-s2_vec1_angle)
+    rotate_s2vec1_off_x = Affine2D.identity().rotate(s2_vec1_angle)
+
+    affine = Affine2D.compose_ltr(
+        (s1_to_origin, s1_vec1_to_s2_vec2, rotate_s2vec1_onto_x)
+    )
+    s1_prime = _apply_affine(affine, s1)
+
+    affine = Affine2D.compose_ltr((s2_to_origin, rotate_s2vec1_onto_x))
+    s2_prime = _apply_affine(affine, s2)
+
+    s1_vecy = _first_y(_vectors(s1_prime))
+    s2_vecy = _first_y(_vectors(s2_prime))
+
+    if s1_vecy and s2_vecy:
+        affine = Affine2D.compose_ltr(
+            (
+                s1_to_origin,
+                s1_vec1_to_s2_vec2,
+                # lie vec1 along x axis
+                rotate_s2vec1_onto_x,
+                # scale first y-vectors to match; x-parts should already match
+                Affine2D.identity().scale(1.0, s2_vecy.y / s1_vecy.y),
+                # restore the rotation we removed
+                rotate_s2vec1_off_x,
+                # drop into final position
+                origin_to_s2,
+            )
+        )
+        if _try_affine(affine, s1, s2):
+            return _round(affine, s1, s2)
 
     # If we still aren't the same give up
     return None

@@ -58,7 +58,9 @@ class Point(NamedTuple):
     def almost_equals(
         self, other: "Point", tolerence=_DEFAULT_ALMOST_EQUAL_TOLERENCE
     ) -> bool:
-        return almost_equal(self.x, other.x, tolerence) and almost_equal(self.y, other.y, tolerence)
+        return almost_equal(self.x, other.x, tolerence) and almost_equal(
+            self.y, other.y, tolerence
+        )
 
 
 class Vector(NamedTuple):

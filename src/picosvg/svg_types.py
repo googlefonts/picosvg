@@ -14,6 +14,7 @@
 
 import copy
 import dataclasses
+from itertools import zip_longest
 from picosvg.geometric_types import Point, Rect
 from picosvg.svg_meta import (
     check_cmd,
@@ -58,7 +59,7 @@ def _rewrite_coords(cmd_converter, coord_converter, curr_pos, cmd, args):
     desired_cmd = cmd_converter(cmd)
     if cmd != desired_cmd:
         cmd = desired_cmd
-        #if x_coord_idxs or y_coord_idxs:
+        # if x_coord_idxs or y_coord_idxs:
         args = list(args)  # we'd like to mutate 'em
         for x_coord_idx in x_coord_idxs:
             args[x_coord_idx] += coord_converter(curr_pos.x)
@@ -263,8 +264,24 @@ class SVGShape:
         return target
 
     def almost_equals(self, other: "SVGShape", tolerance: int) -> bool:
-        assert isinstance(other, SVGShape)
-        return self.round_floats(tolerance) == other.round_floats(tolerance)
+        tol = 10 ** -tolerance
+        # print("almost_equals")
+        # print("  tol", tol)
+        # print("  self", self)
+        # print("  other", other)
+        # print("  self", self.as_path())
+        # print("  other", other.as_path())
+        # print(next(zip_longest(self.as_path(), other.as_path(), fillvalue=(None, ()))))
+        for (l_cmd, l_args), (r_cmd, r_args) in zip_longest(
+            self.as_path(), other.as_path(), fillvalue=(None, ())
+        ):
+            if l_cmd != r_cmd or len(l_args) != len(r_args):
+                # print(f"cmd mismatch {l_cmd} != {r_cmd}")
+                return False
+            if any(abs(lv - rv) > tol for lv, rv in zip(l_args, r_args)):
+                # print(f"arg mismatch {l_cmd}  {l_args}!= {r_args}")
+                return False
+        return True
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
