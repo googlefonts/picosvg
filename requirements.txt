@@ -4,5 +4,5 @@
 #
 #    pip-compile setup.py
 #
-lxml==4.5.2               # via picosvg (setup.py)
+lxml==4.6.1               # via picosvg (setup.py)
 skia-pathops==0.4.1       # via picosvg (setup.py)
