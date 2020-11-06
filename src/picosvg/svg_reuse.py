@@ -251,7 +251,7 @@ def affine_between2(
 
     s1_to_origin = Affine2D.identity().translate(-s1x, -s1y)
     s2_to_origin = Affine2D.identity().translate(-s2x, -s2y)
-    s1_vec1_to_s2_vec2 = _affine_vec2vec(s1_vec1, s2_vec1)
+    s1_vec1_to_s2_vec1 = _affine_vec2vec(s1_vec1, s2_vec1)
 
     # Move to s2 start
     origin_to_s2 = Affine2D.identity().translate(s2x, s2y)
