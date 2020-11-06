@@ -10,7 +10,7 @@ black==20.8b1            # via -r dev-requirements.in
 click==7.1.2              # via black
 decorator==4.4.2          # via networkx
 importlab==0.5.1          # via pytype
-importlib-metadata==1.7.0  # via pluggy, pytest
+importlib-metadata==2.0.0  # via pluggy, pytest
 more-itertools==8.4.0     # via pytest
 networkx==2.5             # via importlab
 ninja==1.10.0.post2        # via pytype
