@@ -172,7 +172,8 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
 
 
 def normalize2(shape: SVGShape, tolerance: int = _DEFAULT_TOLERANCE) -> SVGShape:
-    """Build a version of shape that will compare == to other shapes even if offset.
+    """Build a version of shape that will compare == to other shapes even if offset,
+    scaled, rotated, etc.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
 
