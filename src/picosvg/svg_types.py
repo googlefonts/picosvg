@@ -507,7 +507,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
         Also reformat the SVGPath.d string floats with the same rounding.
         """
-        target: SVGPath = super().round_floats(ndigits, inplace=inplace)
+        target: SVGPath = super().round_floats(ndigits, inplace=inplace).as_path()
 
         d, target.d = target.d, ""
         for cmd, args in parse_svg_path(d):
