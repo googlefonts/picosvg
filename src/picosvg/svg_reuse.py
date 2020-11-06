@@ -256,12 +256,9 @@ def affine_between2(
     # Move to s2 start
     origin_to_s2 = Affine2D.identity().translate(s2x, s2y)
 
-    affine = Affine2D.compose_ltr((s1_to_origin,  s1_vec1_to_s2_vec1, origin_to_s2))
+    affine = Affine2D.compose_ltr((s1_to_origin, s1_vec1_to_s2_vec1, origin_to_s2))
     if _try_affine(affine, s1, s2):
         return _round(affine, s1, s2)
-
-    # Could be non-uniform scaling or mirroring
-    # Try to match up the first y movement
 
     # Could be non-uniform scaling and/or mirroring
     # Scale first y movement (after matching up vec1) to match
@@ -272,7 +269,7 @@ def affine_between2(
     rotate_s2vec1_off_x = Affine2D.identity().rotate(s2_vec1_angle)
 
     affine = Affine2D.compose_ltr(
-        (s1_to_origin,  s1_vec1_to_s2_vec1, rotate_s2vec1_onto_x)
+        (s1_to_origin, s1_vec1_to_s2_vec1, rotate_s2vec1_onto_x)
     )
     s1_prime = _apply_affine(affine, s1)
 
@@ -286,7 +283,7 @@ def affine_between2(
         affine = Affine2D.compose_ltr(
             (
                 s1_to_origin,
-                 s1_vec1_to_s2_vec1,
+                s1_vec1_to_s2_vec1,
                 # lie vec1 along x axis
                 rotate_s2vec1_onto_x,
                 # scale first y-vectors to match; x-parts should already match
