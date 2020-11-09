@@ -19,11 +19,19 @@ import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
 from typing import List, Optional, Tuple
-from picosvg.svg_meta import ntos, svgns, xlinkns, parse_css_declarations
+from picosvg.svg_meta import (
+    number_or_percentage,
+    ntos,
+    strip_ns,
+    svgns,
+    xlinkns,
+    parse_css_declarations,
+)
 from picosvg.svg_types import *
+from picosvg.svg_transform import Affine2D
 import numbers
 
-_ELEMENT_CLASSES = {
+_SHAPE_CLASSES = {
     "circle": SVGCircle,
     "ellipse": SVGEllipse,
     "line": SVGLine,
@@ -32,8 +40,17 @@ _ELEMENT_CLASSES = {
     "polyline": SVGPolyline,
     "rect": SVGRect,
 }
-_CLASS_ELEMENTS = {v: f"{{{svgns()}}}{k}" for k, v in _ELEMENT_CLASSES.items()}
-_ELEMENT_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _ELEMENT_CLASSES.items()})
+_CLASS_ELEMENTS = {v: f"{{{svgns()}}}{k}" for k, v in _SHAPE_CLASSES.items()}
+_SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
+
+_GRADIENT_CLASSES = {
+    "linearGradient": SVGLinearGradient,
+    "radialGradient": SVGRadialGradient,
+}
+_GRADIENT_COORDS = {
+    "linearGradient": (("x1", "y1"), ("x2", "y2")),
+    "radialGradient": (("cx", "cy"), ("fx", "fy")),
+}
 
 _XLINK_TEMP = "xlink_"
 
@@ -44,6 +61,10 @@ _MAX_PCT_ERROR = 0.1
 
 # When you have no viewbox, use this. Absolute value in svg units.
 _DEFAULT_DEFAULT_TOLERENCE = 0.1
+
+
+# Rounding for rewritten gradient matrices
+_GRADIENT_TRANSFORM_NDIGITS = 6
 
 
 def _xlink_href_attr_name() -> str:
@@ -104,9 +125,10 @@ def _field_name(attr_name):
 
 
 def from_element(el):
-    if el.tag not in _ELEMENT_CLASSES:
+    if el.tag not in _SHAPE_CLASSES:
         raise ValueError(f"Bad tag <{el.tag}>")
-    data_type = _ELEMENT_CLASSES[el.tag]
+    data_type = _SHAPE_CLASSES[el.tag]
+    parse_fn = getattr(data_type, "from_element", None)
     args = {
         f.name: f.type(el.attrib[_attr_name(f.name)])
         for f in dataclasses.fields(data_type)
@@ -148,8 +170,9 @@ class SVG:
         if self.elements:
             return self.elements
         elements = []
+        view_box = self.view_box()
         for el in self.svg_root.iter("*"):
-            if el.tag not in _ELEMENT_CLASSES:
+            if el.tag not in _SHAPE_CLASSES:
                 continue
             elements.append((el, (from_element(el),)))
         self.elements = elements
@@ -679,16 +702,88 @@ class SVG:
 
         return self
 
+    def _select_gradients(self):
+        return self.xpath(" | ".join(f"//svg:{tag}" for tag in _GRADIENT_CLASSES))
+
+    def _collect_gradients(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg._collect_gradients(inplace=False)
+            return svg
+
+        # Collect gradients; remove other defs
+        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
+        for gradient in self._select_gradients():
+            gradient.getparent().remove(gradient)
+            defs.append(gradient)
+
+        for def_el in [e for e in self.xpath("//svg:defs")]:
+            def_el.getparent().remove(def_el)
+
+        self.svg_root.insert(0, defs)
+
+    def _apply_gradient_translation(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg._apply_gradient_translation(inplace=True)
+            return svg
+
+        for el in self._select_gradients():
+            gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(
+                el, self.view_box()
+            )
+            affine = gradient.gradientTransform
+            a, b, c, d, dx, dy = affine
+            if (dx, dy) == (0, 0):
+                continue
+            affine_prime = affine._replace(e=0, f=0)
+
+            for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
+                # if at default just ignore
+                if x_attr not in el.attrib and y_attr not in el.attrib:
+                    continue
+                x = getattr(gradient, x_attr)
+                y = getattr(gradient, y_attr)
+
+                # We need x`, y` such that matrix a b c d 0 0 yields same
+                # result as x,y with a b c d e f
+                # That is:
+                # 1)  ax` + cy` + 0 = ax + cy + e
+                # 2)  bx` + dy` + 0 = bx + dy + f
+                #                   ^ rhs is a known scalar; we'll call r1, r2
+                # multiply 1) by b/a so when subtracted from 2) we eliminate x`
+                # 1)  bx` + (b/a)cy` = (b/a) * r1
+                # 2) - 1)  bx` - bx` + dy` - (b/a)cy` = r2 - (b/a) * r1
+                #         y` = (r2 - (b/a) * r1) / (d - (b/a)c)
+                r1, r2 = affine.map_point((x, y))
+                assert r1 == a * x + c * y + dx
+                assert r2 == b * x + d * y + dy
+                y_prime = (r2 - r1 * b / a) / (d - b * c / a)
+
+                # Sub y` into 1)
+                # 1) x` = (r1 - cy`) / a
+                x_prime = (r1 - c * y_prime) / a
+
+                # sanity check: a`(x`, y`) should be a(x, y)
+                p = affine.map_point((x, y))
+                p_prime = affine_prime.map_point((x_prime, y_prime))
+                assert p.almost_equals(p_prime)
+
+                el.attrib[x_attr] = ntos(round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
+                el.attrib[y_attr] = ntos(round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
+
+            if affine_prime != Affine2D.identity():
+                el.attrib["gradientTransform"] = (
+                    "matrix(" + " ".join(ntos(v) for v in affine_prime) + ")"
+                )
+            else:
+                del el.attrib["gradientTransform"]
+
     def checkpicosvg(self):
         """Check for nano violations, return xpaths to bad elements.
 
         If result sequence empty then this is a valid picosvg.
         """
-
-        def _strip_ns(tagname):
-            if "}" in tagname:
-                return tagname[tagname.index("}") + 1 :]
-            return tagname
 
         self._update_etree()
 
@@ -705,7 +800,7 @@ class SVG:
         frontier = [(0, self.svg_root, "")]
         while frontier:
             el_idx, el, parent_path = frontier.pop(0)
-            el_tag = _strip_ns(el.tag)
+            el_tag = strip_ns(el.tag)
             el_path = f"{parent_path}/{el_tag}[{el_idx}]"
 
             if not any((re.match(pat, el_path) for pat in path_whitelist)):
@@ -742,16 +837,8 @@ class SVG:
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
 
-        # Collect gradients; remove other defs
-        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
-        for gradient in self.xpath("//svg:linearGradient | //svg:radialGradient"):
-            gradient.getparent().remove(gradient)
-            defs.append(gradient)
-
-        for def_el in [e for e in self.xpath("//svg:defs")]:
-            def_el.getparent().remove(def_el)
-
-        self.svg_root.insert(0, defs)
+        self._apply_gradient_translation(inplace=True)
+        self._collect_gradients(inplace=True)
 
         nano_violations = self.checkpicosvg()
         if nano_violations:

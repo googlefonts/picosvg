@@ -15,7 +15,16 @@
 import copy
 import dataclasses
 from picosvg.geometric_types import Point, Rect
-from picosvg import svg_meta
+from picosvg.svg_meta import (
+    check_cmd,
+    cmd_coords,
+    number_or_percentage,
+    parse_css_declarations,
+    path_segment,
+    strip_ns,
+    SVGCommand,
+    SVGCommandSeq,
+)
 from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
@@ -45,7 +54,7 @@ def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
 
 
 def _relative_to_absolute(curr_pos, cmd, args):
-    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     if cmd.islower():
         cmd = cmd.upper()
         args = list(args)  # we'd like to mutate 'em
@@ -59,7 +68,7 @@ def _relative_to_absolute(curr_pos, cmd, args):
 
 def _next_pos(curr_pos, cmd, cmd_args):
     # update current position
-    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     new_x, new_y = curr_pos
     if cmd.isupper():
         if x_coord_idxs:
@@ -79,7 +88,7 @@ def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
     # we need to be able to alter both axes
     ((cmd, cmd_args),) = _explicit_lines_callback(None, curr_pos, cmd, cmd_args)
 
-    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     cmd_args = list(cmd_args)  # we'd like to mutate
     new_x, new_y = new_endpoint
     if cmd.islower():
@@ -179,7 +188,7 @@ class SVGShape:
     def as_path(self) -> "SVGPath":
         raise NotImplementedError("You should implement as_path")
 
-    def as_cmd_seq(self) -> svg_meta.SVGCommandSeq:
+    def as_cmd_seq(self) -> SVGCommandSeq:
         return (
             self.as_path()
             .explicit_lines()  # hHvV => lL
@@ -193,7 +202,7 @@ class SVGShape:
         # only meaningful for path, which overrides
         return self
 
-    def stroke_commands(self, tolerance) -> Generator[svg_meta.SVGCommand, None, None]:
+    def stroke_commands(self, tolerance) -> Generator[SVGCommand, None, None]:
         return svg_pathops.stroke(
             self.as_cmd_seq(),
             self.stroke_linecap,
@@ -217,7 +226,7 @@ class SVGShape:
                 f.name.replace("_", "-"): f.type for f in dataclasses.fields(self)
             }
             raw_attrs = {}
-            unparsed_style = svg_meta.parse_css_declarations(
+            unparsed_style = parse_css_declarations(
                 target.style, raw_attrs, property_names=attr_types.keys()
             )
             for attr_name, attr_value in raw_attrs.items():
@@ -245,7 +254,7 @@ class SVGShape:
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 @dataclasses.dataclass
-class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
+class SVGPath(SVGShape, SVGCommandSeq):
     d: str = ""
 
     def __init__(self, **kwargs):
@@ -258,7 +267,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         self.d += path_snippet
 
     def _add_cmd(self, cmd, *args):
-        self._add(svg_meta.path_segment(cmd, *args))
+        self._add(path_segment(cmd, *args))
 
     def M(self, *args):
         self._add_cmd("M", *args)
@@ -267,7 +276,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         self._add_cmd("m", *args)
 
     def _arc(self, c, rx, ry, x, y, large_arc):
-        self._add(svg_meta.path_segment(c, rx, ry, 0, large_arc, 1, x, y))
+        self._add(path_segment(c, rx, ry, 0, large_arc, 1, x, y))
 
     def A(self, rx, ry, x, y, large_arc=0):
         self._arc("A", rx, ry, x, y, large_arc)
@@ -332,7 +341,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
 
         # iteration gives us exploded commands
         for idx, (cmd, args) in enumerate(self):
-            svg_meta.check_cmd(cmd, args)
+            check_cmd(cmd, args)
             if idx == 0 and cmd == "m":
                 cmd = "M"
 
@@ -366,7 +375,7 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
             # Shift the absolute parts and call it a day.
             if cmd.islower():
                 return ((cmd, args),)
-            x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+            x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
             args = list(args)  # we'd like to mutate 'em
             for x_coord_idx in x_coord_idxs:
                 args[x_coord_idx] += dx
@@ -485,13 +494,11 @@ class SVGPath(SVGShape, svg_meta.SVGCommandSeq):
         return target
 
     @classmethod
-    def from_commands(
-        cls, svg_cmds: Generator[svg_meta.SVGCommand, None, None]
-    ) -> "SVGPath":
+    def from_commands(cls, svg_cmds: Generator[SVGCommand, None, None]) -> "SVGPath":
         return cls().update_path(svg_cmds, inplace=True)
 
     def update_path(
-        self, svg_cmds: Generator[svg_meta.SVGCommand, None, None], inplace=False
+        self, svg_cmds: Generator[SVGCommand, None, None], inplace=False
     ) -> "SVGPath":
         target = self
         if not inplace:
@@ -635,6 +642,90 @@ class SVGRect(SVGShape):
         path._copy_common_fields(*shape_fields)
 
         return path
+
+
+def _get_gradient_units_relative_scale(grad_el, view_box):
+    gradient_units = grad_el.attrib.get("gradientUnits", "objectBoundingBox")
+    if gradient_units == "userSpaceOnUse":
+        # For gradientUnits="userSpaceOnUse", percentages represent values relative to
+        # the current viewport.
+        return view_box
+    elif gradient_units == "objectBoundingBox":
+        # For gradientUnits="objectBoundingBox", percentages represent values relative
+        # to the object bounding box. The latter defines an abstract coordinate system
+        # with origin at (0,0) and a nominal width and height = 1.
+        return Rect(0, 0, 1, 1)
+    else:
+        raise ValueError(
+            f'{strip_ns(grad_el.tag)} gradientUnits="{gradient_units}" not supported'
+        )
+
+
+def _parse_common_gradient_parts(gradient, el, view_box):
+    self = gradient
+    self.gradientUnits = _get_gradient_units_relative_scale(el, view_box)
+    if "gradientTransform" in el.attrib:
+        self.gradientTransform = Affine2D.fromstring(el.attrib["gradientTransform"])
+    if "spreadMethod" in el.attrib:
+        self.spreadMethod = el.attrib["spreadMethod"]
+    return self.gradientUnits.w, self.gradientUnits.h
+
+
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient
+# Should be parsed with from_element
+@dataclasses.dataclass
+class SVGLinearGradient:
+    x1: float = 0.0
+    x2: float = 0.0
+    y1: float = 0.0
+    y2: float = 0.0
+    gradientUnits: Rect = Rect(0, 0, 1, 1)
+    gradientTransform: Affine2D = Affine2D.identity()
+    spreadMethod: str = "pad"
+
+    @staticmethod
+    def from_element(el, view_box) -> "SVGLinearGradient":
+        self = SVGLinearGradient()
+        width, height = _parse_common_gradient_parts(self, el, view_box)
+
+        self.x1 = number_or_percentage(el.attrib.get("x1", "0%"), width)
+        self.y1 = number_or_percentage(el.attrib.get("y1", "0%"), height)
+        self.x2 = number_or_percentage(el.attrib.get("x2", "100%"), width)
+        self.y2 = number_or_percentage(el.attrib.get("y2", "0%"), height)
+        return self
+
+
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/radialGradient
+# Should be parsed with from_element
+@dataclasses.dataclass
+class SVGRadialGradient:
+    cx: float = 0.0
+    cy: float = 0.0
+    r: float = 0.0
+    fr: float = 0.0
+    fx: float = 0.0
+    fy: float = 0.0
+    gradientUnits: Rect = Rect(0, 0, 1, 1)
+    gradientTransform: Affine2D = Affine2D.identity()
+    spreadMethod: str = "pad"
+
+    @staticmethod
+    def from_element(el, view_box) -> "SVGRadialGradient":
+        self = SVGRadialGradient()
+        width, height = _parse_common_gradient_parts(self, el, view_box)
+
+        self.cx = number_or_percentage(el.attrib.get("cx", "50%"), width)
+        self.cy = number_or_percentage(el.attrib.get("cy", "50%"), height)
+        self.r = number_or_percentage(el.attrib.get("r", "50%"), width)
+
+        raw_fx = el.attrib.get("fx")
+        self.fx = number_or_percentage(raw_fx, width) if raw_fx is not None else self.cx
+        raw_fy = el.attrib.get("fy")
+        self.fy = (
+            number_or_percentage(raw_fy, height) if raw_fy is not None else self.cy
+        )
+        self.fr = number_or_percentage(el.attrib.get("fr", "0%"), width)
+        return self
 
 
 def union(shapes: Iterable[SVGShape]) -> SVGPath:

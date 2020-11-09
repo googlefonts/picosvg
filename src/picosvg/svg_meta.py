@@ -36,6 +36,12 @@ def xlinkns():
     return "http://www.w3.org/1999/xlink"
 
 
+def strip_ns(tagname):
+    if "}" in tagname:
+        return tagname[tagname.index("}") + 1 :]
+    return tagname
+
+
 # https://www.w3.org/TR/SVG11/paths.html#PathData
 _CMD_ARGS = {
     "m": 2,
@@ -98,6 +104,10 @@ def cmd_coords(cmd):
 def ntos(n: float) -> str:
     # strip superflous .0 decimals
     return str(int(n)) if isinstance(n, float) and n.is_integer() else str(n)
+
+
+def number_or_percentage(s: str, scale=1) -> float:
+    return float(s[:-1]) / 100 * scale if s.endswith("%") else float(s)
 
 
 def path_segment(cmd, *args):
