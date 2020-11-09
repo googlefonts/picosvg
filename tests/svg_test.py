@@ -414,14 +414,22 @@ def test_apply_style_attributes(actual, expected_result):
             '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
         ),
         # Real example from emoji_u1f392.svg w/ dx changed from 0 to 1
+        # scale, translate
         (
             '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientTransform="translate(1 -4122)" gradientUnits="userSpaceOnUse"/>',
             '<linearGradient id="c" x1="64.85" x2="64.85" y1="123" y2="15.3" gradientUnits="userSpaceOnUse"/>',
         ),
         # Real example from emoji_u1f392.svg w/sx changed from 1 to 0.5
+        # scale, translate
         (
             '<radialGradient id="b" cx="63.523" cy="12368" r="53.477" gradientTransform="matrix(.5 0 0 .2631 0 -3150)" gradientUnits="userSpaceOnUse"/>',
             '<radialGradient id="b" cx="63.523" cy="395.366021" r="53.477" gradientTransform="matrix(0.5 0 0 0.2631 0 0)" gradientUnits="userSpaceOnUse"/>',
+        ),
+        # Real example from emoji_u1f44d.svg
+        # Using all 6 parts
+        (
+            '<radialGradient id="d" cx="2459.4" cy="-319.18" r="20.331" gradientTransform="matrix(-1.3883 .0794 -.0374 -.6794 3505.4 -353.39)" gradientUnits="userSpaceOnUse"/>',
+            '<radialGradient id="d" cx="-71.60264" cy="-94.82264" r="20.331" gradientTransform="matrix(-1.3883 0.0794 -0.0374 -0.6794 0 0)" gradientUnits="userSpaceOnUse"/>',
         ),
     ],
 )
