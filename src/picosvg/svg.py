@@ -765,9 +765,10 @@ class SVG:
                 x_prime = (r1 - c * y_prime) / a
 
                 # sanity check: a`(x`, y`) should be a(x, y)
-                p = affine.map_point((x, y))
+                # all our float brutality damages points; low tolerence sanity checks!
+                p = Point(r1, r2)
                 p_prime = affine_prime.map_point((x_prime, y_prime))
-                assert p.almost_equals(p_prime)
+                assert p.almost_equals(p_prime, tolerence=1e-1), f"{p} != {p_prime}"
 
                 el.attrib[x_attr] = ntos(round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
                 el.attrib[y_attr] = ntos(round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
