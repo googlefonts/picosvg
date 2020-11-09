@@ -17,7 +17,7 @@ from lxml import etree
 import os
 import pytest
 from picosvg.svg import SVG
-from picosvg import svg_meta
+from picosvg.svg_meta import strip_ns, parse_css_declarations
 from svg_test_helpers import *
 
 
@@ -380,7 +380,7 @@ def test_parse_css_declarations(
     style, property_names, expected_output, expected_unparsed
 ):
     output = {}
-    unparsed = svg_meta.parse_css_declarations(style, output, property_names)
+    unparsed = parse_css_declarations(style, output, property_names)
     assert output == expected_output
     assert unparsed == expected_unparsed
 
@@ -388,7 +388,7 @@ def test_parse_css_declarations(
 @pytest.mark.parametrize("style", ["foo;bar;", "foo:bar:baz;"])
 def test_parse_css_declarations_invalid(style):
     with pytest.raises(ValueError, match="Invalid CSS declaration syntax"):
-        svg_meta.parse_css_declarations(style, {})
+        parse_css_declarations(style, {})
 
 
 @pytest.mark.parametrize(
@@ -403,3 +403,39 @@ def test_apply_style_attributes(actual, expected_result):
         expected_result,
         lambda svg: svg.shapes() and svg.apply_style_attributes(),
     )
+
+
+@pytest.mark.parametrize(
+    "gradient_string, expected_result",
+    [
+        # No transform, no change
+        (
+            '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
+            '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
+        ),
+        # Real example from emoji_u1f392.svg w/ dx changed from 0 to 1
+        (
+            '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientTransform="translate(1 -4122)" gradientUnits="userSpaceOnUse"/>',
+            '<linearGradient id="c" x1="64.85" x2="64.85" y1="123" y2="15.3" gradientUnits="userSpaceOnUse"/>',
+        ),
+        # Real example from emoji_u1f392.svg w/sx changed from 1 to 0.5
+        (
+            '<radialGradient id="b" cx="63.523" cy="12368" r="53.477" gradientTransform="matrix(.5 0 0 .2631 0 -3150)" gradientUnits="userSpaceOnUse"/>',
+            '<radialGradient id="b" cx="63.523" cy="395.366021" r="53.477" gradientTransform="matrix(0.5 0 0 0.2631 0 0)" gradientUnits="userSpaceOnUse"/>',
+        ),
+    ],
+)
+def test_apply_gradient_translation(gradient_string, expected_result):
+    svg_string = (
+        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'
+        + gradient_string
+        + "</svg>"
+    )
+    svg = SVG.fromstring(svg_string)._apply_gradient_translation()
+    el = svg.xpath_one("//svg:linearGradient | //svg:radialGradient")
+
+    for node in svg.svg_root.getiterator():
+        node.tag = etree.QName(node).localname
+    etree.cleanup_namespaces(svg.svg_root)
+
+    assert etree.tostring(el).decode("utf-8") == expected_result
