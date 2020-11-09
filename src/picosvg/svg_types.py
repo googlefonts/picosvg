@@ -55,7 +55,7 @@ def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
 
 
 def _rewrite_coords(cmd_converter, coord_converter, curr_pos, cmd, args):
-    x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
+    x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     desired_cmd = cmd_converter(cmd)
     if cmd != desired_cmd:
         cmd = desired_cmd
