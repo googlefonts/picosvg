@@ -82,13 +82,15 @@ import pytest
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine):
+    ndigits = 3
+    tolerance = 0.01
     # if we can get an affine we should normalize to same shape
     if expected_affine:
-        assert normalize(s1) == normalize(s2)
+        assert normalize(s1, tolerance, ndigits) == normalize(s2, tolerance, ndigits)
     else:
-        assert normalize(s1) != normalize(s2)
+        assert normalize(s1, tolerance, ndigits) != normalize(s2, tolerance, ndigits)
 
-    affine = affine_between(s1, s2)
+    affine = affine_between(s1, s2, tolerance)
     if expected_affine:
         assert (
             affine

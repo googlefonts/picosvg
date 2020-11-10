@@ -263,23 +263,13 @@ class SVGShape:
                 setattr(target, field.name, round(field_value, ndigits))
         return target
 
-    def almost_equals(self, other: "SVGShape", tolerance: int) -> bool:
-        tol = 10 ** -tolerance
-        # print("almost_equals")
-        # print("  tol", tol)
-        # print("  self", self)
-        # print("  other", other)
-        # print("  self", self.as_path())
-        # print("  other", other.as_path())
-        # print(next(zip_longest(self.as_path(), other.as_path(), fillvalue=(None, ()))))
+    def almost_equals(self, other: "SVGShape", tolerance: float) -> bool:
         for (l_cmd, l_args), (r_cmd, r_args) in zip_longest(
             self.as_path(), other.as_path(), fillvalue=(None, ())
         ):
             if l_cmd != r_cmd or len(l_args) != len(r_args):
-                # print(f"cmd mismatch {l_cmd} != {r_cmd}")
                 return False
-            if any(abs(lv - rv) > tol for lv, rv in zip(l_args, r_args)):
-                # print(f"arg mismatch {l_cmd}  {l_args}!= {r_args}")
+            if any(abs(lv - rv) > tolerance for lv, rv in zip(l_args, r_args)):
                 return False
         return True
 
@@ -358,7 +348,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
     def __iter__(self):
         return parse_svg_path(self.d, exploded=True)
 
-    def walk(self, callback):
+    def walk(self, callback) -> "SVGPath":
         """Walk path and call callback to build potentially new commands.
 
         https://www.w3.org/TR/SVG11/paths.html
@@ -396,6 +386,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
         self.d = ""
         for _, cmd, args in new_cmds:
             self._add_cmd(cmd, *args)
+        return self
 
     def move(self, dx, dy, inplace=False):
         """Returns a new path that is this one shifted."""
