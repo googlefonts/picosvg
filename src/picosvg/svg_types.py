@@ -33,6 +33,10 @@ from picosvg.svg_transform import Affine2D
 from typing import Generator, Iterable
 
 
+def _round_multiple(f: float, of: float) -> float:
+    return  round(f / of) * of
+
+
 def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
     del subpath_start
     if cmd == "v":
@@ -261,6 +265,17 @@ class SVGShape:
             field_value = getattr(self, field.name)
             if isinstance(field_value, float):
                 setattr(target, field.name, round(field_value, ndigits))
+        return target
+
+    def round_multiple(self, multiple_of: float, inplace=False) -> "SVGShape":
+        """Round all floats in SVGShape to nearest multiple of multiple_of."""
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        for field in dataclasses.fields(target):
+            field_value = getattr(self, field.name)
+            if isinstance(field_value, float):
+                setattr(target, field.name, _round_multiple(field_value, multiple_of))
         return target
 
     def almost_equals(self, other: "SVGShape", tolerance: float) -> bool:
@@ -548,6 +563,20 @@ class SVGPath(SVGShape, SVGCommandSeq):
         d, target.d = target.d, ""
         for cmd, args in parse_svg_path(d):
             target._add_cmd(cmd, *(round(n, ndigits) for n in args))
+
+        return target
+
+
+    def round_multiple(self, multiple_of: float, inplace=False) -> "SVGPath":
+        """Round all floats in SVGPath to given decimal digits.
+
+        Also reformat the SVGPath.d string floats with the same rounding.
+        """
+        target: SVGPath = super().round_multiple(multiple_of, inplace=inplace).as_path()
+
+        d, target.d = target.d, ""
+        for cmd, args in parse_svg_path(d):
+            target._add_cmd(cmd, *(_round_multiple(n, multiple_of) for n in args))
 
         return target
 

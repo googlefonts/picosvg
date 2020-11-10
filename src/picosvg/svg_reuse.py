@@ -116,7 +116,7 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     return ((cmd, args),)
 
 
-def normalize(shape: SVGShape, tolerance: float, ndigits: int) -> SVGShape:
+def normalize(shape: SVGShape, tolerance: float) -> SVGShape:
     """Build a version of shape that will compare == to other shapes even if offset,
     scaled, rotated, etc.
 
@@ -143,7 +143,7 @@ def normalize(shape: SVGShape, tolerance: float, ndigits: int) -> SVGShape:
     # TODO: what if shapes are the same but different drawing cmds
     # This DOES happen in Noto; extent unclear
 
-    path.round_floats(ndigits, inplace=True)
+    path.round_multiple(tolerance, inplace=True)
     return path
 
 
