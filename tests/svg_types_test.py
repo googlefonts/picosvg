@@ -242,6 +242,7 @@ def test_apply_style_attribute(shape, expected):
     assert actual == expected
     assert shape.apply_style_attribute(inplace=True) == expected
 
+
 @pytest.mark.parametrize(
     "path, multiple_of, expected_result",
     [

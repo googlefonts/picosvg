@@ -34,7 +34,7 @@ from typing import Generator, Iterable
 
 
 def _round_multiple(f: float, of: float) -> float:
-    return  round(f / of) * of
+    return round(f / of) * of
 
 
 def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
@@ -565,7 +565,6 @@ class SVGPath(SVGShape, SVGCommandSeq):
             target._add_cmd(cmd, *(round(n, ndigits) for n in args))
 
         return target
-
 
     def round_multiple(self, multiple_of: float, inplace=False) -> "SVGPath":
         """Round all floats in SVGPath to given decimal digits.
