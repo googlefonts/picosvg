@@ -436,6 +436,12 @@ def test_apply_style_attributes(actual, expected_result):
             '<radialGradient id="mbbox" cx="0.75" cy="0.75" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0.5 0)" gradientUnits="objectBoundingBox"/>',
             '<radialGradient id="mbbox" cx="0.748907" cy="0.11353" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0 0)" gradientUnits="objectBoundingBox"/>',
         ),
+        # Real example from emoji_u26BE
+        # https://github.com/googlefonts/picosvg/issues/129
+        (
+            '<radialGradient id="f" cx="-779.79" cy="3150" r="58.471" gradientTransform="matrix(0 1 -1 0 3082.5 1129.5)" gradientUnits="userSpaceOnUse"/>',
+            '<radialGradient id="f" cx="349.71" cy="67.5" r="58.471" gradientTransform="matrix(0 1 -1 0 0 0)" gradientUnits="userSpaceOnUse"/>',
+        ),
     ],
 )
 def test_apply_gradient_translation(gradient_string, expected_result):
