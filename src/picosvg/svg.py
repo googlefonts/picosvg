@@ -733,8 +733,9 @@ class SVG:
                 el, self.view_box()
             )
             affine = gradient.gradientTransform
-            a, b, c, d, dx, dy = affine
-            if (dx, dy) == (0, 0):
+            a, b, c, d, e, f = affine
+            #  no translate? nop!
+            if (e, f) == (0, 0):
                 continue
             affine_prime = affine._replace(e=0, f=0)
 
@@ -756,13 +757,24 @@ class SVG:
                 # 2) - 1)  bx` - bx` + dy` - (b/a)cy` = r2 - (b/a) * r1
                 #         y` = (r2 - (b/a) * r1) / (d - (b/a)c)
                 r1, r2 = affine.map_point((x, y))
-                assert r1 == a * x + c * y + dx
-                assert r2 == b * x + d * y + dy
-                y_prime = (r2 - r1 * b / a) / (d - b * c / a)
+                assert r1 == a * x + c * y + e
+                assert r2 == b * x + d * y + f
 
-                # Sub y` into 1)
-                # 1) x` = (r1 - cy`) / a
-                x_prime = (r1 - c * y_prime) / a
+                if a != 0:
+                    y_prime = (r2 - r1 * b / a) / (d - b * c / a)
+
+                    # Sub y` into 1)
+                    # 1) x` = (r1 - cy`) / a
+                    x_prime = (r1 - c * y_prime) / a
+                else:
+                    # if a == 0 then above gives div / 0. Take a simpler path.
+                    # 1) 0x` + cy` + 0 = 0x + cy + e
+                    #    y` = y + e/c
+                    y_prime = y + e / c
+                    # Sub y` into 2)
+                    # 2)  bx` + dy` + 0 = bx + dy + f
+                    #      x` = x + dy/b  + f/b - dy`/b
+                    x_prime = x + (d * y / b) + (f / b) - (d * y_prime / b)
 
                 # sanity check: a`(x`, y`) should be a(x, y)
                 # all our float brutality damages points; low tolerance sanity checks!
