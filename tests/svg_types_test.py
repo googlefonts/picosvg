@@ -241,3 +241,18 @@ def test_apply_style_attribute(shape, expected):
     actual = shape.apply_style_attribute()
     assert actual == expected
     assert shape.apply_style_attribute(inplace=True) == expected
+
+
+@pytest.mark.parametrize(
+    "path, multiple_of, expected_result",
+    [
+        ("m1,1 2,0 1,3", 0.1, "m1,1 2,0 1,3"),
+        # why a multiple that divides evenly into 1 is a good idea
+        ("m1,1 2,0 1,3", 0.128, "m1.024,1.024 2.048,0 1.024,2.944"),
+    ],
+)
+def test_round_multiple(path: str, multiple_of: float, expected_result: str):
+    actual = SVGPath(d=path).round_multiple(multiple_of, inplace=True).d
+    print(f"A: {actual}")
+    print(f"E: {expected_result}")
+    assert actual == expected_result

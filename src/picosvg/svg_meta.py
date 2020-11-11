@@ -135,7 +135,7 @@ def parse_css_declarations(
     output: MutableMapping[str, Any],
     property_names: Optional[Container[str]] = None,
 ) -> str:
-    """ Parse CSS declaration list into {property: value} dict.
+    """Parse CSS declaration list into {property: value} dict.
 
     Args:
         style: CSS declaration list without the enclosing braces,

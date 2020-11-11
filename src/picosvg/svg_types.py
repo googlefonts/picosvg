@@ -14,6 +14,7 @@
 
 import copy
 import dataclasses
+from itertools import zip_longest
 from picosvg.geometric_types import Point, Rect
 from picosvg.svg_meta import (
     check_cmd,
@@ -30,6 +31,10 @@ from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
 from typing import Generator, Iterable
+
+
+def _round_multiple(f: float, of: float) -> float:
+    return round(f / of) * of
 
 
 def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
@@ -53,20 +58,34 @@ def _explicit_lines_callback(subpath_start, curr_pos, cmd, args, *_):
     return ((cmd, args),)
 
 
-def _relative_to_absolute(curr_pos, cmd, args):
+def _rewrite_coords(cmd_converter, coord_converter, curr_pos, cmd, args):
     x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
-    if cmd.islower():
-        cmd = cmd.upper()
+    desired_cmd = cmd_converter(cmd)
+    if cmd != desired_cmd:
+        cmd = desired_cmd
+        # if x_coord_idxs or y_coord_idxs:
         args = list(args)  # we'd like to mutate 'em
         for x_coord_idx in x_coord_idxs:
-            args[x_coord_idx] += curr_pos.x
+            args[x_coord_idx] += coord_converter(curr_pos.x)
         for y_coord_idx in y_coord_idxs:
-            args[y_coord_idx] += curr_pos.y
+            args[y_coord_idx] += coord_converter(curr_pos.y)
 
     return (cmd, tuple(args))
 
 
-def _next_pos(curr_pos, cmd, cmd_args):
+def _relative_to_absolute(curr_pos, cmd, args):
+    return _rewrite_coords(
+        lambda cmd: cmd.upper(), lambda curr_scaler: curr_scaler, curr_pos, cmd, args
+    )
+
+
+def _absolute_to_relative(curr_pos, cmd, args):
+    return _rewrite_coords(
+        lambda cmd: cmd.lower(), lambda curr_scaler: -curr_scaler, curr_pos, cmd, args
+    )
+
+
+def _next_pos(curr_pos, cmd, cmd_args) -> Point:
     # update current position
     x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
     new_x, new_y = curr_pos
@@ -89,16 +108,17 @@ def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
     ((cmd, cmd_args),) = _explicit_lines_callback(None, curr_pos, cmd, cmd_args)
 
     x_coord_idxs, y_coord_idxs = cmd_coords(cmd)
-    cmd_args = list(cmd_args)  # we'd like to mutate
-    new_x, new_y = new_endpoint
-    if cmd.islower():
-        new_x = new_x - curr_pos.x
-        new_y = new_y - curr_pos.y
+    if x_coord_idxs or y_coord_idxs:
+        cmd_args = list(cmd_args)  # we'd like to mutate
+        new_x, new_y = new_endpoint
+        if cmd.islower():
+            new_x = new_x - curr_pos.x
+            new_y = new_y - curr_pos.y
 
-    cmd_args[x_coord_idxs[-1]] = new_x
-    cmd_args[y_coord_idxs[-1]] = new_y
+        cmd_args[x_coord_idxs[-1]] = new_x
+        cmd_args[y_coord_idxs[-1]] = new_y
 
-    return cmd, cmd_args
+    return cmd, tuple(cmd_args)
 
 
 # Subset of https://www.w3.org/TR/SVG11/painting.html
@@ -247,9 +267,26 @@ class SVGShape:
                 setattr(target, field.name, round(field_value, ndigits))
         return target
 
-    def almost_equals(self, other: "SVGShape", tolerance: int) -> bool:
-        assert isinstance(other, SVGShape)
-        return self.round_floats(tolerance) == other.round_floats(tolerance)
+    def round_multiple(self, multiple_of: float, inplace=False) -> "SVGShape":
+        """Round all floats in SVGShape to nearest multiple of multiple_of."""
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        for field in dataclasses.fields(target):
+            field_value = getattr(self, field.name)
+            if isinstance(field_value, float):
+                setattr(target, field.name, _round_multiple(field_value, multiple_of))
+        return target
+
+    def almost_equals(self, other: "SVGShape", tolerance: float) -> bool:
+        for (l_cmd, l_args), (r_cmd, r_args) in zip_longest(
+            self.as_path(), other.as_path(), fillvalue=(None, ())
+        ):
+            if l_cmd != r_cmd or len(l_args) != len(r_args):
+                return False
+            if any(abs(lv - rv) > tolerance for lv, rv in zip(l_args, r_args)):
+                return False
+        return True
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
@@ -326,7 +363,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
     def __iter__(self):
         return parse_svg_path(self.d, exploded=True)
 
-    def walk(self, callback):
+    def walk(self, callback) -> "SVGPath":
         """Walk path and call callback to build potentially new commands.
 
         https://www.w3.org/TR/SVG11/paths.html
@@ -364,6 +401,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
         self.d = ""
         for _, cmd, args in new_cmds:
             self._add_cmd(cmd, *args)
+        return self
 
     def move(self, dx, dy, inplace=False):
         """Returns a new path that is this one shifted."""
@@ -389,11 +427,9 @@ class SVGPath(SVGShape, SVGCommandSeq):
         target.walk(move_callback)
         return target
 
-    def absolute(self, inplace=False) -> "SVGPath":
-        """Returns equivalent path with only absolute commands."""
-
-        def absolute_callback(subpath_start, curr_pos, cmd, args, *_):
-            new_cmd, new_cmd_args = _relative_to_absolute(curr_pos, cmd, args)
+    def _rewrite_path(self, rewrite_fn, inplace) -> "SVGPath":
+        def rewrite_callback(subpath_start, curr_pos, cmd, args, *_):
+            new_cmd, new_cmd_args = rewrite_fn(curr_pos, cmd, args)
 
             # if we modified cmd to pass *very* close to subpath start snap to it
             # eliminates issues with not-quite-closed shapes due float imprecision
@@ -407,8 +443,16 @@ class SVGPath(SVGShape, SVGCommandSeq):
         target = self
         if not inplace:
             target = copy.deepcopy(self)
-        target.walk(absolute_callback)
+        target.walk(rewrite_callback)
         return target
+
+    def absolute(self, inplace=False) -> "SVGPath":
+        """Returns equivalent path with only absolute commands."""
+        return self._rewrite_path(_relative_to_absolute, inplace)
+
+    def relative(self, inplace=False) -> "SVGPath":
+        """Returns equivalent path with only relative commands."""
+        return self._rewrite_path(_absolute_to_relative, inplace)
 
     def explicit_lines(self, inplace=False):
         """Replace all vertical/horizontal lines with line to (x,y)."""
@@ -519,6 +563,19 @@ class SVGPath(SVGShape, SVGCommandSeq):
         d, target.d = target.d, ""
         for cmd, args in parse_svg_path(d):
             target._add_cmd(cmd, *(round(n, ndigits) for n in args))
+
+        return target
+
+    def round_multiple(self, multiple_of: float, inplace=False) -> "SVGPath":
+        """Round all floats in SVGPath to given decimal digits.
+
+        Also reformat the SVGPath.d string floats with the same rounding.
+        """
+        target: SVGPath = super().round_multiple(multiple_of, inplace=inplace).as_path()
+
+        d, target.d = target.d, ""
+        for cmd, args in parse_svg_path(d):
+            target._add_cmd(cmd, *(_round_multiple(n, multiple_of) for n in args))
 
         return target
 

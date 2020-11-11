@@ -431,6 +431,11 @@ def test_apply_style_attributes(actual, expected_result):
             '<radialGradient id="d" cx="2459.4" cy="-319.18" r="20.331" gradientTransform="matrix(-1.3883 .0794 -.0374 -.6794 3505.4 -353.39)" gradientUnits="userSpaceOnUse"/>',
             '<radialGradient id="d" cx="-71.60264" cy="-94.82264" r="20.331" gradientTransform="matrix(-1.3883 0.0794 -0.0374 -0.6794 0 0)" gradientUnits="userSpaceOnUse"/>',
         ),
+        # Manually constructed objectBBox
+        (
+            '<radialGradient id="mbbox" cx="0.75" cy="0.75" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0.5 0)" gradientUnits="objectBoundingBox"/>',
+            '<radialGradient id="mbbox" cx="0.748907" cy="0.11353" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0 0)" gradientUnits="objectBoundingBox"/>',
+        ),
     ],
 )
 def test_apply_gradient_translation(gradient_string, expected_result):

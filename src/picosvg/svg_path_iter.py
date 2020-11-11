@@ -35,11 +35,11 @@ def _explode_cmd(args_per_cmd, cmd, args):
 def parse_svg_path(svg_path: str, exploded=False):
     """Parses an svg path.
 
-  Exploded means when params repeat each the command is reported as
-  if multiplied. For example "M1,1 2,2 3,3" would report as three
-  separate steps when exploded.
+    Exploded means when params repeat each the command is reported as
+    if multiplied. For example "M1,1 2,2 3,3" would report as three
+    separate steps when exploded.
 
-  Yields tuples of (cmd, (args))."""
+    Yields tuples of (cmd, (args))."""
     command_tuples = []
     parts = _CMD_RE.split(svg_path)[1:]
     for i in range(0, len(parts), 2):
