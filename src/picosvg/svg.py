@@ -674,6 +674,21 @@ class SVG:
 
         return self
 
+    def remove_anonymous_symbols(self, inplace=False):
+        # No id makes a symbol useless
+        # https://github.com/googlefonts/picosvg/issues/46
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_anonymous_symbols(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        for el in self.xpath("//svg:symbol[not(@id)]"):
+            el.getparent().remove(el)
+
+        return self
+
     def set_attributes(self, name_values, xpath="/svg:svg", inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -821,6 +836,7 @@ class SVG:
 
             if not any((re.match(pat, el_path) for pat in path_whitelist)):
                 errors.append(f"BadElement: {el_path}")
+                continue  # no sense reporting all the children as bad
 
             for child_idx, child in enumerate(el):
                 if child.tag is etree.Comment:
@@ -840,6 +856,7 @@ class SVG:
         self._update_etree()
 
         self.remove_comments(inplace=True)
+        self.remove_anonymous_symbols(inplace=True)
         self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
