@@ -732,8 +732,11 @@ class SVG:
             gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(
                 el, self.view_box()
             )
-            affine = gradient.gradientTransform
-            a, b, c, d, e, f = affine
+            a, b, c, d, e, f = (
+                round(v, _GRADIENT_TRANSFORM_NDIGITS)
+                for v in gradient.gradientTransform
+            )
+            affine = Affine2D(a, b, c, d, e, f)
             #  no translate? nop!
             if (e, f) == (0, 0):
                 continue
