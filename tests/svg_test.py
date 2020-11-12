@@ -442,6 +442,12 @@ def test_apply_style_attributes(actual, expected_result):
             '<radialGradient id="f" cx="-779.79" cy="3150" r="58.471" gradientTransform="matrix(0 1 -1 0 3082.5 1129.5)" gradientUnits="userSpaceOnUse"/>',
             '<radialGradient id="f" cx="349.71" cy="67.5" r="58.471" gradientTransform="matrix(0 1 -1 0 0 0)" gradientUnits="userSpaceOnUse"/>',
         ),
+        # Real example from emoji_u270c.svg
+        # Very small values (e-17...) and float math makes for large errors
+        (
+            '<radialGradient id="f" cx="75.915" cy="20.049" r="71.484" fx="88.617" fy="-50.297" gradientTransform="matrix(6.1232e-17 1 -1.0519 6.4408e-17 97.004 -55.866)" gradientUnits="userSpaceOnUse"/>',
+            '<radialGradient id="f" cx="20.049" cy="-72.168891" r="71.484" fx="32.751" fy="-142.514891" gradientTransform="matrix(0 1 -1.0519 0 0 0)" gradientUnits="userSpaceOnUse"/>',
+        ),
     ],
 )
 def test_apply_gradient_translation(gradient_string, expected_result):
