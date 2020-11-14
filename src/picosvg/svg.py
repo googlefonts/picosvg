@@ -371,6 +371,7 @@ class SVG:
             "fill": _inherit_copy,
             "fill-rule": _inherit_copy,
             "style": _inherit_copy,
+            "transform": _inherit_copy,
             "stroke": _inherit_copy,
             "stroke-width": _inherit_copy,
             "stroke-linecap": _inherit_copy,
@@ -860,10 +861,10 @@ class SVG:
         self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
-        self.apply_transforms(inplace=True)
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
         self.strokes_to_paths(inplace=True)
+        self.apply_transforms(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
