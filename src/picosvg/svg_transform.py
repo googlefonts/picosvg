@@ -65,6 +65,9 @@ class Affine2D(NamedTuple):
     def fromstring(raw_transform):
         return parse_svg_transform(raw_transform)
 
+    def tostring(self):
+        return f'matrix({" ".join(str(v) for v in self)})'
+
     @staticmethod
     def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
         """Returns the product of first x second.
