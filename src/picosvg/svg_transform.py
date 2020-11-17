@@ -23,6 +23,7 @@ import re
 from typing import NamedTuple, Sequence, Tuple
 from sys import float_info
 from picosvg.geometric_types import Point, Rect, Vector
+from picosvg.svg_meta import ntos
 
 
 _SVG_ARG_FIXUPS = collections.defaultdict(
@@ -66,7 +67,7 @@ class Affine2D(NamedTuple):
         return parse_svg_transform(raw_transform)
 
     def tostring(self):
-        return f'matrix({" ".join(str(v) for v in self)})'
+        return f'matrix({" ".join(ntos(v) for v in self)})'
 
     @staticmethod
     def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
