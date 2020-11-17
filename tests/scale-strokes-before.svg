@@ -1,0 +1,7 @@
+<svg enable-background="new 0 0 128 128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(10, 10) scale(2, 1)">
+    <path d="M10,10 10,60 60,60 60,10 z" fill="none" stroke="black" stroke-width="3" />
+    <path d="M5,5 5,25 25,25 25,5 z" fill="none" stroke="black" stroke-width="2" transform="scale(4,3)" />
+    <path d="M5,5 5,25 25,25 25,5 z" fill="none" stroke="black" stroke-width="2" />
+  </g>
+</svg>

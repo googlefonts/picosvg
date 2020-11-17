@@ -222,6 +222,7 @@ def test_ungroup(actual, expected_result):
         ("stroke-simplepath-before.svg", "stroke-simplepath-after.svg"),
         ("stroke-path-before.svg", "stroke-path-after.svg"),
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
+        ("scale-strokes-before.svg", "scale-strokes-after.svg"),
     ],
 )
 def test_strokes_to_paths(actual, expected_result):
@@ -264,6 +265,7 @@ def test_transform(actual, expected_result):
         ("inline-css-style-before.svg", "inline-css-style-nano.svg"),
         ("clipped-strokes-before.svg", "clipped-strokes-nano.svg"),
         ("drop-anon-symbols-before.svg", "drop-anon-symbols-after.svg"),
+        ("scale-strokes-before.svg", "scale-strokes-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

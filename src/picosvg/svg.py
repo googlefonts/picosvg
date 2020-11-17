@@ -366,11 +366,22 @@ class SVG:
             if value != "visible":
                 _inherit_copy(attrib, child, attr_name)
 
+        def _inherit_matrix_multiply(attrib, child, attr_name):
+            group_transform = Affine2D.fromstring(attrib[attr_name])
+            if attr_name in child.attrib:
+                transform = Affine2D.fromstring(child.attrib[attr_name])
+                transform = Affine2D.product(transform, group_transform)
+            else:
+                transform = group_transform
+            if transform != Affine2D.identity():
+                child.attrib[attr_name] = transform.tostring()
+
         attrib_handlers = {
             "clip-rule": _inherit_copy,
             "fill": _inherit_copy,
             "fill-rule": _inherit_copy,
             "style": _inherit_copy,
+            "transform": _inherit_matrix_multiply,
             "stroke": _inherit_copy,
             "stroke-width": _inherit_copy,
             "stroke-linecap": _inherit_copy,
@@ -860,10 +871,10 @@ class SVG:
         self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
-        self.apply_transforms(inplace=True)
         self.ungroup(inplace=True)
         # stroke after ungroup to apply group strokes properly
         self.strokes_to_paths(inplace=True)
+        self.apply_transforms(inplace=True)
         self.apply_clip_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
