@@ -9,4 +9,6 @@
         fill="none" stroke="red" />
   <path d="M0,5 L200,200"
         fill="none" stroke="yellow" stroke-opacity="0" />
+  <path d="M1,1 L2,1 L2,2 L1,2 Z" display="none" />
+  <path d="M1,1 L2,1 L2,2 L1,2 Z" style="display:none;fill:#F5FAFC;" />
 </svg>
