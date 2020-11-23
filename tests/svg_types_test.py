@@ -210,6 +210,8 @@ def test_apply_basic_transform(path, transform, expected_result):
         (SVGPath(d="M1,2"), False),
         (SVGPath(d="M1,2 M3,4"), False),
         (SVGPath(d="M1,2 L3,4 Z"), True),
+        (SVGPath(d="M1,1 L2,1 L2,2 L1,2 Z", display="none"), False),
+        (SVGPath(style="display:none;fill:#F5FAFC;", d="M1,1 L2,1 L2,2 L1,2 Z"), False),
     ],
 )
 def test_might_paint(path, expected_result):

@@ -140,6 +140,7 @@ class SVGShape:
     opacity: float = 1.0
     transform: str = ""
     style: str = ""
+    display: str = "inline"
 
     def _copy_common_fields(
         self,
@@ -159,6 +160,7 @@ class SVGShape:
         opacity,
         transform,
         style,
+        display,
     ):
         self.id = id
         self.clip_path = clip_path
@@ -176,9 +178,15 @@ class SVGShape:
         self.opacity = opacity
         self.transform = transform
         self.style = style
+        self.display = display
 
     def might_paint(self) -> bool:
         """False if we're sure this shape will not paint. True if it *might* paint."""
+
+        shape = self.apply_style_attribute()
+
+        if shape.display == "none":
+            return False
 
         def _visible(fill, opacity):
             return fill != "none" and opacity != 0
@@ -188,8 +196,8 @@ class SVGShape:
         if all(c[0].upper() == "M" for c in self.as_cmd_seq()):
             return False
 
-        return _visible(self.stroke, self.stroke_opacity) or _visible(
-            self.fill, self.opacity
+        return _visible(shape.stroke, shape.stroke_opacity) or _visible(
+            shape.fill, shape.opacity
         )
 
     def bounding_box(self) -> Rect:
