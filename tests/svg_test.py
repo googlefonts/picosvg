@@ -285,7 +285,10 @@ def test_remove_unpainted_shapes(actual, expected_result):
         ("good-defs-0.svg", ()),
         (
             "bad-defs-0.svg",
-            ("BadElement: /svg[0]/defs[1]", "BadElement: /svg[0]/donkey[2]",),
+            (
+                "BadElement: /svg[0]/defs[1]",
+                "BadElement: /svg[0]/donkey[2]",
+            ),
         ),
         ("bad-defs-1.svg", ("BadElement: /svg[0]/path[0]",)),
     ],
