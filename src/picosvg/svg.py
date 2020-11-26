@@ -622,6 +622,7 @@ class SVG:
         for idx, (el, (shape,)) in enumerate(self._elements()):
             bbox = shape.bounding_box()
             isct = view_box.intersection(bbox)
+            assert isct is not None, f"We should have already dumped {shape}"
             if bbox == isct:
                 continue
             clip_path = (
