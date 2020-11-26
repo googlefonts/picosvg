@@ -60,6 +60,9 @@ jobs:
         pip install setuptools wheel twine
     - name: Extract release notes from annotated tag message
       id: release_notes
+      env:
+        # e.g. v0.1.0a1, v1.2.0b2 or v2.3.0rc3, but not v1.0.0
+        PRERELEASE_TAG_PATTERN: "v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+([ab]|rc)[[:digit:]]+"
       run: |
         # GH checkout action doesn't preserve tag annotations, we must fetch them
         # https://github.com/actions/checkout/issues/290
@@ -70,9 +73,8 @@ jobs:
         # signature at the bottom)
         TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG_NAME | tail -n +2 | sed -n '/-----BEGIN PGP SIGNATURE-----/q;p')
         echo "$TAG_MESSAGE" > "${{ runner.temp }}/release_notes.md"
-        # Check if the tag name contains a pre-release suffix: e.g. v0.1.0a1, v0.2.0b2
-        # or v0.3.0rc3. Set variable to mark the Github Release accordingly in next step
-        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< "$TAG_NAME"; then
+        # if the tag has a pre-release suffix mark the Github Release accordingly
+        if egrep -q "$PRERELEASE_TAG_PATTERN" <<< "$TAG_NAME"; then
           echo "Tag contains a pre-release suffix"
           echo "IS_PRERELEASE=true" >> "$GITHUB_ENV"
         else
