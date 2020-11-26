@@ -119,3 +119,18 @@ class Rect(NamedTuple):
     def empty(self) -> bool:
         """Return True if the Rect's width or height is 0."""
         return self.w == 0 or self.h == 0
+
+    def intersection(self, other: "Rect") -> Optional["Rect"]:
+        def _overlap(start1, end1, start2, end2):
+            start = max(start1, start2)
+            end = min(end1, end2)
+            if start >= end:
+                return (0., 0.)
+            return (start, end)
+
+        x1, x2 = _overlap(self.x, self.x + self.w, other.x, other.x + other.w)
+        y1, y2 = _overlap(self.y, self.y + self.h, other.y, other.y + other.h)
+
+        if x1 != x2 and y1 != y2:
+            return Rect(x1, y1, x2 - x1, y2 - y1)
+        return None
