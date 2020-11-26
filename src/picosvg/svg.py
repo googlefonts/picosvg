@@ -18,7 +18,7 @@ from functools import reduce
 import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
@@ -322,27 +322,27 @@ class SVG:
         self._resolve_use(self.svg_root)
         return self
 
-    def _resolve_clip_path(self, clip_path_url):
+    def _resolve_clip_path(self, clip_path_url) -> SVGPath:
         clip_path_el = self.resolve_url(clip_path_url, "clipPath")
         self._resolve_use(clip_path_el)
         self._ungroup(clip_path_el)
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        return union([from_element(e) for e in clip_path_el])
+        return SVGPath.from_commands(union([from_element(e) for e in clip_path_el]))
 
     def append_to(self, xpath, el):
         self._update_etree()
         self.xpath_one(xpath).append(el)
         return el
 
-    def _combine_clip_paths(self, clip_paths) -> SVGPath:
+    def _combine_clip_paths(self, clip_paths: Sequence[SVGPath]) -> SVGPath:
         # multiple clip paths leave behind their intersection
         if not clip_paths:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return intersection(clip_paths)
+        return SVGPath.from_commands(intersection(clip_paths))
 
     def _new_id(self, tag, template):
         for i in range(100):

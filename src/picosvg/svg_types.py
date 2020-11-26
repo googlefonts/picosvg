@@ -793,17 +793,13 @@ class SVGRadialGradient:
         return self
 
 
-def union(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(
-        svg_pathops.union(
-            [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
-        )
+def union(shapes: Iterable[SVGShape]) -> Generator[SVGCommand, None, None]:
+    return svg_pathops.union(
+        [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
     )
 
 
-def intersection(shapes: Iterable[SVGShape]) -> SVGPath:
-    return SVGPath.from_commands(
-        svg_pathops.intersection(
-            [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
-        )
+def intersection(shapes: Iterable[SVGShape]) -> Generator[SVGCommand, None, None]:
+    return svg_pathops.intersection(
+        [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
     )
