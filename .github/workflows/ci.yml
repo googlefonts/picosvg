@@ -70,7 +70,7 @@ jobs:
         # bash escaping rules
         echo "$(git tag -l --format='%(contents)' $TAG_NAME)" > "${{ runner.temp }}/CHANGELOG.md"
         # Check if tag name contains pre-release suffix: e.g. v0.1.0a1, v0.2.0b2, v0.3.0rc3
-        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< $TAG_NAME; do
+        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< $TAG_NAME; then
           echo ::set-env name=IS_PRERELEASE::true
         else
           echo ::set-env name=IS_PRERELEASE::false
