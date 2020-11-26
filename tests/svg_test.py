@@ -273,6 +273,16 @@ def test_topicosvg(actual, expected_result):
 
 
 @pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        ("outside-viewbox.svg", "outside-viewbox-clipped.svg"),
+    ],
+)
+def test_clip_to_viewbox(actual, expected_result):
+    _test(actual, expected_result, lambda svg: svg.clip_to_viewbox().round_floats(4))
+
+
+@pytest.mark.parametrize(
     "actual, expected_result", [("invisible-before.svg", "invisible-after.svg")]
 )
 def test_remove_unpainted_shapes(actual, expected_result):

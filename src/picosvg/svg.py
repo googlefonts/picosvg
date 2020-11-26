@@ -18,7 +18,7 @@ from functools import reduce
 import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
@@ -155,6 +155,12 @@ def _reset_attrs(data_obj, field_pred):
     for field in dataclasses.fields(data_obj):
         if field_pred(field):
             setattr(data_obj, field.name, field.default)
+
+
+def _safe_remove(el: etree.Element):
+    parent = el.getparent()
+    if parent is not None:
+        parent.remove(el)
 
 
 class SVG:
@@ -316,27 +322,27 @@ class SVG:
         self._resolve_use(self.svg_root)
         return self
 
-    def _resolve_clip_path(self, clip_path_url):
+    def _resolve_clip_path(self, clip_path_url) -> SVGPath:
         clip_path_el = self.resolve_url(clip_path_url, "clipPath")
         self._resolve_use(clip_path_el)
         self._ungroup(clip_path_el)
 
         # union all the shapes under the clipPath
         # Fails if there are any non-shapes under clipPath
-        return union([from_element(e) for e in clip_path_el])
+        return SVGPath.from_commands(union([from_element(e) for e in clip_path_el]))
 
     def append_to(self, xpath, el):
         self._update_etree()
         self.xpath_one(xpath).append(el)
         return el
 
-    def _combine_clip_paths(self, clip_paths) -> SVGPath:
+    def _combine_clip_paths(self, clip_paths: Sequence[SVGPath]) -> SVGPath:
         # multiple clip paths leave behind their intersection
         if not clip_paths:
             raise ValueError("Cannot combine no clip_paths")
         if len(clip_paths) == 1:
             return clip_paths[0]
-        return intersection(clip_paths)
+        return SVGPath.from_commands(intersection(clip_paths))
 
     def _new_id(self, tag, template):
         for i in range(100):
@@ -417,8 +423,7 @@ class SVG:
         # nuke the groups that are not displayed
         display_none = [e for e in self.xpath(f".//svg:g[@display='none']", scope_el)]
         for group in display_none:
-            if group.getparent() is not None:
-                group.getparent().remove(group)
+            _safe_remove(group)
 
         # Any groups left are displayed
         groups = [e for e in self.xpath(f".//svg:g", scope_el)]
@@ -441,8 +446,7 @@ class SVG:
 
         # nuke the groups
         for group in groups:
-            if group.getparent() is not None:
-                group.getparent().remove(group)
+            _safe_remove(group)
 
         # if we have new combinations of clip paths dedup & materialize them
         new_clip_paths = {}
@@ -472,7 +476,7 @@ class SVG:
                 continue
             old_id = old_clip_path.attrib["id"]
             if not self.xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
-                old_clip_path.getparent().remove(old_clip_path)
+                _safe_remove(old_clip_path)
 
     def _compute_clip_path(self, el):
         """Resolve clip path for element, including inherited clipping.
@@ -589,10 +593,52 @@ class SVG:
 
         # destroy clip path elements
         for clip_path_el in self.xpath("//svg:clipPath"):
-            clip_path_el.getparent().remove(clip_path_el)
+            _safe_remove(clip_path_el)
 
         # destroy clip-path attributes
         self.remove_attributes(["clip-path"], xpath="//svg:*[@clip-path]", inplace=True)
+
+        return self
+
+    def clip_to_viewbox(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.clip_to_viewbox(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        view_box = self.view_box()
+
+        # phase 1: dump shapes that are completely out of bounds
+        for el, (shape,) in self._elements():
+            if view_box.intersection(shape.bounding_box()) is None:
+                _safe_remove(el)
+
+        self.elements = None  # force elements to reload
+
+        # phase 2: clip things that are partially out of bounds
+        updates = []
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            bbox = shape.bounding_box()
+            isct = view_box.intersection(bbox)
+            assert isct is not None, f"We should have already dumped {shape}"
+            if bbox == isct:
+                continue
+            clip_path = (
+                SVGRect(x=isct.x, y=isct.y, width=isct.w, height=isct.h)
+                .as_path()
+                .absolute(inplace=True)
+            )
+            shape = shape.as_path().absolute(inplace=True)
+            shape.update_path(intersection((shape, clip_path)), inplace=True)
+            updates.append((idx, el, shape))
+
+        for idx, el, shape in updates:
+            self._set_element(idx, el, (shape,))
+
+        # Update the etree
+        self._update_etree()
 
         return self
 
