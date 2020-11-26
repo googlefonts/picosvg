@@ -66,9 +66,10 @@ jobs:
         git fetch --tags --force
         # strip leading 'refs/tags/' to get the tag name
         TAG_NAME="${GITHUB_REF##*/}"
-        # Dump tag contents to temporary .md file to avoid having to fight with YAML and
-        # bash escaping rules
-        echo "$(git tag -l --format='%(contents)' $TAG_NAME)" > "${{ runner.temp }}/CHANGELOG.md"
+        # Dump tag message to temporary .md file (excluding the first title line and PGP
+        # signature at the bottom)
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG_NAME | tail -n +2 | sed -n '/-----BEGIN PGP SIGNATURE-----/q;p')
+        echo "$TAG_MESSAGE" > "${{ runner.temp }}/release_notes.md"
         # Check if the tag name contains a pre-release suffix: e.g. v0.1.0a1, v0.2.0b2
         # or v0.3.0rc3. Set variable to mark the Github Release accordingly in next step
         if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< "$TAG_NAME"; then
@@ -87,7 +88,7 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: ${{ github.ref }}
-        body_path: "${{ runner.temp }}/CHANGELOG.md"
+        body_path: "${{ runner.temp }}/release_notes.md"
         draft: false
         prerelease: ${{ env.IS_PRERELEASE }}
     - name: Build and publish
