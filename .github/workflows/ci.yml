@@ -62,7 +62,7 @@ jobs:
       id: release_notes
       env:
         # e.g. v0.1.0a1, v1.2.0b2 or v2.3.0rc3, but not v1.0.0
-        PRERELEASE_TAG_PATTERN: "v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+([ab]|rc)[[:digit:]]+"
+        PRERELEASE_TAG_PATTERN: "v[[:digit:]]+\\.[[:digit:]]+\\.[[:digit:]]+([ab]|rc)[[:digit:]]+"
       run: |
         # GH checkout action doesn't preserve tag annotations, we must fetch them
         # https://github.com/actions/checkout/issues/290
