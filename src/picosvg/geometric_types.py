@@ -125,7 +125,7 @@ class Rect(NamedTuple):
             start = max(start1, start2)
             end = min(end1, end2)
             if start >= end:
-                return (0., 0.)
+                return (0.0, 0.0)
             return (start, end)
 
         x1, x2 = _overlap(self.x, self.x + self.w, other.x, other.x + other.w)

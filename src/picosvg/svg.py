@@ -600,7 +600,6 @@ class SVG:
 
         return self
 
-
     def clip_to_viewbox(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -625,7 +624,11 @@ class SVG:
             isct = view_box.intersection(bbox)
             if bbox == isct:
                 continue
-            clip_path = SVGRect(x=isct.x, y=isct.y, width=isct.w, height=isct.h).as_path().absolute(inplace=True)
+            clip_path = (
+                SVGRect(x=isct.x, y=isct.y, width=isct.w, height=isct.h)
+                .as_path()
+                .absolute(inplace=True)
+            )
             shape = shape.as_path().absolute(inplace=True)
             shape.update_path(intersection((shape, clip_path)), inplace=True)
             updates.append((idx, el, shape))
@@ -637,7 +640,6 @@ class SVG:
         self._update_etree()
 
         return self
-
 
     def apply_transforms(self, inplace=False):
         """Naively transforms to shapes and removes the transform attribute.
