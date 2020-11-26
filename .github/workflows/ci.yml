@@ -1,0 +1,96 @@
+name: Contnuous Test + Deploy
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        # pytype currently doesn't work with python >= 3.9
+        python-version: 3.8
+    - name: Install tox
+      run: pip install tox
+    - name: Run style and typing checks
+      run: tox -e lint
+  test:
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        platform: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install tox
+      run: pip install tox
+    - name: Run the tests
+      run: tox -e py
+  deploy:
+    # only run if the commit is tagged...
+    if: startsWith(github.ref, 'refs/tags/v')
+    # ... and both the lint and test jobs completed successfully
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # setuptools_scm requires the git clone to not be 'shallow'
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.x"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel twine
+    - name: Extract release notes from annotated tag message
+      id: release_notes
+      run: |
+        # GH checkout action doesn't preserve tag annotations, we must fetch them
+        # https://github.com/actions/checkout/issues/290
+        git fetch --tags --force
+        # strip leading 'refs/tags/' to get the tag name
+        TAG_NAME="${GITHUB_REF##*/}"
+        # Dump tag contents to temporary .md file to avoid having to fight with YAML and
+        # bash escaping rules
+        echo "$(git tag -l --format='%(contents)' $TAG_NAME)" > "${{ runner.temp }}/CHANGELOG.md"
+        # Check if tag name contains pre-release suffix: e.g. v0.1.0a1, v0.2.0b2, v0.3.0rc3
+        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< $TAG_NAME; do
+          echo ::set-env name=IS_PRERELEASE::true
+        else
+          echo ::set-env name=IS_PRERELEASE::false
+        fi
+    - name: Create GitHub release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        # This token is provided by Actions, you do not need to create your own token
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        body_path: "${{ runner.temp }}/CHANGELOG.md"
+        draft: false
+        prerelease: ${{ env.IS_PRERELEASE }}
+    - name: Build and publish
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist bdist_wheel
+        twine upload dist/*
