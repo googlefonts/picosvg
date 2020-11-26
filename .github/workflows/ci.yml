@@ -69,11 +69,14 @@ jobs:
         # Dump tag contents to temporary .md file to avoid having to fight with YAML and
         # bash escaping rules
         echo "$(git tag -l --format='%(contents)' $TAG_NAME)" > "${{ runner.temp }}/CHANGELOG.md"
-        # Check if tag name contains pre-release suffix: e.g. v0.1.0a1, v0.2.0b2, v0.3.0rc3
-        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< $TAG_NAME; then
-          echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+        # Check if the tag name contains a pre-release suffix: e.g. v0.1.0a1, v0.2.0b2
+        # or v0.3.0rc3. Set variable to mark the Github Release accordingly in next step
+        if grep -E -q "v\d+\.\d+\.\d+([ab]|rc)\d+" <<< "$TAG_NAME"; then
+          echo "Tag contains a pre-release suffix"
+          echo "IS_PRERELEASE=true" >> "$GITHUB_ENV"
         else
-          echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+          echo "Tag does not contain pre-release suffix"
+          echo "IS_PRERELEASE=false" >> "$GITHUB_ENV"
         fi
     - name: Create GitHub release
       id: create_release
@@ -92,5 +95,10 @@ jobs:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
+        if [ "$IS_PRERELEASE" == true ]; then
+          echo "DEBUG: This is a pre-release"
+        else
+          echo "DEBUG: This is a final release"
+        fi
         python setup.py sdist bdist_wheel
         twine upload dist/*
