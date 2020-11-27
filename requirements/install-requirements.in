@@ -1,0 +1,6 @@
+# Only list here top-level runtime dependencies.
+# Run `pip-compile-all.sh` to generate the concrete py3*-requirements.txt
+# files that are used to set up the tox and CI environments.
+dataclasses>=0.7; python_version < '3.7'
+lxml>=4.0
+skia-pathops>=0.4.1
