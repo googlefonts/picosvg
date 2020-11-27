@@ -35,8 +35,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install tox
       run: pip install tox
+    - name: Set TOXENV for current python
+      run: |
+        TOXENV=$(python -c "import sys; print(f'py{sys.version_info.major}{sys.version_info.minor}')")
+        echo "TOXENV=$TOXENV" >> "$GITHUB_ENV"
     - name: Run the tests
-      run: tox -e py
+      run: tox
   deploy:
     # only run if the commit is tagged...
     if: startsWith(github.ref, 'refs/tags/v')
