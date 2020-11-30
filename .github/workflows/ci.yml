@@ -1,4 +1,4 @@
-name: Contnuous Test + Deploy
+name: Continuous Test + Deploy
 
 on:
   push:

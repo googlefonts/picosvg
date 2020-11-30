@@ -1,4 +1,4 @@
-[![Travis Build Status](https://travis-ci.org/googlefonts/picosvg.svg?branch=master)](https://travis-ci.org/googlefonts/picosvg)
+![CI Build Status](https://github.com/googlefonts/picosvg/workflows/Continuous%20Test%20+%20Deploy/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/picosvg.svg)](https://pypi.org/project/picosvg/)
 [![Dependencies](https://badgen.net/github/dependabot/googlefonts/picosvg)](https://github.com/googlefonts/picosvg/network/updates)
 
