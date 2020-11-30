@@ -223,6 +223,7 @@ def test_ungroup(actual, expected_result):
         ("stroke-path-before.svg", "stroke-path-after.svg"),
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
         ("scale-strokes-before.svg", "scale-strokes-after.svg"),
+        ("stroke-fill-opacity-before.svg", "stroke-fill-opacity-after.svg"),
     ],
 )
 def test_strokes_to_paths(actual, expected_result):

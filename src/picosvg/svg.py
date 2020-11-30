@@ -524,6 +524,9 @@ class SVG:
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
         stroke.fill = stroke.stroke
+        # reset fill_opacity to default, as that only applies to the filled part
+        # of the shape, not the stroke, now encoded as distinct <path> elements
+        stroke.fill_opacity = 1.0
 
         # remove all the stroke settings
         for cleanmeup in (shape, stroke):
