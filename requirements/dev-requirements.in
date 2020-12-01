@@ -1,0 +1,9 @@
+# This file only declares the top-level development requirements.
+# Run `pip-compile-all.sh` to generate the concrete py3*-requirements.txt
+# files that are used to set up the tox and CI environments.
+
+black
+pytest
+# As of November 2020, pytype requires: Python <3.9, >=3.6
+# https://pypi.org/project/pytype/2020.11.23
+pytype; python_version < '3.9'
