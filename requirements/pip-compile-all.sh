@@ -3,7 +3,8 @@
 # that are listed in the tox.ini default envlist.
 # It is recommended to run this every time any top-level requirements in either
 # install-requirements.in or dev-requirements.in are added, removed or changed.
-# The script requires that all the supported python3.X binaries are installed
+# The script must be run from the same directory where tox.ini file is located,
+# and it requires that all the supported python3.X binaries are installed
 # locally and available on $PATH.
 # It also requires that the venv module is present in all of them, in order to
 # create the temporary virtual environment where to install pip-compile.
@@ -12,8 +13,6 @@
 
 set -e
 
-SRCDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1; pwd -P)"
-TOXINI="$(dirname "${SRCDIR}")/tox.ini"
 TMPDIR="$(mktemp -d)"
 
 function compile_requirements {
@@ -27,15 +26,17 @@ function compile_requirements {
     "${pip_cmd}" install -qq pip-tools
 
     local pip_compile_cmd="${venv_bin}/pip-compile"
-    "${pip_compile_cmd}" -q --upgrade -o "${SRCDIR}/${python_cmd}-requirements.txt" \
-        "${SRCDIR}/install-requirements.in" \
-        "${SRCDIR}/dev-requirements.in"
+    "${pip_compile_cmd}" -q --upgrade \
+        -o requirements/${python_cmd}-requirements.txt \
+        requirements/install-requirements.in \
+        requirements/dev-requirements.in
 }
 
+[ -f "tox.ini" ] || { echo "ERROR: tox.ini file not found" ; exit 1; }
 
 running=false
 # `tox -l` prints all the environments listed in the tox.ini's default 'envlist'
-for toxenv in $(tox -c "${TOXINI}" -l); do
+for toxenv in $(tox -l); do
     if [[ $toxenv =~ py([0-9])([0-9]+) ]]; then
         version_major=${BASH_REMATCH[1]}
         version_minor=${BASH_REMATCH[2]}
