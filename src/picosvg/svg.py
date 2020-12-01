@@ -513,6 +513,9 @@ class SVG:
         drawn on top of result[0], etc."""
 
         if shape.stroke == "none":
+            # no stroke, safe to combine opacity with fill_opacity and drop the latter
+            shape.opacity *= shape.fill_opacity
+            shape.fill_opacity = 1.0
             return (shape,)
 
         # make a new path that is the stroke
@@ -524,9 +527,10 @@ class SVG:
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
         stroke.fill = stroke.stroke
-        # reset fill_opacity to default, as that only applies to the filled part
-        # of the shape, not the stroke, now encoded as distinct <path> elements
-        stroke.fill_opacity = 1.0
+        # the fill and stroke are now different (filled) paths, reset 'fill_opacity'
+        # to default and only use a combined 'opacity' in each one.
+        shape.opacity *= shape.fill_opacity
+        shape.fill_opacity = stroke.fill_opacity = 1.0
 
         # remove all the stroke settings
         for cleanmeup in (shape, stroke):
