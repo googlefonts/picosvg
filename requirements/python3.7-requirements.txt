@@ -16,7 +16,7 @@ lxml==4.6.2               # via -r requirements/install-requirements.in
 mypy-extensions==0.4.3    # via black
 networkx==2.5             # via importlab
 ninja==1.10.0.post2       # via pytype
-packaging==20.4           # via pytest
+packaging==20.7           # via pytest
 pathspec==0.8.1           # via black
 pluggy==0.13.1            # via pytest
 py==1.9.0                 # via pytest
@@ -25,7 +25,7 @@ pytest==6.1.2             # via -r requirements/dev-requirements.in
 pytype==2020.11.23 ; python_version < "3.9"  # via -r requirements/dev-requirements.in
 pyyaml==5.3.1             # via pytype
 regex==2020.11.13         # via black
-six==1.15.0               # via importlab, packaging, pytype
+six==1.15.0               # via importlab, pytype
 skia-pathops==0.5.1.post1  # via -r requirements/install-requirements.in
 toml==0.10.2              # via black, pytest
 typed-ast==1.4.1          # via black, pytype
