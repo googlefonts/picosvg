@@ -258,3 +258,66 @@ def test_round_multiple(path: str, multiple_of: float, expected_result: str):
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
+
+
+@pytest.mark.parametrize(
+    "shape, expected",
+    [
+        # neither fill nor stroke, unchanged
+        (
+            SVGPath(d="m1,1 2,0 1,3 z", fill="none", fill_opacity=0.0),
+            SVGPath(d="m1,1 2,0 1,3 z", fill="none", fill_opacity=0.0),
+        ),
+        # both fill and stroke, also unchanged
+        (
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="red",
+                fill_opacity=0.5,
+                stroke="black",
+                stroke_opacity=0.8,
+                opacity=0.9,
+            ),
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="red",
+                fill_opacity=0.5,
+                stroke="black",
+                stroke_opacity=0.8,
+                opacity=0.9,
+            ),
+        ),
+        # no stroke, only fill: merge and drop fill_opacity
+        (
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="red",
+                fill_opacity=0.5,
+                opacity=0.9,
+            ),
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="red",
+                opacity=0.45,  # 0.9 * 0.5
+            ),
+        ),
+        # no fill, only stroke: merge and drop stroke_opacity
+        (
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="none",
+                stroke="black",
+                stroke_opacity=0.3,
+                opacity=0.9,
+            ),
+            SVGPath(
+                d="m1,1 2,0 1,3 z",
+                fill="none",
+                stroke="black",
+                opacity=0.27,  # 0.9 * 0.3
+            ),
+        ),
+    ],
+)
+def test_normalize_opacity(shape, expected):
+    assert shape.normalize_opacity() == expected
