@@ -512,8 +512,7 @@ class SVG:
         Returns sequence of shapes in draw order. That is, result[1] should be
         drawn on top of result[0], etc."""
 
-        if shape.stroke == "none":
-            return (shape,)
+        assert shape.stroke != "none"
 
         # make a new path that is the stroke
         stroke = shape.as_path().update_path(shape.stroke_commands(self.tolerance))
@@ -524,6 +523,10 @@ class SVG:
         # a few attributes move in interesting ways
         stroke.opacity *= stroke.stroke_opacity
         stroke.fill = stroke.stroke
+        # the fill and stroke are now different (filled) paths, reset 'fill_opacity'
+        # to default and only use a combined 'opacity' in each one.
+        shape.opacity *= shape.fill_opacity
+        shape.fill_opacity = stroke.fill_opacity = 1.0
 
         # remove all the stroke settings
         for cleanmeup in (shape, stroke):
@@ -774,6 +777,18 @@ class SVG:
 
         return self
 
+    def normalize_opacity(self, inplace=False):
+        """Merge '{fill,stroke}_opacity' with generic 'opacity' when possible."""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.normalize_opacity(inplace=True)
+            return svg
+
+        for shape in self.shapes():
+            shape.normalize_opacity(inplace=True)
+
+        return self
+
     def _select_gradients(self):
         return self.xpath(" | ".join(f"//svg:{tag}" for tag in _GRADIENT_CLASSES))
 
@@ -924,6 +939,7 @@ class SVG:
         self.apply_clip_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
+        self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
 

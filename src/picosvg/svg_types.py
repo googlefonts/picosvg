@@ -128,6 +128,7 @@ class SVGShape:
     clip_path: str = ""
     clip_rule: str = "nonzero"
     fill: str = "black"
+    fill_opacity: float = 1.0
     fill_rule: str = "nonzero"
     stroke: str = "none"
     stroke_width: float = 1.0
@@ -148,6 +149,7 @@ class SVGShape:
         clip_path,
         clip_rule,
         fill,
+        fill_opacity,
         fill_rule,
         stroke,
         stroke_width,
@@ -166,6 +168,7 @@ class SVGShape:
         self.clip_path = clip_path
         self.clip_rule = clip_rule
         self.fill = fill
+        self.fill_opacity = fill_opacity
         self.fill_rule = fill_rule
         self.stroke = stroke
         self.stroke_width = stroke_width
@@ -189,15 +192,14 @@ class SVGShape:
             return False
 
         def _visible(fill, opacity):
-            return fill != "none" and opacity != 0
-            # we're ignoring fill-opacity
+            return fill != "none" and shape.opacity * opacity != 0
 
         # if all you do is move the pen around you can't draw
         if all(c[0].upper() == "M" for c in self.as_cmd_seq()):
             return False
 
         return _visible(shape.stroke, shape.stroke_opacity) or _visible(
-            shape.fill, shape.opacity
+            shape.fill, shape.fill_opacity
         )
 
     def bounding_box(self) -> Rect:
@@ -295,6 +297,31 @@ class SVGShape:
             if any(abs(lv - rv) > tolerance for lv, rv in zip(l_args, r_args)):
                 return False
         return True
+
+    def normalize_opacity(self, inplace=False):
+        """Merge '{fill,stroke}_opacity' with generic 'opacity' when possible.
+
+        If stroke="none", multiply opacity by fill_opacity and reset the latter;
+        or if fill="none", multiply opacity by stroke_opacity and reset the latter.
+        If both == "none" or both != "none", return as is.
+        """
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+
+        if target.fill == "none" and target.stroke == "none":
+            return target
+
+        default = 1.0
+        for fill_attr, opacity_attr in [
+            ("fill", "stroke_opacity"),
+            ("stroke", "fill_opacity"),
+        ]:
+            if getattr(target, fill_attr) == "none":
+                target.opacity *= getattr(target, opacity_attr)
+                setattr(target, opacity_attr, default)
+
+        return target
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
