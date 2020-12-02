@@ -512,11 +512,7 @@ class SVG:
         Returns sequence of shapes in draw order. That is, result[1] should be
         drawn on top of result[0], etc."""
 
-        if shape.stroke == "none":
-            # no stroke, safe to combine opacity with fill_opacity and drop the latter
-            shape.opacity *= shape.fill_opacity
-            shape.fill_opacity = 1.0
-            return (shape,)
+        assert shape.stroke != "none"
 
         # make a new path that is the stroke
         stroke = shape.as_path().update_path(shape.stroke_commands(self.tolerance))
