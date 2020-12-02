@@ -298,6 +298,31 @@ class SVGShape:
                 return False
         return True
 
+    def normalize_opacity(self, inplace=False):
+        """Merge '{fill,stroke}_opacity' with generic 'opacity' when possible.
+
+        If stroke="none", multiply opacity by fill_opacity and reset the latter;
+        or if fill="none", multiply opacity by stroke_opacity and reset the latter.
+        If both == "none" or both != "none", return as is.
+        """
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+
+        if target.fill == "none" and target.stroke == "none":
+            return target
+
+        default = 1.0
+        for fill_attr, opacity_attr in [
+            ("fill", "stroke_opacity"),
+            ("stroke", "fill_opacity"),
+        ]:
+            if getattr(target, fill_attr) == "none":
+                target.opacity *= getattr(target, opacity_attr)
+                setattr(target, opacity_attr, default)
+
+        return target
+
 
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 @dataclasses.dataclass

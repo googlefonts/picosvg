@@ -777,6 +777,18 @@ class SVG:
 
         return self
 
+    def normalize_opacity(self, inplace=False):
+        """Merge '{fill,stroke}_opacity' with generic 'opacity' when possible."""
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.normalize_opacity(inplace=True)
+            return svg
+
+        for shape in self.shapes():
+            shape.normalize_opacity(inplace=True)
+
+        return self
+
     def _select_gradients(self):
         return self.xpath(" | ".join(f"//svg:{tag}" for tag in _GRADIENT_CLASSES))
 
@@ -927,6 +939,7 @@ class SVG:
         self.apply_clip_paths(inplace=True)
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
+        self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
 
