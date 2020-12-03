@@ -11,7 +11,7 @@ click==7.1.2              # via black
 dataclasses==0.8 ; python_version < "3.7"  # via -r requirements/install-requirements.in, black
 decorator==4.4.2          # via networkx
 importlab==0.5.1          # via pytype
-importlib-metadata==3.1.0  # via pluggy, pytest
+importlib-metadata==3.1.1  # via pluggy, pytest
 iniconfig==1.1.1          # via pytest
 lxml==4.6.2               # via -r requirements/install-requirements.in
 mypy-extensions==0.4.3    # via black
