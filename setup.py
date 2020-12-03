@@ -13,32 +13,6 @@
 # limitations under the License.
 
 from setuptools import setup, find_packages
-import os.path
-
-
-def readlines(filename):
-    # Return a file's list of lines excluding # comments
-    lines = []
-    with open(filename, "r") as fp:
-        for line in fp:
-            line, _, _ = line.partition("#")
-            line = line.strip()
-            if not line:
-                continue
-            lines.append(line)
-    return lines
-
-
-# Store top-level depedencies in external requirements.in files, so that
-# pip-compile can use them to compile requirements.txt files with full
-# dependency graph exploded and all versions pinned (for reproducible tests).
-# pip-compile support for setup.py is quite limited: it ignores extras_require,
-# as well as environment markers from install_requires:
-# https://github.com/jazzband/pip-tools/issues/625
-# https://github.com/jazzband/pip-tools/issues/908
-# https://github.com/jazzband/pip-tools/issues/1139
-install_deps = readlines(os.path.join("requirements", "install-requirements.in"))
-develop_deps = readlines(os.path.join("requirements", "dev-requirements.in"))
 
 
 setup_args = dict(
@@ -52,9 +26,17 @@ setup_args = dict(
         ],
     },
     setup_requires=["setuptools_scm"],
-    install_requires=install_deps,
+    install_requires=[
+        "dataclasses>=0.7; python_version < '3.7'",
+        "lxml>=4.0",
+        "skia-pathops>=0.4.1",
+    ],
     extras_require={
-        "dev": develop_deps,
+        "dev": [
+            "pytest",
+            "black==20.8b1",
+            "pytype==2020.11.23; python_version < '3.9'",
+        ],
     },
     python_requires=">=3.6",
 
