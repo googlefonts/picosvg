@@ -18,10 +18,18 @@ Usage:
 picosvg.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
 <simplified svg dumped to stdout>
 """
+from absl import app
+from absl import flags
 from lxml import etree  # pytype: disable=import-error
 from picosvg.svg import SVG
 from picosvg.svg_meta import svgns
 import sys
+
+
+FLAGS = flags.FLAGS
+
+
+flags.DEFINE_bool("clip_to_viewbox", False, "Whether to clip content outside viewbox")
 
 
 def _reduce_text(text):
@@ -29,9 +37,9 @@ def _reduce_text(text):
     return text if text else None
 
 
-def main():
+def _run(argv):
     try:
-        input_file = sys.argv[1]
+        input_file = argv[1]
     except IndexError:
         input_file = None
 
@@ -39,6 +47,9 @@ def main():
         svg = SVG.parse(input_file).topicosvg()
     else:
         svg = SVG.fromstring(sys.stdin.read()).topicosvg()
+
+    if FLAGS.clip_to_viewbox:
+        svg.clip_to_viewbox(inplace=True)
 
     tree = svg.toetree()
 
@@ -50,5 +61,10 @@ def main():
     print(etree.tostring(tree, pretty_print=True).decode("utf-8"))
 
 
+def main():
+    # We don't seem to be __main__ when run as cli tool installed by setuptools
+    app.run(_run)
+
+
 if __name__ == "__main__":
-    main()
+    app.run(_run)
