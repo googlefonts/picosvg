@@ -27,6 +27,7 @@ setup_args = dict(
     },
     setup_requires=["setuptools_scm"],
     install_requires=[
+        "absl-py>=0.9.0",
         "dataclasses>=0.7; python_version < '3.7'",
         "lxml>=4.0",
         "skia-pathops>=0.4.1",
