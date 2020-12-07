@@ -267,6 +267,8 @@ def test_transform(actual, expected_result):
         ("clipped-strokes-before.svg", "clipped-strokes-nano.svg"),
         ("drop-anon-symbols-before.svg", "drop-anon-symbols-after.svg"),
         ("scale-strokes-before.svg", "scale-strokes-nano.svg"),
+        ("ungroup-with-ids-before.svg", "ungroup-with-ids-nano.svg"),
+        ("stroke-with-id-before.svg", "stroke-with-id-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -302,6 +304,12 @@ def test_remove_unpainted_shapes(actual, expected_result):
             ),
         ),
         ("bad-defs-1.svg", ("BadElement: /svg[0]/path[0]",)),
+        (
+            "bad-ids-1.svg",
+            (
+                'BadElement: /svg[0]/path[2] reuses id="not_so_unique", first seen at /svg[0]/path[1]',
+            ),
+        ),
     ],
 )
 def test_checkpicosvg(svg_file, expected_violations):

@@ -276,38 +276,44 @@ class SVG:
     def _resolve_use(self, scope_el):
         attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
 
-        swaps = []
+        while True:
+            swaps = []
+            use_els = list(self.xpath(".//svg:use", el=scope_el))
+            if not use_els:
+                break
+            for use_el in use_els:
+                ref = use_el.attrib.get(_xlink_href_attr_name(), "")
+                if not ref.startswith("#"):
+                    raise ValueError(f"Only use #fragment supported, reject {ref}")
+                target = self.xpath_one(f'//svg:*[@id="{ref[1:]}"]')
 
-        for use_el in self.xpath(".//svg:use", el=scope_el):
-            ref = use_el.attrib.get(_xlink_href_attr_name(), "")
-            if not ref.startswith("#"):
-                raise ValueError(f"Only use #fragment supported, reject {ref}")
-            target = self.xpath_one(f'//svg:*[@id="{ref[1:]}"]')
+                new_el = copy.deepcopy(target)
 
-            new_el = copy.deepcopy(target)
-            del new_el.attrib["id"]
+                group = etree.Element(f"{{{svgns()}}}g", nsmap=self.svg_root.nsmap)
+                use_x = use_el.attrib.get("x", 0)
+                use_y = use_el.attrib.get("y", 0)
+                if use_x != 0 or use_y != 0:
+                    group.attrib["transform"] = (
+                        group.attrib.get("transform", "")
+                        + f" translate({use_x}, {use_y})"
+                    ).strip()
 
-            group = etree.Element(f"{{{svgns()}}}g", nsmap=self.svg_root.nsmap)
-            use_x = use_el.attrib.get("x", 0)
-            use_y = use_el.attrib.get("y", 0)
-            if use_x != 0 or use_y != 0:
-                group.attrib["transform"] = (
-                    group.attrib.get("transform", "") + f" translate({use_x}, {use_y})"
-                ).strip()
+                for attr_name in use_el.attrib:
+                    if attr_name in attrib_not_copied:
+                        continue
+                    group.attrib[attr_name] = use_el.attrib[attr_name]
 
-            for attr_name in use_el.attrib:
-                if attr_name in attrib_not_copied:
-                    continue
-                group.attrib[attr_name] = use_el.attrib[attr_name]
+                if len(group.attrib):
+                    group.append(new_el)
+                    swaps.append((use_el, group))
+                else:
+                    swaps.append((use_el, new_el))
 
-            if len(group.attrib):
-                group.append(new_el)
-                swaps.append((use_el, group))
-            else:
-                swaps.append((use_el, new_el))
-
-        for old_el, new_el in swaps:
-            old_el.getparent().replace(old_el, new_el)
+            for old_el, new_el in swaps:
+                # leaving id's on <use> instantiated content is a path to duplicate ids
+                for new_el_with_id in self.xpath("//svg:*[@id]", el=new_el):
+                    del new_el_with_id.attrib["id"]
+                old_el.getparent().replace(old_el, new_el)
 
     def resolve_use(self, inplace=False):
         """Instantiate reused elements.
@@ -534,6 +540,10 @@ class SVG:
 
         if not shape.might_paint():
             return (stroke,)
+
+        # The original id doesn't correctly refer to either
+        # It would be for the best if any id-based operations happened first
+        shape.id = stroke.id = ""
 
         return (shape, stroke)
 
@@ -900,6 +910,7 @@ class SVG:
         }
 
         # Make a list of xpaths with offsets (/svg/defs[0]/..., etc)
+        ids = {}
         frontier = [(0, self.svg_root, "")]
         while frontier:
             el_idx, el, parent_path = frontier.pop(0)
@@ -909,6 +920,14 @@ class SVG:
             if not any((re.match(pat, el_path) for pat in path_whitelist)):
                 errors.append(f"BadElement: {el_path}")
                 continue  # no sense reporting all the children as bad
+
+            el_id = el.attrib.get("id", None)
+            if el_id is not None:
+                if el_id in ids:
+                    errors.append(
+                        f'BadElement: {el_path} reuses id="{el_id}", first seen at {ids[el_id]}'
+                    )
+                ids[el_id] = el_path
 
             for child_idx, child in enumerate(el):
                 if child.tag is etree.Comment:

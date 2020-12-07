@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     id="svg" width="512" height="512"
+     viewBox="0 0 8 8">
+  <!-- the id shouldn't be copied to both stroke and shape -->
+  <path id="p" d="M1,1 2,1 2,4 1,4 z" stroke="black"/>
+</svg>

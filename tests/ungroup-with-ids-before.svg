@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     id="svg" width="512" height="512"
+     viewBox="0 0 8 8">
+  <!-- use of things with ids shouldn't multiply the id -->
+  <g id="g">
+    <use xlink:href="#p" x="1" />
+  </g>
+
+  <use xlink:href="#g2" y="1" />
+  <use xlink:href="#g" y="1" />
+
+  <g id="g2">
+    <path id="p" d="M1,1 2,1 2,4 1,4 z"/>
+  </g>
+</svg>

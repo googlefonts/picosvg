@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     id="svg" width="512" height="512"
+     viewBox="0 0 8 8">
+  <defs/>
+  <path d="M2,1 L3,1 L3,4 L2,4 Z"/>
+  <path d="M1,2 L2,2 L2,5 L1,5 Z"/>
+  <path d="M2,2 L3,2 L3,5 L2,5 Z"/>
+  <path id="p" d="M1,1 L2,1 L2,4 L1,4 Z"/>
+</svg>
