@@ -61,10 +61,10 @@ def _run(argv):
     print(etree.tostring(tree, pretty_print=True).decode("utf-8"))
 
 
-def main():
+def main(argv=None):
     # We don't seem to be __main__ when run as cli tool installed by setuptools
-    app.run(_run)
+    app.run(_run, argv=argv)
 
 
 if __name__ == "__main__":
-    app.run(_run)
+    main()
