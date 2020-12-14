@@ -1,0 +1,9 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- this path is taken from Noto Emoji's BANJO: emoij_u1fa95.svg -->
+  <circle fill="none"
+          stroke="#BDBDBD"
+          stroke-width="5"
+          stroke-miterlimit="10"
+          stroke-dasharray="7.5,8.5"
+          cx="38.1" cy="89.92" r="31.65"/>
+</svg>

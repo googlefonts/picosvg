@@ -30,7 +30,7 @@ setup_args = dict(
         "absl-py>=0.9.0",
         "dataclasses>=0.7; python_version < '3.7'",
         "lxml>=4.0",
-        "skia-pathops>=0.4.1",
+        "skia-pathops>=0.6.0",
     ],
     extras_require={
         "dev": [

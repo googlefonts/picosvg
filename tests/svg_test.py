@@ -97,26 +97,26 @@ def test_common_attrib(shape, expected_fields):
         # polyline
         ("<polyline points='30,10 50,30 10,30'/>", 'd="M30,10 50,30 10,30"'),
         # circle, minimal valid example
-        ("<circle r='1'/>", 'd="M-1,0 A1 1 0 1 1 1,0 A1 1 0 1 1 -1,0 Z"'),
+        ("<circle r='1'/>", 'd="M1,0 A1 1 0 1 1 -1,0 A1 1 0 1 1 1,0 Z"'),
         # circle
         (
             "<circle cx='600' cy='200' r='100'/>",
-            'd="M500,200 A100 100 0 1 1 700,200 A100 100 0 1 1 500,200 Z"',
+            'd="M700,200 A100 100 0 1 1 500,200 A100 100 0 1 1 700,200 Z"',
         ),
         # circle, decimal positioning
         (
             "<circle cx='12' cy='6.5' r='1.5'></circle>",
-            'd="M10.5,6.5 A1.5 1.5 0 1 1 13.5,6.5 A1.5 1.5 0 1 1 10.5,6.5 Z"',
+            'd="M13.5,6.5 A1.5 1.5 0 1 1 10.5,6.5 A1.5 1.5 0 1 1 13.5,6.5 Z"',
         ),
         # ellipse
         (
             '<ellipse cx="100" cy="50" rx="100" ry="50"/>',
-            'd="M0,50 A100 50 0 1 1 200,50 A100 50 0 1 1 0,50 Z"',
+            'd="M200,50 A100 50 0 1 1 0,50 A100 50 0 1 1 200,50 Z"',
         ),
         # ellipse, decimal positioning
         (
             '<ellipse cx="100.5" cy="50" rx="10" ry="50.5"/>',
-            'd="M90.5,50 A10 50.5 0 1 1 110.5,50 A10 50.5 0 1 1 90.5,50 Z"',
+            'd="M110.5,50 A10 50.5 0 1 1 90.5,50 A10 50.5 0 1 1 110.5,50 Z"',
         ),
     ],
 )
@@ -224,6 +224,8 @@ def test_ungroup(actual, expected_result):
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
         ("scale-strokes-before.svg", "scale-strokes-after.svg"),
         ("stroke-fill-opacity-before.svg", "stroke-fill-opacity-after.svg"),
+        ("stroke-dasharray-before.svg", "stroke-dasharray-after.svg"),
+        ("stroke-circle-dasharray-before.svg", "stroke-circle-dasharray-after.svg"),
     ],
 )
 def test_strokes_to_paths(actual, expected_result):

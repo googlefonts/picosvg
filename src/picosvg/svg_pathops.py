@@ -161,6 +161,8 @@ def stroke(
     stroke_width: float,
     stroke_miterlimit: float,
     tolerance: float,
+    dash_array: Sequence[float] = (),
+    dash_offset: float = 0.0,
 ) -> SVGCommandGen:
     """Create a path that is a shape with its stroke applied.
 
@@ -177,7 +179,7 @@ def stroke(
     # the input path's fill_rule doesn't affect the stroked result so for
     # simplicity here we assume 'nonzero'
     sk_path = skia_path(svg_cmds, fill_rule="nonzero")
-    sk_path.stroke(stroke_width, cap, join, stroke_miterlimit)
+    sk_path.stroke(stroke_width, cap, join, stroke_miterlimit, dash_array, dash_offset)
 
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
     sk_path.convertConicsToQuads(tolerance)
