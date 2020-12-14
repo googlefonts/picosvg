@@ -15,6 +15,7 @@
 import copy
 import dataclasses
 from itertools import zip_longest
+import re
 from picosvg.geometric_types import Point, Rect
 from picosvg.svg_meta import (
     check_cmd,
@@ -136,7 +137,7 @@ class SVGShape:
     stroke_linejoin: str = "miter"
     stroke_miterlimit: float = 4
     stroke_dasharray: str = ""
-    stroke_dashoffset: float = 1.0
+    stroke_dashoffset: float = 0.0
     stroke_opacity: float = 1.0
     opacity: float = 1.0
     transform: str = ""
@@ -233,6 +234,13 @@ class SVGShape:
         return self
 
     def stroke_commands(self, tolerance) -> Generator[SVGCommand, None, None]:
+        dash_array = [float(v) for v in re.split(r"[, ]", self.stroke_dasharray) if v]
+        # If an odd number of values is provided, then the list of values is repeated
+        # to yield an even number of values: e.g. 5,3,2 => 5,3,2,5,3,2.
+        # https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-dasharray
+        if len(dash_array) % 2 != 0:
+            dash_array.extend(dash_array)
+
         return svg_pathops.stroke(
             self.as_cmd_seq(),
             self.stroke_linecap,
@@ -240,6 +248,8 @@ class SVGShape:
             self.stroke_width,
             self.stroke_miterlimit,
             tolerance,
+            dash_array,
+            self.stroke_dashoffset,
         )
 
     def apply_style_attribute(self, inplace=False) -> "SVGShape":
