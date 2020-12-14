@@ -640,10 +640,12 @@ class SVGEllipse(SVGShape):
     def as_path(self) -> SVGPath:
         *shape_fields, rx, ry, cx, cy = dataclasses.astuple(self)
         path = SVGPath()
-        # arc doesn't seem to like being a complete shape, draw two halves
-        path.M(cx - rx, cy)
-        path.A(rx, ry, cx + rx, cy, large_arc=1)
+        # arc doesn't seem to like being a complete shape, draw two halves.
+        # We start at 3 o'clock and proceed in clockwise direction:
+        # https://www.w3.org/TR/SVG/shapes.html#CircleElement
+        path.M(cx + rx, cy)
         path.A(rx, ry, cx - rx, cy, large_arc=1)
+        path.A(rx, ry, cx + rx, cy, large_arc=1)
         path.end()
         path._copy_common_fields(*shape_fields)
         return path
