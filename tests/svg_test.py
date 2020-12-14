@@ -224,6 +224,7 @@ def test_ungroup(actual, expected_result):
         ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
         ("scale-strokes-before.svg", "scale-strokes-after.svg"),
         ("stroke-fill-opacity-before.svg", "stroke-fill-opacity-after.svg"),
+        ("stroke-dasharray-before.svg", "stroke-dasharray-after.svg"),
         ("stroke-circle-dasharray-before.svg", "stroke-circle-dasharray-after.svg"),
     ],
 )

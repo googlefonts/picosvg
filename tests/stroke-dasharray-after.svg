@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 10" height="800">
+  <!-- Example from https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-dasharray -->
+  <!-- No dashes nor gaps -->
+  <path d="M0,0.5 L30,0.5 L30,1.5 L0,1.5 L0,0.5 Z"/>
+  <!-- Dashes and gaps of the same size -->
+  <path d="M0,2.5 L4,2.5 L4,3.5 L0,3.5 M8,2.5 L12,2.5 L12,3.5 L8,3.5 M16,2.5 L20,2.5 L20,3.5 L16,3.5 M24,2.5 L28,2.5 L28,3.5 L24,3.5"/>
+  <!-- Dashes and gaps of different sizes -->
+  <path d="M0,4.5 L4,4.5 L4,5.5 L0,5.5 M5,4.5 L9,4.5 L9,5.5 L5,5.5 M10,4.5 L14,4.5 L14,5.5 L10,5.5 M15,4.5 L19,4.5 L19,5.5 L15,5.5 M20,4.5 L24,4.5 L24,5.5 L20,5.5 M25,4.5 L29,4.5 L29,5.5 L25,5.5"/>
+  <!-- Dashes and gaps of various sizes with an odd number of values -->
+  <path d="M0,6.5 L4,6.5 L4,7.5 L0,7.5 M5,6.5 L7,6.5 L7,7.5 L5,7.5 M11,6.5 L12,6.5 L12,7.5 L11,7.5 M14,6.5 L18,6.5 L18,7.5 L14,7.5 M19,6.5 L21,6.5 L21,7.5 L19,7.5 M25,6.5 L26,6.5 L26,7.5 L25,7.5 M28,6.5 L30,6.5 L30,7.5 L28,7.5"/>
+  <!-- Dashes and gaps of various sizes with an even number of values -->
+  <path d="M0,8.5 L4,8.5 L4,9.5 L0,9.5 M5,8.5 L7,8.5 L7,9.5 L5,9.5 M10,8.5 L14,8.5 L14,9.5 L10,9.5 M15,8.5 L17,8.5 L17,9.5 L15,9.5 M20,8.5 L24,8.5 L24,9.5 L20,9.5 M25,8.5 L27,8.5 L27,9.5 L25,9.5"/>
+</svg>
+
