@@ -199,8 +199,12 @@ class SVGShape:
         if all(c[0].upper() == "M" for c in self.as_cmd_seq()):
             return False
 
-        return _visible(shape.stroke, shape.stroke_opacity) or _visible(
-            shape.fill, shape.fill_opacity
+        return (
+            _visible(shape.stroke, shape.stroke_opacity) and shape.stroke_width != 0
+        ) or (
+            _visible(shape.fill, shape.fill_opacity)
+            and svg_pathops.path_area(shape.as_cmd_seq(), fill_rule=shape.fill_rule)
+            != 0
         )
 
     def bounding_box(self) -> Rect:
