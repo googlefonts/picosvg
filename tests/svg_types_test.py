@@ -209,7 +209,21 @@ def test_apply_basic_transform(path, transform, expected_result):
         # we see paths with move and nothing else in the wild
         (SVGPath(d="M1,2"), False),
         (SVGPath(d="M1,2 M3,4"), False),
-        (SVGPath(d="M1,2 L3,4 Z"), True),
+        # a straight line with only a fill (no stroke) and no area does not paint
+        (SVGPath(d="M1,2 L3,4 Z"), False),
+        # a straight line with a stroke does paint
+        (SVGPath(d="M1,2 L3,4", stroke="black"), True),
+        # a stroke with 0 width doesn't paint
+        (
+            SVGPath(d="M1,2 L3,4 L3,1 Z", fill="none", stroke="black", stroke_width=0),
+            False,
+        ),
+        # a filled triangle does paint (no matter the invisible stroke)
+        (
+            SVGPath(d="M1,2 L3,4 L3,1 Z", fill="red", stroke="black", stroke_width=0),
+            True,
+        ),
+        # we're explicitly told not to display, so we don't
         (SVGPath(d="M1,1 L2,1 L2,2 L1,2 Z", display="none"), False),
         (SVGPath(style="display:none;fill:#F5FAFC;", d="M1,1 L2,1 L2,2 L1,2 Z"), False),
     ],

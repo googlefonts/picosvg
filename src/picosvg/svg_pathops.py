@@ -190,3 +190,10 @@ def stroke(
 
 def bounding_box(svg_cmds: SVGCommandSeq):
     return skia_path(svg_cmds, fill_rule="nonzero").bounds
+
+
+def path_area(svg_cmds: SVGCommandSeq, fill_rule: str) -> float:
+    """Return the path's absolute area."""
+    sk_path = skia_path(svg_cmds, fill_rule=fill_rule)
+    sk_path.simplify(fix_winding=True)
+    return sk_path.area
