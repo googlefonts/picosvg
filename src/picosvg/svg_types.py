@@ -199,13 +199,16 @@ class SVGShape:
         if all(c[0].upper() == "M" for c in self.as_cmd_seq()):
             return False
 
-        return (
-            _visible(shape.stroke, shape.stroke_opacity) and shape.stroke_width != 0
-        ) or (
-            _visible(shape.fill, shape.fill_opacity)
-            and svg_pathops.path_area(shape.as_cmd_seq(), fill_rule=shape.fill_rule)
-            != 0
-        )
+        # Does it look like the stroke is visible?
+        if _visible(shape.stroke, shape.stroke_opacity) and shape.stroke_width != 0:
+            return True
+
+        # No stroke; if the shape is hidden we can't draw
+        if not _visible(shape.fill, shape.fill_opacity):
+            return False
+
+        # Only shapes with area paint
+        return svg_pathops.path_area(shape.as_cmd_seq(), fill_rule=shape.fill_rule) > 0
 
     def bounding_box(self) -> Rect:
         x1, y1, x2, y2 = svg_pathops.bounding_box(self.as_cmd_seq())
