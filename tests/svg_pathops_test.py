@@ -122,27 +122,21 @@ def test_pathops_intersection(shapes, expected_result):
 
 
 @pytest.mark.parametrize(
-    "shape, simplified, expected_result",
+    "shape, expected_result",
     [
         # rectangles with no width or height have zero area
-        (SVGRect(x=1, y=1, width=0, height=1), True, 0.0),
-        (SVGRect(x=1, y=1, width=1, height=0), True, 0.0),
-        # two non-overlapping rects of same size but different contour direction:
-        # when not simplified, their signed areas zero out each other
-        (SVGPath(d="M0,0 L0,1 L1,1 L1,0 Z M2,0 L3,0 L3,1, L2,1 Z"), False, 0.0),
-        # when simplified, sub-paths get same direction and absolute area is doubled
-        (SVGPath(d="M0,0 L0,1 L1,1 L1,0 Z M2,0 L3,0 L3,1, L2,1 Z"), True, 2.0),
+        (SVGRect(x=1, y=1, width=0, height=1), 0.0),
+        (SVGRect(x=1, y=1, width=1, height=0), 0.0),
+        # sub-paths with inverse winding direction
+        (SVGPath(d="M0,0 L0,1 L1,1 L1,0 Z M2,0 L3,0 L3,1, L2,1 Z"), 2.0),
         # a straight line has no area
-        (SVGPath(d="M1,1 L3,1"), False, 0.0),
+        (SVGPath(d="M1,1 L3,1"), 0.0),
         # open paths (no 'Z' at the end) are considered closed for area calculation
-        (SVGPath(d="M1,1 L3,1 L2,0"), False, 1.0),
+        (SVGPath(d="M1,1 L3,1 L2,0"), 1.0),
         # pathops.Path.area always return an absolute value >= 0
-        (SVGPath(d="M0,1 L-1,0 L0,-1 L1,0 Z"), False, 2.0),
-        (SVGPath(d="M0,1 L1,0 L0,-1 L-1,0 Z"), False, 2.0),
+        (SVGPath(d="M0,1 L-1,0 L0,-1 L1,0 Z"), 2.0),
+        (SVGPath(d="M0,1 L1,0 L0,-1 L-1,0 Z"), 2.0),
     ],
 )
-def test_path_area(shape, simplified, expected_result):
-    assert (
-        svg_pathops.path_area(shape.as_cmd_seq(), shape.fill_rule, simplified)
-        == expected_result
-    )
+def test_path_area(shape, expected_result):
+    assert svg_pathops.path_area(shape.as_cmd_seq(), shape.fill_rule) == expected_result
