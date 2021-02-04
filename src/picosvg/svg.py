@@ -132,7 +132,7 @@ def from_element(el):
     args = {
         f.name: f.type(el.attrib[_attr_name(f.name)])
         for f in dataclasses.fields(data_type)
-        if _attr_name(f.name) in el.attrib
+        if el.attrib.get(_attr_name(f.name), "").strip()
     }
     return data_type(**args)
 

@@ -26,7 +26,9 @@ def load_test_svg(filename):
 
 
 def svg_string(*els):
-    root = etree.fromstring('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>')
+    root = etree.fromstring(
+        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"/>'
+    )
     for el in els:
         root.append(etree.fromstring(el))
     return etree.tostring(root)
