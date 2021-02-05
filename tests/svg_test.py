@@ -16,7 +16,7 @@ import dataclasses
 from lxml import etree
 import os
 import pytest
-from picosvg.svg import SVG
+from picosvg.svg import SVG, SVGPath
 from picosvg.svg_meta import strip_ns, parse_css_declarations
 from svg_test_helpers import *
 
@@ -474,12 +474,7 @@ def test_apply_style_attributes(actual, expected_result):
     ],
 )
 def test_apply_gradient_translation(gradient_string, expected_result):
-    svg_string = (
-        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'
-        + gradient_string
-        + "</svg>"
-    )
-    svg = SVG.fromstring(svg_string)._apply_gradient_translation()
+    svg = SVG.fromstring(svg_string(gradient_string))._apply_gradient_translation()
     el = svg.xpath_one("//svg:linearGradient | //svg:radialGradient")
 
     for node in svg.svg_root.getiterator():
@@ -487,3 +482,18 @@ def test_apply_gradient_translation(gradient_string, expected_result):
     etree.cleanup_namespaces(svg.svg_root)
 
     assert etree.tostring(el).decode("utf-8") == expected_result
+
+
+@pytest.mark.parametrize(
+    "svg_content, expected_result",
+    [
+        # Blank fill
+        # https://github.com/googlefonts/nanoemoji/issues/229
+        (
+            '<path fill="" d=""/>',
+            (SVGPath(),),
+        ),
+    ],
+)
+def test_default_for_blank(svg_content, expected_result):
+    assert tuple(SVG.fromstring(svg_string(svg_content)).shapes()) == expected_result
