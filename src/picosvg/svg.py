@@ -760,6 +760,19 @@ class SVG:
 
         return self
 
+    def remove_title(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_title(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        for el in self.xpath("//svg:title"):
+            el.getparent().remove(el)
+
+        return self
+
     def set_attributes(self, name_values, xpath="/svg:svg", inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -949,6 +962,7 @@ class SVG:
 
         self.remove_comments(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
+        self.remove_title(inplace=True)
         self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
