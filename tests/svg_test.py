@@ -272,6 +272,7 @@ def test_transform(actual, expected_result):
         ("ungroup-with-ids-before.svg", "ungroup-with-ids-nano.svg"),
         ("stroke-with-id-before.svg", "stroke-with-id-nano.svg"),
         ("drop-title-before.svg", "drop-title-after.svg"),
+        ("drop-whitespace-before.svg", "drop-whitespace-after.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

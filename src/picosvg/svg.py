@@ -1016,6 +1016,9 @@ class SVG:
         if isinstance(string, bytes):
             string = string.decode("utf-8")
 
+        # Prevent errors when there is whitespace in front of `<?xml ?>`.
+        string = string.strip()
+
         # svgs are fond of not declaring xlink
         # based on https://mailman-mail5.webfaction.com/pipermail/lxml/20100323/021184.html
         if "xlink" in string and "xmlns:xlink" not in string:
