@@ -37,6 +37,14 @@ def test_point_subtraction_and_addition():
 
 
 class TestVector:
+    def test_add_vec(self):
+        assert Vector(1, 2) + Vector(2, 3) == Vector(3, 5)
+        assert Vector(1, 2) + Point(2, 3) == Point(3, 5)
+        assert Point(2, 3) + Vector(1, 2) == Point(3, 5)
+
+    def test_sub_vec(self):
+        assert Vector(3, 5) - Vector(2, 3) == Vector(1, 2)
+
     def test_multiply(self):
         v = Vector(3, 4)
         assert v * 2 == Vector(6, 8)
