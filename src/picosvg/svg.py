@@ -190,6 +190,13 @@ class SVG:
     def view_box(self) -> Optional[Rect]:
         raw_box = self.svg_root.attrib.get("viewBox", None)
         if not raw_box:
+            # if there is no explicit viewbox try to use width/height
+            w = self.svg_root.attrib.get("width", None)
+            h = self.svg_root.attrib.get("height", None)
+            if w and h:
+                return Rect(0, 0, int(w), int(h))
+
+        if not raw_box:
             return None
         box = tuple(int(v) for v in re.split(r",|\s+", raw_box))
         if len(box) != 4:
