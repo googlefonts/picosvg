@@ -136,7 +136,7 @@ class SVGShape:
     stroke_linecap: str = "butt"
     stroke_linejoin: str = "miter"
     stroke_miterlimit: float = 4
-    stroke_dasharray: str = ""
+    stroke_dasharray: str = "none"
     stroke_dashoffset: float = 0.0
     stroke_opacity: float = 1.0
     opacity: float = 1.0
@@ -241,7 +241,11 @@ class SVGShape:
         return self
 
     def stroke_commands(self, tolerance) -> Generator[SVGCommand, None, None]:
-        dash_array = [float(v) for v in re.split(r"[, ]", self.stroke_dasharray) if v]
+        dash_array = []
+        if self.stroke_dasharray != "none":
+            dash_array = [
+                float(v) for v in re.split(r"[, ]", self.stroke_dasharray) if v
+            ]
         # If an odd number of values is provided, then the list of values is repeated
         # to yield an even number of values: e.g. 5,3,2 => 5,3,2,5,3,2.
         # https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-dasharray
