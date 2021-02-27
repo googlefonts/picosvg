@@ -194,16 +194,12 @@ def _fix_rotate(args):
 
 def parse_svg_transform(raw_transform: str):
     # much simpler to read if we do stages rather than a single regex
+    # one day it might be worth writing a real parser
     transform = Affine2D.identity()
 
-    svg_transforms = re.split(r"(?<=[)])\s*[,\s]\s*(?=\w)", raw_transform)
-    for svg_transform in svg_transforms:
-        match = re.match(
-            r"(?i)(matrix|translate|scale|rotate|skewX|skewY)\((.*)\)", svg_transform
-        )
-        if not match:
-            raise ValueError(f"Unable to parse {raw_transform}")
-
+    for match in re.finditer(
+        r"(?i)(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)", raw_transform
+    ):
         op = match.group(1).lower()
         args = [float(p) for p in re.split(r"\s*[,\s]\s*", match.group(2))]
         _SVG_ARG_FIXUPS[op](args)
