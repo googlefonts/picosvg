@@ -194,11 +194,11 @@ class SVG:
             w = self.svg_root.attrib.get("width", None)
             h = self.svg_root.attrib.get("height", None)
             if w and h:
-                return Rect(0, 0, int(w), int(h))
+                return Rect(0, 0, float(w), float(h))
 
         if not raw_box:
             return None
-        box = tuple(int(v) for v in re.split(r",|\s+", raw_box))
+        box = tuple(float(v) for v in re.split(r",|\s+", raw_box))
         if len(box) != 4:
             raise ValueError("Unable to parse viewBox")
         return Rect(*box)
