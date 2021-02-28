@@ -22,6 +22,7 @@ from typing import List, Optional, Sequence, Tuple
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
+    splitns,
     strip_ns,
     svgns,
     xlinkns,
@@ -739,6 +740,48 @@ class SVG:
 
         return self
 
+    def remove_nonsvg_content(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_nonsvg_content(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        good_ns = {svgns(), xlinkns()}
+        if self.svg_root.nsmap[None] == svgns():
+            good_ns.add(None)
+
+        el_to_rm = []
+        for el in self.svg_root.getiterator("*"):
+            attr_to_rm = []
+            ns, _ = splitns(el.tag)
+            if ns not in good_ns:
+                el_to_rm.append(el)
+                continue
+            for attr in el.attrib:
+                ns, _ = splitns(attr)
+                if ns not in good_ns:
+                    attr_to_rm.append(attr)
+            for attr in attr_to_rm:
+                del el.attrib[attr]
+                print("del", attr)
+
+        for el in el_to_rm:
+            el.getparent().remove(el)
+
+        # Make svg default; destroy anything unexpected
+        good_nsmap = {
+            None: svgns(),
+            "xlink": xlinkns(),
+        }
+        if any(good_nsmap.get(k, None) != v for k, v in self.svg_root.nsmap.items()):
+            self.svg_root = _copy_new_nsmap(self.svg_root, good_nsmap)
+
+        self.elements = None
+
+        return self
+
     def remove_comments(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -968,6 +1011,7 @@ class SVG:
 
         self._update_etree()
 
+        self.remove_nonsvg_content(inplace=True)
         self.remove_comments(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
         self.remove_title_meta_desc(inplace=True)

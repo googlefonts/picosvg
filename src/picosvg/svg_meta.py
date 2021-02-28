@@ -36,10 +36,15 @@ def xlinkns():
     return "http://www.w3.org/1999/xlink"
 
 
+def splitns(name):
+    if "}" in name:
+        idx = name.index("}")
+        return name[1:idx], name[idx + 1 :]
+    return None, name
+
+
 def strip_ns(tagname):
-    if "}" in tagname:
-        return tagname[tagname.index("}") + 1 :]
-    return tagname
+    return splitns(tagname)[1]
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathData

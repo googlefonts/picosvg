@@ -274,6 +274,7 @@ def test_transform(actual, expected_result):
         ("drop-title-meta-desc-before.svg", "drop-title-meta-desc-nano.svg"),
         ("no-viewbox-before.svg", "no-viewbox-nano.svg"),
         ("decimal-viewbox-before.svg", "decimal-viewbox-nano.svg"),
+        ("inkscape-noise-before.svg", "inkscape-noise-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
