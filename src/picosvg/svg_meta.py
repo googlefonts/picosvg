@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from lxml import etree  # pytype: disable=import-error
 from typing import (
     Any,
     Container,
@@ -37,10 +38,8 @@ def xlinkns():
 
 
 def splitns(name):
-    if "}" in name:
-        idx = name.index("}")
-        return name[1:idx], name[idx + 1 :]
-    return None, name
+    qn = etree.QName(name)
+    return qn.namespace, qn.localname
 
 
 def strip_ns(tagname):

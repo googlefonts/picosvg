@@ -765,7 +765,6 @@ class SVG:
                     attr_to_rm.append(attr)
             for attr in attr_to_rm:
                 del el.attrib[attr]
-                print("del", attr)
 
         for el in el_to_rm:
             el.getparent().remove(el)
