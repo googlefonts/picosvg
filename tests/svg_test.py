@@ -271,7 +271,10 @@ def test_transform(actual, expected_result):
         ("scale-strokes-before.svg", "scale-strokes-nano.svg"),
         ("ungroup-with-ids-before.svg", "ungroup-with-ids-nano.svg"),
         ("stroke-with-id-before.svg", "stroke-with-id-nano.svg"),
-        ("drop-title-before.svg", "drop-title-after.svg"),
+        ("drop-title-meta-desc-before.svg", "drop-title-meta-desc-nano.svg"),
+        ("no-viewbox-before.svg", "no-viewbox-nano.svg"),
+        ("decimal-viewbox-before.svg", "decimal-viewbox-nano.svg"),
+        ("inkscape-noise-before.svg", "inkscape-noise-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

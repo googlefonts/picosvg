@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="275" version="1.1">
+  <defs>
+    <linearGradient id="grad" gradientUnits="userSpaceOnUse">
+      <stop stop-color="orange" offset="0"/>
+      <stop stop-color="red" offset="1"/>
+    </linearGradient>
+  </defs>
+  <path id="heart" fill="url(#grad)" d="M10,30 A20 20 0 0 1 50,30 A20 20 0 0 1 90,30 Q90,60 50,90 Q10,60 10,30 Z"/>
+</svg>

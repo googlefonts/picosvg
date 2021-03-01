@@ -22,6 +22,7 @@ from typing import List, Optional, Sequence, Tuple
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
+    splitns,
     strip_ns,
     svgns,
     xlinkns,
@@ -190,8 +191,15 @@ class SVG:
     def view_box(self) -> Optional[Rect]:
         raw_box = self.svg_root.attrib.get("viewBox", None)
         if not raw_box:
+            # if there is no explicit viewbox try to use width/height
+            w = self.svg_root.attrib.get("width", None)
+            h = self.svg_root.attrib.get("height", None)
+            if w and h:
+                return Rect(0, 0, float(w), float(h))
+
+        if not raw_box:
             return None
-        box = tuple(int(v) for v in re.split(r",|\s+", raw_box))
+        box = tuple(float(v) for v in re.split(r",|\s+", raw_box))
         if len(box) != 4:
             raise ValueError("Unable to parse viewBox")
         return Rect(*box)
@@ -732,6 +740,47 @@ class SVG:
 
         return self
 
+    def remove_nonsvg_content(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_nonsvg_content(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        good_ns = {svgns(), xlinkns()}
+        if self.svg_root.nsmap[None] == svgns():
+            good_ns.add(None)
+
+        el_to_rm = []
+        for el in self.svg_root.getiterator("*"):
+            attr_to_rm = []
+            ns, _ = splitns(el.tag)
+            if ns not in good_ns:
+                el_to_rm.append(el)
+                continue
+            for attr in el.attrib:
+                ns, _ = splitns(attr)
+                if ns not in good_ns:
+                    attr_to_rm.append(attr)
+            for attr in attr_to_rm:
+                del el.attrib[attr]
+
+        for el in el_to_rm:
+            el.getparent().remove(el)
+
+        # Make svg default; destroy anything unexpected
+        good_nsmap = {
+            None: svgns(),
+            "xlink": xlinkns(),
+        }
+        if any(good_nsmap.get(k, None) != v for k, v in self.svg_root.nsmap.items()):
+            self.svg_root = _copy_new_nsmap(self.svg_root, good_nsmap)
+
+        self.elements = None
+
+        return self
+
     def remove_comments(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -760,16 +809,17 @@ class SVG:
 
         return self
 
-    def remove_title(self, inplace=False):
+    def remove_title_meta_desc(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.remove_title(inplace=True)
+            svg.remove_title_meta_desc(inplace=True)
             return svg
 
         self._update_etree()
 
-        for el in self.xpath("//svg:title"):
-            el.getparent().remove(el)
+        for tag in ("title", "desc", "metadata"):
+            for el in self.xpath(f"//svg:{tag}"):
+                el.getparent().remove(el)
 
         return self
 
@@ -960,9 +1010,10 @@ class SVG:
 
         self._update_etree()
 
+        self.remove_nonsvg_content(inplace=True)
         self.remove_comments(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
-        self.remove_title(inplace=True)
+        self.remove_title_meta_desc(inplace=True)
         self.apply_style_attributes(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)

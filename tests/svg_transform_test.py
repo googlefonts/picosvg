@@ -48,12 +48,24 @@ from typing import Tuple
             "translate(50 90),rotate(-45) translate(130,160)",
             Affine2D(0.707, -0.707, 0.707, 0.707, 255.061, 111.213),
         ),
+        # example from Noto
+        (
+            "rotate(150)translate(0,6)rotate(66)",
+            Affine2D(a=-0.809, b=-0.588, c=0.588, d=-0.809, e=-2.999, f=-5.196),
+        ),
+        # Crafted example
+        (
+            # "rotate (180)\ttranslate\t(0 6)\n\t",
+            "rotate (180)\ttranslate(0 6)\n\t",
+            Affine2D(-1, 0, 0, -1, 0, -6),
+        ),
     ],
 )
 def test_parse_svg_transform(transform: str, expected_result: Tuple[str, ...]):
     actual = parse_svg_transform(transform)
     print(f"A: {actual}")
     print(f"E: {expected_result}")
+
     assert actual == pytest.approx(expected_result, 3)
 
 

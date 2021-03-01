@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from lxml import etree  # pytype: disable=import-error
 from typing import (
     Any,
     Container,
@@ -36,10 +37,13 @@ def xlinkns():
     return "http://www.w3.org/1999/xlink"
 
 
+def splitns(name):
+    qn = etree.QName(name)
+    return qn.namespace, qn.localname
+
+
 def strip_ns(tagname):
-    if "}" in tagname:
-        return tagname[tagname.index("}") + 1 :]
-    return tagname
+    return splitns(tagname)[1]
 
 
 # https://www.w3.org/TR/SVG11/paths.html#PathData
