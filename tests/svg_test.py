@@ -275,6 +275,7 @@ def test_transform(actual, expected_result):
         ("no-viewbox-before.svg", "no-viewbox-nano.svg"),
         ("decimal-viewbox-before.svg", "decimal-viewbox-nano.svg"),
         ("inkscape-noise-before.svg", "inkscape-noise-nano.svg"),
+        ("flag-use-before.svg", "flag-use-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

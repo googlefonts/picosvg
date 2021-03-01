@@ -29,7 +29,7 @@ from picosvg.svg_meta import (
     parse_css_declarations,
 )
 from picosvg.svg_types import *
-from picosvg.svg_transform import Affine2D
+from picosvg.svg_transform import parse_svg_transform, Affine2D
 import numbers
 
 _SHAPE_CLASSES = {
@@ -282,7 +282,17 @@ class SVG:
         return self.xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
 
     def _resolve_use(self, scope_el):
-        attrib_not_copied = {"x", "y", "width", "height", _xlink_href_attr_name()}
+        attrib_not_copied = {
+            "x",
+            "y",
+            "width",
+            "height",
+            "transform",
+            _xlink_href_attr_name(),
+        }
+
+        # capture elements by id so even if we change it they remain stable
+        el_by_id = {el.attrib["id"]: el for el in self.xpath(".//svg:*[@id]")}
 
         while True:
             swaps = []
@@ -293,18 +303,32 @@ class SVG:
                 ref = use_el.attrib.get(_xlink_href_attr_name(), "")
                 if not ref.startswith("#"):
                     raise ValueError(f"Only use #fragment supported, reject {ref}")
-                target = self.xpath_one(f'//svg:*[@id="{ref[1:]}"]')
+
+                target = el_by_id.get(ref[1:], None)
+                if target is None:
+                    raise ValueError(f"No element has id '{ref[1:]}'")
 
                 new_el = copy.deepcopy(target)
+                # leaving id's on <use> instantiated content is a path to duplicate ids
+                for el in new_el.getiterator("*"):
+                    if "id" in el.attrib:
+                        del el.attrib["id"]
 
                 group = etree.Element(f"{{{svgns()}}}g", nsmap=self.svg_root.nsmap)
-                use_x = use_el.attrib.get("x", 0)
-                use_y = use_el.attrib.get("y", 0)
-                if use_x != 0 or use_y != 0:
-                    group.attrib["transform"] = (
-                        group.attrib.get("transform", "")
-                        + f" translate({use_x}, {use_y})"
-                    ).strip()
+                affine = Affine2D.identity().translate(
+                    float(use_el.attrib.get("x", 0)), float(use_el.attrib.get("y", 0))
+                )
+
+                if "transform" in use_el.attrib:
+                    affine = Affine2D.compose_ltr(
+                        (
+                            affine,
+                            parse_svg_transform(use_el.attrib["transform"]),
+                        )
+                    )
+
+                if affine != Affine2D.identity():
+                    group.attrib["transform"] = affine.tosvgstring()
 
                 for attr_name in use_el.attrib:
                     if attr_name in attrib_not_copied:
@@ -318,9 +342,6 @@ class SVG:
                     swaps.append((use_el, new_el))
 
             for old_el, new_el in swaps:
-                # leaving id's on <use> instantiated content is a path to duplicate ids
-                for new_el_with_id in self.xpath("//svg:*[@id]", el=new_el):
-                    del new_el_with_id.attrib["id"]
                 old_el.getparent().replace(old_el, new_el)
 
     def resolve_use(self, inplace=False):

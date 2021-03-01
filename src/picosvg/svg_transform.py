@@ -69,6 +69,11 @@ class Affine2D(NamedTuple):
     def tostring(self):
         return f'matrix({" ".join(ntos(v) for v in self)})'
 
+    def tosvgstring(self):
+        if self == Affine2D.identity().translate(*self.gettranslate()):
+            return f'translate({", ".join(ntos(v) for v in self.gettranslate())})'
+        return self.tostring()
+
     @staticmethod
     def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
         """Returns the product of first x second.
