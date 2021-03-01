@@ -67,6 +67,15 @@ class Vector(NamedTuple):
     x: float = 0
     y: float = 0
 
+    def __add__(self, other: "Vector") -> "Vector":
+        return self.__class__(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other: "Vector") -> "Vector":
+        return self.__class__(self.x - other.x, self.y - other.y)
+
+    def __neg__(self) -> "Vector":
+        return self * -1.0
+
     def __mul__(self, scalar: float) -> "Vector":
         """Multiply vector by a scalar value."""
         if not isinstance(scalar, (int, float)):
