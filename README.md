@@ -1,4 +1,4 @@
-![CI Build Status](https://github.com/googlefonts/picosvg/workflows/Continuous%20Test%20+%20Deploy/badge.svg)
+[![CI Build Status](https://github.com/googlefonts/picosvg/workflows/Continuous%20Test%20+%20Deploy/badge.svg)](https://github.com/googlefonts/picosvg/actions/workflows/ci.yml?query=workflow%3ATest)
 [![PyPI](https://img.shields.io/pypi/v/picosvg.svg)](https://pypi.org/project/picosvg/)
 [![Dependencies](https://badgen.net/github/dependabot/googlefonts/picosvg)](https://github.com/googlefonts/picosvg/network/updates)
 
