@@ -25,6 +25,27 @@ pip install -e .
 picosvg mysvg.svg
 ```
 
+## Test
+
+Install the dev dependencies specified in [`extras_require`](https://github.com/googlefonts/picosvg/blob/main/setup.py#L36-L40).
+
+```shell
+pip install -e .[dev]
+pytest
+```
+
+If you use zsh, it will prompt an error(`zsh: no matches found: .[dev]`). Please use the following command:
+
+```shell
+pip install -e '.[dev]'
+```
+
+You can also use [pytest](https://docs.pytest.org/) to test the specified files individually.
+
+```shell
+pytest tests/svg_test.py
+```
+
 ## Releasing
 
 See https://googlefonts.github.io/python#make-a-release.
