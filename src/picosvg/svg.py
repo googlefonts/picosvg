@@ -328,7 +328,7 @@ class SVG:
                     )
 
                 if affine != Affine2D.identity():
-                    group.attrib["transform"] = affine.tosvgstring()
+                    group.attrib["transform"] = affine.tostring()
 
                 for attr_name in use_el.attrib:
                     if attr_name in attrib_not_copied:
