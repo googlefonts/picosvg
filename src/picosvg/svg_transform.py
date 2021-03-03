@@ -67,6 +67,8 @@ class Affine2D(NamedTuple):
         return parse_svg_transform(raw_transform)
 
     def tostring(self):
+        if self == Affine2D.identity().translate(*self.gettranslate()):
+            return f'translate({", ".join(ntos(v) for v in self.gettranslate())})'
         return f'matrix({" ".join(ntos(v) for v in self)})'
 
     @staticmethod

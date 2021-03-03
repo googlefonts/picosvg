@@ -168,5 +168,5 @@ def parse_css_declarations(
             else:
                 unparsed.append(declaration.strip())
         elif declaration.strip():
-            raise ValueError("Invalid CSS declaration syntax: {declaration}")
+            raise ValueError(f"Invalid CSS declaration syntax: {declaration}")
     return "; ".join(unparsed) + ";" if unparsed else ""
