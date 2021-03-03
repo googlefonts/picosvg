@@ -323,7 +323,7 @@ class SVG:
                     affine = Affine2D.compose_ltr(
                         (
                             affine,
-                            parse_svg_transform(use_el.attrib["transform"]),
+                            Affine2D.fromstring(use_el.attrib["transform"]),
                         )
                     )
 
