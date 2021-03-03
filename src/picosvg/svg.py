@@ -29,7 +29,7 @@ from picosvg.svg_meta import (
     parse_css_declarations,
 )
 from picosvg.svg_types import *
-from picosvg.svg_transform import parse_svg_transform, Affine2D
+from picosvg.svg_transform import Affine2D
 import numbers
 
 _SHAPE_CLASSES = {
