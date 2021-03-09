@@ -210,6 +210,7 @@ def test_resolve_use(actual, expected_result):
         ("ungroup-before.svg", "ungroup-after.svg"),
         ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-after.svg"),
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-after-ungroup.svg"),
+        ("ungroup-transform-before.svg", "ungroup-transform-after.svg"),
     ],
 )
 def test_ungroup(actual, expected_result):
@@ -276,6 +277,7 @@ def test_transform(actual, expected_result):
         ("decimal-viewbox-before.svg", "decimal-viewbox-nano.svg"),
         ("inkscape-noise-before.svg", "inkscape-noise-nano.svg"),
         ("flag-use-before.svg", "flag-use-nano.svg"),
+        ("ungroup-transform-before.svg", "ungroup-transform-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
