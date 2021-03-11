@@ -416,6 +416,8 @@ class SVG:
                 transform = group_transform
             if transform != Affine2D.identity():
                 child.attrib[attr_name] = transform.tostring()
+            else:
+                del child.attrib[attr_name]
 
         attrib_handlers = {
             "clip-rule": _inherit_copy,
