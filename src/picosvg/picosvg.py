@@ -30,6 +30,7 @@ FLAGS = flags.FLAGS
 
 
 flags.DEFINE_bool("clip_to_viewbox", False, "Whether to clip content outside viewbox")
+flags.DEFINE_string("output_file", "-", "Output SVG file ('-' means stdout)")
 
 
 def _reduce_text(text):
@@ -58,7 +59,13 @@ def _run(argv):
         e.text = _reduce_text(e.text)
         e.tail = _reduce_text(e.tail)
 
-    print(etree.tostring(tree, pretty_print=True).decode("utf-8"))
+    output = etree.tostring(tree, pretty_print=True).decode("utf-8")
+
+    if FLAGS.output_file == "-":
+        print(output)
+    else:
+        with open(FLAGS.output_file, "w") as f:
+            f.write(output)
 
 
 def main(argv=None):
