@@ -203,7 +203,7 @@ def parse_svg_transform(raw_transform: str):
         r"(?i)(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)", raw_transform
     ):
         op = match.group(1).lower()
-        args = [float(p) for p in re.split(r"\s*[,\s]\s*", match.group(2))]
+        args = [float(p) for p in re.split(r"\s*[,\s]\s*", match.group(2).strip())]
         _SVG_ARG_FIXUPS[op](args)
         transform = getattr(transform, op)(*args)
 
