@@ -278,6 +278,7 @@ def test_transform(actual, expected_result):
         ("inkscape-noise-before.svg", "inkscape-noise-nano.svg"),
         ("flag-use-before.svg", "flag-use-nano.svg"),
         ("ungroup-transform-before.svg", "ungroup-transform-nano.svg"),
+        ("pathops-tricky-path-before.svg", "pathops-tricky-path-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):

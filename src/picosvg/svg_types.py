@@ -208,7 +208,15 @@ class SVGShape:
             return False
 
         # Only shapes with area paint
-        return svg_pathops.path_area(shape.as_cmd_seq(), fill_rule=shape.fill_rule) > 0
+        try:
+            return (
+                svg_pathops.path_area(shape.as_cmd_seq(), fill_rule=shape.fill_rule) > 0
+            )
+        except svg_pathops.pathops.PathOpsError:
+            # some tricky paths with very densely packed segments sometimes can trigger a
+            # PathOpsError. We assume they do paint to stay on the safe side.
+            # https://github.com/googlefonts/picosvg/issues/192
+            return True
 
     def bounding_box(self) -> Rect:
         x1, y1, x2, y2 = svg_pathops.bounding_box(self.as_cmd_seq())
