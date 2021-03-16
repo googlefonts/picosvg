@@ -59,6 +59,11 @@ from typing import Tuple
             "rotate (180)\ttranslate(0 6)\n\t",
             Affine2D(-1, 0, 0, -1, 0, -6),
         ),
+        # found in the wild, contains some odd spacing
+        (
+            "matrix( -1,0,0,1,3717.75,0 )",
+            Affine2D(-1, 0, 0, 1, 3717.75, 0),
+        ),
     ],
 )
 def test_parse_svg_transform(transform: str, expected_result: Tuple[str, ...]):
