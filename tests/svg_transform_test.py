@@ -71,7 +71,7 @@ def test_parse_svg_transform(transform: str, expected_result: Tuple[str, ...]):
     print(f"A: {actual}")
     print(f"E: {expected_result}")
 
-    assert actual == pytest.approx(expected_result, 3)
+    assert actual == pytest.approx(expected_result, rel=1e-3)
 
 
 class TestAffine2D:
