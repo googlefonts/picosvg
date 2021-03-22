@@ -18,11 +18,17 @@ Focuses on converting to a sequence of affine matrices.
 """
 import collections
 from functools import reduce
-from math import cos, sin, radians, tan
+from math import cos, sin, radians, tan, hypot
 import re
 from typing import NamedTuple, Sequence, Tuple
 from sys import float_info
-from picosvg.geometric_types import Point, Rect, Vector
+from picosvg.geometric_types import (
+    Point,
+    Rect,
+    Vector,
+    DEFAULT_ALMOST_EQUAL_TOLERANCE,
+    almost_equal,
+)
 from picosvg.svg_meta import ntos
 
 
@@ -183,6 +189,79 @@ class Affine2D(NamedTuple):
         tx = dst.x - src.x * sx
         ty = dst.y - src.y * sy
         return cls(sx, 0, 0, sy, tx, ty)
+
+    def almost_equals(
+        self, other: "Affine2D", tolerance=DEFAULT_ALMOST_EQUAL_TOLERANCE
+    ):
+        return all(almost_equal(v1, v2, tolerance) for v1, v2 in zip(self, other))
+
+    def decompose_scale(self) -> Tuple["Affine2D", "Affine2D"]:
+        """Split affine into a scale component and whatever remains.
+
+        Return the affine components in LTR order, such that mapping a point
+        consecutively by each gives the same result as mapping the same by the
+        original combined affine.
+
+        For reference, see SkMatrix::decomposeScale
+        https://github.com/google/skia/blob/e0707b7/src/core/SkMatrix.cpp#L1577-L1597
+        """
+        sx = hypot(self.a, self.b)
+        sy = hypot(self.c, self.d)
+        scale = Affine2D(sx, 0, 0, sy, 0, 0)
+        remaining = Affine2D.compose_ltr((scale.inverse(), self))
+        return scale, remaining
+
+    def decompose_translation(self) -> Tuple["Affine2D", "Affine2D"]:
+        """Split affine into a translation and a 2x2 component.
+
+        Return the affine components in LTR order, such that mapping a point
+        consecutively by each gives the same result as mapping the same by the
+        original combined affine.
+        """
+        affine_prime = self._replace(e=0, f=0)
+        #  no translate? nop!
+        if self.almost_equals(affine_prime):
+            return Affine2D.identity(), affine_prime
+
+        a, b, c, d, e, f = self
+        # We need x`, y` such that matrix a b c d 0 0 yields same
+        # result as x, y with a b c d e f
+        # That is:
+        # 1)  ax` + cy` + 0 = ax + cy + e
+        # 2)  bx` + dy` + 0 = bx + dy + f
+        #                   ^ rhs is a known scalar; we'll call r1, r2
+        # multiply 1) by b/a so when subtracted from 2) we eliminate x`
+        # 1)  bx` + (b/a)cy` = (b/a) * r1
+        # 2) - 1)  bx` - bx` + dy` - (b/a)cy` = r2 - (b/a) * r1
+        #         y` = (r2 - (b/a) * r1) / (d - (b/a)c)
+
+        # for the special case of origin (0,0) the math below could be simplified
+        # futher but I keep the expanded version for clarity sake
+        x, y = (0, 0)
+        r1, r2 = self.map_point((x, y))
+        if not almost_equal(a, 0):
+            y_prime = (r2 - r1 * b / a) / (d - b * c / a)
+
+            # Sub y` into 1)
+            # 1) x` = (r1 - cy`) / a
+            x_prime = (r1 - c * y_prime) / a
+        else:
+            # if a == 0 then above gives div / 0. Take a simpler path.
+            # 1) 0x` + cy` + 0 = 0x + cy + e
+            #    y` = y + e/c
+            y_prime = y + e / c
+            # Sub y` into 2)
+            # 2)  bx` + dy` + 0 = bx + dy + f
+            #      x` = x + dy/b + f/b - dy`/b
+            x_prime = x + (d * y / b) + (f / b) - (d * y_prime / b)
+
+        # basically this says "by how much do I need to pre-translate things so
+        # that when I subsequently apply the 2x2 portion of the original affine
+        # (with the translation zeroed) it'll land me in the same place?"
+        translation = Affine2D.identity().translate(x_prime, y_prime)
+        # sanity check that combining the two affines gives back self
+        assert self.almost_equals(Affine2D.compose_ltr((translation, affine_prime)))
+        return translation, affine_prime
 
 
 Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)

@@ -924,51 +924,16 @@ class SVG:
             #  no translate? nop!
             if (e, f) == (0, 0):
                 continue
-            affine_prime = affine._replace(e=0, f=0)
 
+            # split translation from rest of the transform and apply to gradient coords
+            translate, affine_prime = affine.decompose_translation()
             for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
                 # if at default just ignore
                 if x_attr not in el.attrib and y_attr not in el.attrib:
                     continue
                 x = getattr(gradient, x_attr)
                 y = getattr(gradient, y_attr)
-
-                # We need x`, y` such that matrix a b c d 0 0 yields same
-                # result as x,y with a b c d e f
-                # That is:
-                # 1)  ax` + cy` + 0 = ax + cy + e
-                # 2)  bx` + dy` + 0 = bx + dy + f
-                #                   ^ rhs is a known scalar; we'll call r1, r2
-                # multiply 1) by b/a so when subtracted from 2) we eliminate x`
-                # 1)  bx` + (b/a)cy` = (b/a) * r1
-                # 2) - 1)  bx` - bx` + dy` - (b/a)cy` = r2 - (b/a) * r1
-                #         y` = (r2 - (b/a) * r1) / (d - (b/a)c)
-                r1, r2 = affine.map_point((x, y))
-                assert r1 == a * x + c * y + e
-                assert r2 == b * x + d * y + f
-
-                if a != 0:
-                    y_prime = (r2 - r1 * b / a) / (d - b * c / a)
-
-                    # Sub y` into 1)
-                    # 1) x` = (r1 - cy`) / a
-                    x_prime = (r1 - c * y_prime) / a
-                else:
-                    # if a == 0 then above gives div / 0. Take a simpler path.
-                    # 1) 0x` + cy` + 0 = 0x + cy + e
-                    #    y` = y + e/c
-                    y_prime = y + e / c
-                    # Sub y` into 2)
-                    # 2)  bx` + dy` + 0 = bx + dy + f
-                    #      x` = x + dy/b  + f/b - dy`/b
-                    x_prime = x + (d * y / b) + (f / b) - (d * y_prime / b)
-
-                # sanity check: a`(x`, y`) should be a(x, y)
-                # all our float brutality damages points; low tolerance sanity checks!
-                p = Point(r1, r2)
-                p_prime = affine_prime.map_point((x_prime, y_prime))
-                assert p.almost_equals(p_prime, tolerance=1e-1), f"{p} != {p_prime}"
-
+                x_prime, y_prime = translate.map_point((x, y))
                 el.attrib[x_attr] = ntos(round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
                 el.attrib[y_attr] = ntos(round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
 

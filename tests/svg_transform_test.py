@@ -180,3 +180,72 @@ class TestAffine2D:
         assert af.getscale() == (1, 1)
         af = af.scale(2, 3)
         assert af.getscale() == (2, 3)
+
+    def test_almost_equals(self):
+        assert Affine2D.identity().almost_equals(Affine2D.identity())
+
+        a1 = Affine2D(0.005, 0, 0, 0.005, 0, 0)
+        a2 = Affine2D(0.0049, 0, 0, 0.0049, 0, 0)
+        assert a1.almost_equals(a2, tolerance=1e-03)
+        assert not a1.almost_equals(a2, tolerance=1e-04)
+
+    @pytest.mark.parametrize(
+        "affine, expected_scale, expected_remaining",
+        [
+            (
+                Affine2D(2, 0, 0, 2, 3, 4),
+                Affine2D(2, 0, 0, 2, 0, 0),
+                Affine2D(1, 0, 0, 1, 3, 4),
+            ),
+            (
+                Affine2D.fromstring("translate(36 180) rotate(110) scale(68)"),
+                Affine2D(a=68.0, b=0, c=0, d=68.0, e=0, f=0),
+                Affine2D(
+                    a=-0.3420201,
+                    b=0.9396926,
+                    c=-0.9396926,
+                    d=-0.3420201,
+                    e=36.0,
+                    f=180.0,
+                ),
+            ),
+        ],
+    )
+    def test_decompose_scale(self, affine, expected_scale, expected_remaining):
+        scale, remaining = affine.decompose_scale()
+        # we could use Affine2D.almost_equals but pytest.approx gives more rich
+        # error messages
+        assert scale == pytest.approx(expected_scale)
+        assert remaining == pytest.approx(expected_remaining)
+
+    @pytest.mark.parametrize(
+        "affine, expected_translate, expected_remaining",
+        [
+            (
+                Affine2D(2, 0, 0, 2, 0, 0),  # no translation
+                Affine2D(1, 0, 0, 1, 0, 0),
+                Affine2D(2, 0, 0, 2, 0, 0),
+            ),
+            (
+                Affine2D(2, 0, 0, 2, 3, 4),
+                Affine2D(1, 0, 0, 1, 1.5, 2),
+                Affine2D(2, 0, 0, 2, 0, 0),
+            ),
+            (
+                Affine2D.fromstring("translate(36 180) rotate(110) scale(68)"),
+                Affine2D(a=1, b=0, c=0, d=1, e=2.3063522, f=-1.4028318),
+                Affine2D(a=-23.25737, b=63.8991, c=-63.8991, d=-23.25737, e=0, f=0),
+            ),
+            (
+                Affine2D.fromstring("rotate(-90) translate(50, -100)"),
+                Affine2D(1, 0, 0, 1, 50, -100),
+                Affine2D(0, -1.0, 1.0, 0, 0, 0),
+            ),
+        ],
+    )
+    def test_decompose_translation(
+        self, affine, expected_translate, expected_remaining
+    ):
+        translate, remaining = affine.decompose_translation()
+        assert translate == pytest.approx(expected_translate)
+        assert remaining == pytest.approx(expected_remaining)
