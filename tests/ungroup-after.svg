@@ -16,6 +16,7 @@
        overflow="visible"
        stroke-linecap="round"
        stroke-miterlimit="10"
+       stroke-opacity="0.6"
        stroke-width="0.9563" />
   <clipPath id="merged-clip-0">
     <path d="M9,9 L11,9 L11,11 L9,11 Z"/>

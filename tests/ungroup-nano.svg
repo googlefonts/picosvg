@@ -10,6 +10,7 @@
   <path stroke-width="0.956"
         stroke-linecap="round"
         stroke-miterlimit="10"
+        stroke-opacity="0.6"
         d="M5,5 H15 V15 H5 V5 Z" />
 </svg>
 

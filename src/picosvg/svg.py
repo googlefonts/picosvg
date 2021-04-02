@@ -432,6 +432,7 @@ class SVG:
             "stroke-miterlimit": _inherit_copy,
             "stroke-dasharray": _inherit_copy,
             "stroke-dashoffset": _inherit_copy,
+            "stroke-opacity": _inherit_multiply,
             "fill-opacity": _inherit_multiply,
             "opacity": _inherit_multiply,
             "clip-path": _inherit_clip_path,
