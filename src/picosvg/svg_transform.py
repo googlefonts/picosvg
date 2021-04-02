@@ -175,19 +175,71 @@ class Affine2D(NamedTuple):
     def round(self, digits: int) -> "Affine2D":
         return Affine2D(*(round(v, digits) for v in self))
 
+    # all lowercase so we ignore case
+    _ALIGN_VALUES = frozenset(
+        (
+            "none",
+            "xminymin",
+            "xminymid",
+            "xminymax",
+            "xmidymin",
+            "xmidymid",
+            "xmidymax",
+            "xmaxymin",
+            "xmaxymid",
+            "xmaxymax",
+        )
+    )
+    _MEET_OR_SLICE = frozenset(("meet", "slice"))
+
     @classmethod
-    def rect_to_rect(cls, src: Rect, dst: Rect) -> "Affine2D":
+    def rect_to_rect(
+        cls,
+        src: Rect,
+        dst: Rect,
+        preserveAspectRatio: str = "none",
+    ) -> "Affine2D":
         """Return Affine2D set to scale and translate src Rect to dst Rect.
-        The mapping completely fills dst, it does not preserve aspect ratio.
+        By default the mapping completely fills dst, it does not preserve aspect ratio,
+        unless the 'preserveAspectRatio' argument is used.
+        See https://www.w3.org/TR/SVG/coords.html#PreserveAspectRatioAttribute for
+        the list of values supported.
         """
         if src.empty():
             return cls.identity()
         if dst.empty():
             return cls(0, 0, 0, 0, 0, 0)
+
+        # We follow the same process described in the SVG spec for computing the
+        # equivalent scale + translation which maps from viewBox (src) to viewport (dst)
+        # coordinates given the value of preserveAspectRatio.
+        # https://www.w3.org/TR/SVG/coords.html#ComputingAViewportsTransform
         sx = dst.w / src.w
         sy = dst.h / src.h
+
+        align, _, meetOrSlice = preserveAspectRatio.lower().strip().partition(" ")
+        if (
+            align not in cls._ALIGN_VALUES
+            or meetOrSlice
+            and meetOrSlice not in cls._MEET_OR_SLICE
+        ):
+            raise ValueError(f"Invalid preserveAspectRatio: {preserveAspectRatio!r}")
+
+        if align != "none":
+            sx = sy = max(sx, sy) if "slice" in meetOrSlice else min(sx, sy)
+
         tx = dst.x - src.x * sx
         ty = dst.y - src.y * sy
+
+        if "xmid" in align:
+            tx += (dst.w - src.w * sx) / 2
+        elif "xmax" in align:
+            tx += dst.w - src.w * sx
+        if "ymid" in align:
+            ty += (dst.h - src.h * sy) / 2
+        elif "ymax" in align:
+            ty += dst.h - src.h * sy
+
         return cls(sx, 0, 0, sy, tx, ty)
 
     def almost_equals(
