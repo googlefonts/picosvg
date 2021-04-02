@@ -279,6 +279,7 @@ def test_transform(actual, expected_result):
         ("flag-use-before.svg", "flag-use-nano.svg"),
         ("ungroup-transform-before.svg", "ungroup-transform-nano.svg"),
         ("pathops-tricky-path-before.svg", "pathops-tricky-path-nano.svg"),
+        ("gradient-template-1-before.svg", "gradient-template-1-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -505,3 +506,19 @@ def test_apply_gradient_translation(gradient_string, expected_result):
 )
 def test_default_for_blank(svg_content, expected_result):
     assert tuple(SVG.fromstring(svg_string(svg_content)).shapes()) == expected_result
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        ("gradient-template-1-before.svg", "gradient-template-1-after.svg"),
+        ("gradient-template-2-before.svg", "gradient-template-2-after.svg"),
+        ("gradient-template-3-before.svg", "gradient-template-3-after.svg"),
+    ],
+)
+def test_resolve_gradient_templates(actual, expected_result):
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg._resolve_gradient_templates(),
+    )

@@ -48,6 +48,10 @@ _GRADIENT_CLASSES = {
     "linearGradient": SVGLinearGradient,
     "radialGradient": SVGRadialGradient,
 }
+_GRADIENT_ATTRS = {
+    tag: tuple(f.name for f in dataclasses.fields(klass))
+    for tag, klass in _GRADIENT_CLASSES.items()
+}
 _GRADIENT_COORDS = {
     "linearGradient": (("x1", "y1"), ("x2", "y2")),
     "radialGradient": (("cx", "cy"), ("fx", "fy")),
@@ -945,6 +949,71 @@ class SVG:
             else:
                 del el.attrib["gradientTransform"]
 
+    def _resolve_gradient_templates(self, inplace=False):
+        # Gradients can have an 'href' attribute that specifies another gradient as
+        # a template, inheriting its attributes and/or stops when not already defined:
+        # https://www.w3.org/TR/SVG/pservers.html#PaintServerTemplates
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg._resolve_gradient_templates(inplace=True)
+            return svg
+
+        href_attr = _xlink_href_attr_name()
+        el_by_id = {el.attrib["id"]: el for el in self.xpath(".//svg:*[@id]")}
+
+        def resolve_gradient_template(gradient: etree.Element):
+            ref = gradient.attrib[href_attr]
+            if not ref.startswith("#"):
+                raise ValueError(f"Only use #fragment supported, reject {ref}")
+            ref = ref[1:].strip()
+
+            template = el_by_id.get(ref)
+            if template is None:
+                raise ValueError(f"No element has id '{ref}'")
+
+            template_tag = strip_ns(template.tag)
+            if template_tag not in _GRADIENT_CLASSES:
+                raise ValueError(
+                    f"Referenced element with id='{ref}' has unexpected tag: "
+                    f"expected linear or radialGradient, found '{template_tag}'"
+                )
+
+            # recurse if template references another template
+            if template.attrib.get(href_attr):
+                resolve_gradient_template(template)
+
+            for attr_name in _GRADIENT_ATTRS[strip_ns(gradient.tag)]:
+                if attr_name in template.attrib and attr_name not in gradient.attrib:
+                    gradient.attrib[attr_name] = template.attrib[attr_name]
+
+            # only copy stops if we don't have our own
+            if len(gradient) == 0:
+                for stop_el in template:
+                    gradient.append(copy.deepcopy(stop_el))
+
+            del gradient.attrib[href_attr]
+
+        for gradient in self._select_gradients():
+            if not gradient.attrib.get(href_attr):
+                continue
+            resolve_gradient_template(gradient)
+
+        # remove orphaned templates, only keep gradients directly referenced by shapes
+        used_gradient_ids = set()
+        for shape in self.shapes():
+            if shape.fill.startswith("url("):
+                try:
+                    el = self.resolve_url(shape.fill, "*")
+                except ValueError:  # skip not found
+                    continue
+                if strip_ns(el.tag) not in _GRADIENT_CLASSES:
+                    # unlikely the url target isn't a gradient but I'm not the police
+                    continue
+                used_gradient_ids.add(el.attrib["id"])
+        for grad in self._select_gradients():
+            if grad.attrib.get("id") not in used_gradient_ids:
+                _safe_remove(grad)
+
     def checkpicosvg(self):
         """Check for nano violations, return xpaths to bad elements.
 
@@ -1017,6 +1086,7 @@ class SVG:
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
 
+        self._resolve_gradient_templates(inplace=True)
         self._apply_gradient_translation(inplace=True)
         self._collect_gradients(inplace=True)
 
