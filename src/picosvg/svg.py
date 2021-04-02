@@ -960,19 +960,20 @@ class SVG:
         href_attr = _xlink_href_attr_name()
         el_by_id = {el.attrib["id"]: el for el in self.xpath(".//svg:*[@id]")}
 
-        def resolve_gradient_template(gradient):
+        def resolve_gradient_template(gradient: etree.Element):
             ref = gradient.attrib[href_attr]
             if not ref.startswith("#"):
                 raise ValueError(f"Only use #fragment supported, reject {ref}")
+            ref = ref[1:].strip()
 
-            template = el_by_id.get(ref[1:])
+            template = el_by_id.get(ref)
             if template is None:
-                raise ValueError(f"No element has id '{ref[1:]}'")
+                raise ValueError(f"No element has id '{ref}'")
 
             template_tag = strip_ns(template.tag)
             if template_tag not in _GRADIENT_CLASSES:
                 raise ValueError(
-                    f"Referenced element with id='{ref[1:]}' has unexpected tag: "
+                    f"Referenced element with id='{ref}' has unexpected tag: "
                     f"expected linear or radialGradient, found '{template_tag}'"
                 )
 
@@ -984,6 +985,7 @@ class SVG:
                 if attr_name in template.attrib and attr_name not in gradient.attrib:
                     gradient.attrib[attr_name] = template.attrib[attr_name]
 
+            # only copy stops if we don't have our own
             if len(gradient) == 0:
                 for stop_el in template:
                     gradient.append(copy.deepcopy(stop_el))
@@ -1009,7 +1011,7 @@ class SVG:
                 used_gradient_ids.add(el.attrib["id"])
         for grad in self._select_gradients():
             if grad.attrib.get("id") not in used_gradient_ids:
-                grad.getparent().remove(grad)
+                _safe_remove(grad)
 
     def checkpicosvg(self):
         """Check for nano violations, return xpaths to bad elements.
