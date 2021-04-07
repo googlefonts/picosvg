@@ -845,7 +845,7 @@ class SVG:
 
         self._update_etree()
 
-        for tag in ("title", "desc", "metadata"):
+        for tag in ("title", "desc", "metadata", "comment"):
             for el in self.xpath(f"//svg:{tag}"):
                 el.getparent().remove(el)
 
