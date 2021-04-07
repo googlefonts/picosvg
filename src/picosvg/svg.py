@@ -27,6 +27,7 @@ from picosvg.svg_meta import (
     svgns,
     xlinkns,
     parse_css_declarations,
+    parse_view_box,
 )
 from picosvg.svg_types import *
 from picosvg.svg_transform import Affine2D
@@ -193,20 +194,16 @@ class SVG:
         self.elements[idx] = (el, shapes)
 
     def view_box(self) -> Optional[Rect]:
-        raw_box = self.svg_root.attrib.get("viewBox", None)
-        if not raw_box:
+        if "viewBox" not in self.svg_root.attrib:
             # if there is no explicit viewbox try to use width/height
             w = self.svg_root.attrib.get("width", None)
             h = self.svg_root.attrib.get("height", None)
             if w and h:
                 return Rect(0, 0, float(w), float(h))
+            else:
+                return None
 
-        if not raw_box:
-            return None
-        box = tuple(float(v) for v in re.split(r",|\s+", raw_box))
-        if len(box) != 4:
-            raise ValueError("Unable to parse viewBox")
-        return Rect(*box)
+        return parse_view_box(self.svg_root.attrib["viewBox"])
 
     def _default_tolerance(self):
         vbox = self.view_box()

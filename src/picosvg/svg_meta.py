@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from lxml import etree  # pytype: disable=import-error
 from typing import (
     Any,
@@ -22,6 +23,7 @@ from typing import (
     Optional,
     Tuple,
 )
+from picosvg.geometric_types import Rect
 
 
 SVGCommand = Tuple[str, Tuple[float, ...]]
@@ -170,3 +172,10 @@ def parse_css_declarations(
         elif declaration.strip():
             raise ValueError(f"Invalid CSS declaration syntax: {declaration}")
     return "; ".join(unparsed) + ";" if unparsed else ""
+
+
+def parse_view_box(s: str) -> Rect:
+    box = tuple(float(v) for v in re.split(r",|\s+", s))
+    if len(box) != 4:
+        raise ValueError("Unable to parse viewBox")
+    return Rect(*box)
