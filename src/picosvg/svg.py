@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
 import copy
 import dataclasses
 from functools import reduce
 import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
-from typing import List, Optional, Sequence, Tuple
+from typing import Generator, Iterable, List, Optional, Sequence, Tuple
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
@@ -888,6 +889,99 @@ class SVG:
 
         return self
 
+    def _iter_nested_svgs(
+        self, root: etree.Element
+    ) -> Generator[etree.Element, None, None]:
+        # This is different from Element.iter("svg") in that we don't yield the root
+        # svg element itself, only traverse its children and yield any immediate
+        # nested SVGs without traversing the latter's children as well.
+        frontier = deque(root)
+        while frontier:
+            el = frontier.popleft()
+            if el.tag is etree.Comment:
+                continue
+            if strip_ns(el.tag) == "svg":
+                yield el
+            elif len(el) != 0:
+                frontier.extend(el)
+
+    def _unnest_svg(
+        self, svg: etree.Element, parent_width: float, parent_height: float
+    ) -> Tuple[etree.Element, ...]:
+        x = float(svg.attrib.get("x", 0))
+        y = float(svg.attrib.get("y", 0))
+        width = float(svg.attrib.get("width", parent_width))
+        height = float(svg.attrib.get("height", parent_height))
+
+        viewport = viewbox = Rect(x, y, width, height)
+        if "viewBox" in svg.attrib:
+            viewbox = parse_view_box(svg.attrib["viewBox"])
+
+        # first recurse to un-nest any nested nested SVGs
+        self._swap_elements(
+            (el, self._unnest_svg(el, viewbox.w, viewbox.h))
+            for el in self._iter_nested_svgs(svg)
+        )
+
+        g = etree.Element(f"{{{svgns()}}}g")
+        for el in svg:
+            g.append(el)
+
+        if viewport != viewbox:
+            preserve_aspect_ratio = svg.attrib.get("preserveAspectRatio", "xMidYMid")
+            transform = Affine2D.rect_to_rect(viewbox, viewport, preserve_aspect_ratio)
+        else:
+            transform = Affine2D.identity().translate(x, y)
+
+        if "transform" in svg.attrib:
+            transform = Affine2D.compose_ltr(
+                (transform, Affine2D.fromstring(svg.attrib["transform"]))
+            )
+
+        if transform != Affine2D.identity():
+            g.attrib["transform"] = transform.tostring()
+
+        # TODO Define a viewport-sized clipPath once transform+clip-path issue is fixed
+        # https://github.com/googlefonts/picosvg/issues/200
+        return (g,)
+
+    def resolve_nested_svgs(self, inplace=False):
+        """Replace nested <svg> elements with equivalent <g> with a transform.
+
+        NOTE: currently this is still missing two features:
+        1) resolving percentage units in reference to the nearest SVG viewport;
+        2) applying a clip to all children of the nested SVG with a rectangle the size
+           of the new viewport (inner SVGs have default overflow property set to
+           'hidden'). Blocked on https://github.com/googlefonts/picosvg/issues/200
+
+        References:
+        - https://www.w3.org/TR/SVG/coords.html
+        - https://www.sarasoueidan.com/blog/nesting-svgs/
+        """
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.resolve_nested_svgs(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        nested_svgs = list(self._iter_nested_svgs(self.svg_root))
+        if len(nested_svgs) == 0:
+            return
+
+        vb = self.view_box()
+        if vb is None:
+            raise ValueError(
+                "Can't determine root SVG width/height, "
+                "which is required for resolving nested SVGs"
+            )
+
+        self._swap_elements(
+            (el, self._unnest_svg(el, vb.w, vb.h)) for el in nested_svgs
+        )
+
+        return self
+
     def _select_gradients(self):
         return self.xpath(" | ".join(f"//svg:{tag}" for tag in _GRADIENT_CLASSES))
 
@@ -1070,6 +1164,7 @@ class SVG:
         self.remove_anonymous_symbols(inplace=True)
         self.remove_title_meta_desc(inplace=True)
         self.apply_style_attributes(inplace=True)
+        self.resolve_nested_svgs(inplace=True)
         self.shapes_to_paths(inplace=True)
         self.resolve_use(inplace=True)
         self.ungroup(inplace=True)
