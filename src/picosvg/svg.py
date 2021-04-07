@@ -1095,12 +1095,8 @@ class SVG:
 
         return self
 
-    def _update_etree(self):
-        if not self.elements:
-            return
-        swaps = []
-        for old_el, shapes in self.elements:
-            swaps.append((old_el, [to_element(s) for s in shapes]))
+    @staticmethod
+    def _swap_elements(swaps: Iterable[Tuple[etree.Element, Sequence[etree.Element]]]):
         for old_el, new_els in swaps:
             for new_el in reversed(new_els):
                 old_el.addnext(new_el)
@@ -1108,6 +1104,14 @@ class SVG:
             if parent is None:
                 raise ValueError("Lost parent!")
             parent.remove(old_el)
+
+    def _update_etree(self):
+        if not self.elements:
+            return
+        self._swap_elements(
+            (old_el, [to_element(s) for s in shapes])
+            for old_el, shapes in self.elements
+        )
         self.elements = None
 
     def toetree(self):
