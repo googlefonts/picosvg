@@ -924,8 +924,7 @@ class SVG:
         )
 
         g = etree.Element(f"{{{svgns()}}}g")
-        for el in svg:
-            g.append(el)
+        g.extend(svg)
 
         if viewport != viewbox:
             preserve_aspect_ratio = svg.attrib.get("preserveAspectRatio", "xMidYMid")
@@ -953,6 +952,7 @@ class SVG:
         2) applying a clip to all children of the nested SVG with a rectangle the size
            of the new viewport (inner SVGs have default overflow property set to
            'hidden'). Blocked on https://github.com/googlefonts/picosvg/issues/200
+        No error is raised in these cases.
 
         References:
         - https://www.w3.org/TR/SVG/coords.html

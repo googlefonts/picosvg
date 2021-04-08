@@ -177,5 +177,5 @@ def parse_css_declarations(
 def parse_view_box(s: str) -> Rect:
     box = tuple(float(v) for v in re.split(r",|\s+", s))
     if len(box) != 4:
-        raise ValueError("Unable to parse viewBox")
+        raise ValueError(f"Unable to parse viewBox: {s!r}")
     return Rect(*box)
