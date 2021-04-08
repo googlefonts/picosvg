@@ -989,7 +989,10 @@ class SVG:
             # only copy stops if we don't have our own
             if len(gradient) == 0:
                 for stop_el in template:
-                    gradient.append(copy.deepcopy(stop_el))
+                    new_stop_el = copy.deepcopy(stop_el)
+                    # strip stop id if present; useless and no longer unique
+                    _del_attrs(new_stop_el, "id")
+                    gradient.append(new_stop_el)
 
             del gradient.attrib[href_attr]
 
