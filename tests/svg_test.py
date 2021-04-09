@@ -280,6 +280,7 @@ def test_transform(actual, expected_result):
         ("ungroup-transform-before.svg", "ungroup-transform-nano.svg"),
         ("pathops-tricky-path-before.svg", "pathops-tricky-path-nano.svg"),
         ("gradient-template-1-before.svg", "gradient-template-1-nano.svg"),
+        ("nested-svg-slovenian-flag-before.svg", "nested-svg-slovenian-flag-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -521,4 +522,18 @@ def test_resolve_gradient_templates(actual, expected_result):
         actual,
         expected_result,
         lambda svg: svg._resolve_gradient_templates(),
+    )
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        ("nested-svg-slovenian-flag-before.svg", "nested-svg-slovenian-flag-after.svg"),
+    ],
+)
+def test_resolve_nested_svgs(actual, expected_result):
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.resolve_nested_svgs(),
     )
