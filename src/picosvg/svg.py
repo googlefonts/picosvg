@@ -1212,16 +1212,17 @@ class SVG:
         )
         self.elements = None
 
-    def toetree(self):
+    def toetree(self, fix_xlink_ns=True):
         self._update_etree()
-        self.svg_root = _fix_xlink_ns(self.svg_root)
+        if fix_xlink_ns:
+            self.svg_root = _fix_xlink_ns(self.svg_root)
         return copy.deepcopy(self.svg_root)
 
-    def tostring(self):
-        return etree.tostring(self.toetree()).decode("utf-8")
+    def tostring(self, fix_xlink_ns=True):
+        return etree.tostring(self.toetree(fix_xlink_ns)).decode("utf-8")
 
     @classmethod
-    def fromstring(cls, string):
+    def fromstring(cls, string, fix_xlink_ns=True):
         if isinstance(string, bytes):
             string = string.decode("utf-8")
 
@@ -1233,7 +1234,8 @@ class SVG:
         # encode because fromstring dislikes xml encoding decl if input is str
         parser = etree.XMLParser(remove_blank_text=True)
         tree = etree.fromstring(string.encode("utf-8"), parser)
-        tree = _fix_xlink_ns(tree)
+        if fix_xlink_ns:
+            tree = _fix_xlink_ns(tree)
         return cls(tree)
 
     @classmethod

@@ -372,6 +372,34 @@ def test_remove_attributes(svg_string, names, expected_result):
     ) == expected_result
 
 
+@pytest.mark.parametrize(
+    "svg_string, remove_xmlns_xlink, expected_result",
+    [
+        # No change
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
+            True,
+            '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"/>',
+        ),
+        # Drop xmlns:xlink
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1"/>',
+            True,
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12" version="1.1"/>',
+        ),
+        # Don't drop xmlns:xlink
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1"/>',
+            False,
+            '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="7 7 12 12" version="1.1"/>',
+        ),
+    ],
+)
+def test_remove_xmlns_xlink(svg_string, remove_xmlns_xlink, expected_result):
+    assert (
+        SVG.fromstring(svg_string, remove_xmlns_xlink).tostring(remove_xmlns_xlink)
+    ) == expected_result
+
 # https://github.com/rsheeter/picosvg/issues/1
 @pytest.mark.parametrize(
     "svg_string, expected_result",
