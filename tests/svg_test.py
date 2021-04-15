@@ -211,6 +211,7 @@ def test_resolve_use(actual, expected_result):
         ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-after.svg"),
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-after-ungroup.svg"),
         ("ungroup-transform-before.svg", "ungroup-transform-after.svg"),
+        ("global-fill-none-before.svg", "global-fill-none-after.svg"),
     ],
 )
 def test_ungroup(actual, expected_result):
@@ -281,6 +282,7 @@ def test_transform(actual, expected_result):
         ("pathops-tricky-path-before.svg", "pathops-tricky-path-nano.svg"),
         ("gradient-template-1-before.svg", "gradient-template-1-nano.svg"),
         ("nested-svg-slovenian-flag-before.svg", "nested-svg-slovenian-flag-nano.svg"),
+        ("global-fill-none-before.svg", "global-fill-none-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
