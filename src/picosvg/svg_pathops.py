@@ -18,7 +18,6 @@ import pathops  # pytype: disable=import-error
 from typing import Sequence, Tuple
 from picosvg.svg_meta import SVGCommand, SVGCommandGen, SVGCommandSeq
 from picosvg.svg_transform import Affine2D
-from picosvg import svg_pathops
 
 
 # Absolutes coords assumed
@@ -184,13 +183,13 @@ def stroke(
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
     sk_path.convertConicsToQuads(tolerance)
 
+    backup = pathops.Path(sk_path)
     try:
         sk_path.simplify(fix_winding=True)
-    except svg_pathops.pathops.PathOpsError:
-        # some tricky paths with very densely packed segments sometimes can trigger a
-        # PathOpsError.
+    except pathops.PathOpsError:
+        # skip tricky paths that trigger PathOpsError
         # https://github.com/googlefonts/picosvg/issues/192
-        pass
+        sk_path = backup
     return svg_commands(sk_path)
 
 
