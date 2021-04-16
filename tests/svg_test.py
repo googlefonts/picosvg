@@ -283,6 +283,7 @@ def test_transform(actual, expected_result):
         ("gradient-template-1-before.svg", "gradient-template-1-nano.svg"),
         ("nested-svg-slovenian-flag-before.svg", "nested-svg-slovenian-flag-nano.svg"),
         ("global-fill-none-before.svg", "global-fill-none-nano.svg"),
+        ("stroke-polyline-before.svg", "stroke-polyline-nano.svg"),
     ],
 )
 def test_topicosvg(actual, expected_result):
