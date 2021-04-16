@@ -46,6 +46,16 @@ You can also use [pytest](https://docs.pytest.org/) to test the specified files 
 pytest tests/svg_test.py
 ```
 
+If you need to test a certain function (for example: test_topicosvg), please execute:
+
+```shell
+pytest tests/svg_test.py::test_topicosvg
+```
+
+If you need to display detailed diff information, please execute:
+```shell
+pytest tests/svg_test.py::test_topicosvg --vv
+```
 ## Releasing
 
 See https://googlefonts.github.io/python#make-a-release.
