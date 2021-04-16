@@ -183,6 +183,7 @@ def stroke(
 
     # nuke any conics that snuck in (e.g. with stroke-linecap="round")
     sk_path.convertConicsToQuads(tolerance)
+    sk_path.simplify(fix_winding=True)
 
     assert sk_path.fillType == pathops.FillType.WINDING
     return svg_commands(sk_path)
