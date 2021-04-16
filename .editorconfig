@@ -7,10 +7,15 @@ end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+indent_size = 4
 
 # 4 space indentation
 [*.{ini,py,py.tpl,rst}]
 indent_size = 4
+
+# 2 space indentation
+[*.svg]
+indent_size = 2
 
 # 2 space indentation
 [*.yml]
