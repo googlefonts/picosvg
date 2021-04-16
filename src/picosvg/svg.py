@@ -389,71 +389,6 @@ class SVG:
                 return potential_id
         raise ValueError(f"No free id for {template}")
 
-    def _inherit_group_attrib(self, group, child):
-        def _inherit_copy(attrib, child, attr_name):
-            child.attrib[attr_name] = child.attrib.get(attr_name, attrib[attr_name])
-
-        def _inherit_multiply(attrib, child, attr_name):
-            value = float(attrib[attr_name])
-            value *= float(child.attrib.get(attr_name, 1.0))
-            child.attrib[attr_name] = ntos(value)
-
-        def _inherit_clip_path(attrib, child, attr_name):
-            clips = sorted(
-                child.attrib.get("clip-path", "").split(",") + [attrib.get("clip-path")]
-            )
-            child.attrib["clip-path"] = ",".join([c for c in clips if c])
-
-        def _inherit_nondefault_overflow(attrib, child, attr_name):
-            value = attrib[attr_name]
-            if value != "visible":
-                _inherit_copy(attrib, child, attr_name)
-
-        def _inherit_matrix_multiply(attrib, child, attr_name):
-            group_transform = Affine2D.fromstring(attrib[attr_name])
-            if attr_name in child.attrib:
-                transform = Affine2D.fromstring(child.attrib[attr_name])
-                transform = Affine2D.product(transform, group_transform)
-            else:
-                transform = group_transform
-            if transform != Affine2D.identity():
-                child.attrib[attr_name] = transform.tostring()
-            else:
-                del child.attrib[attr_name]
-
-        attrib_handlers = {
-            "clip-rule": _inherit_copy,
-            "fill": _inherit_copy,
-            "fill-rule": _inherit_copy,
-            "style": _inherit_copy,
-            "transform": _inherit_matrix_multiply,
-            "stroke": _inherit_copy,
-            "stroke-width": _inherit_copy,
-            "stroke-linecap": _inherit_copy,
-            "stroke-linejoin": _inherit_copy,
-            "stroke-miterlimit": _inherit_copy,
-            "stroke-dasharray": _inherit_copy,
-            "stroke-dashoffset": _inherit_copy,
-            "stroke-opacity": _inherit_multiply,
-            "fill-opacity": _inherit_multiply,
-            "opacity": _inherit_multiply,
-            "clip-path": _inherit_clip_path,
-            "id": lambda *_: 0,
-            "data-name": lambda *_: 0,
-            "enable-background": lambda *_: 0,
-            "overflow": _inherit_nondefault_overflow,
-        }
-
-        attrib = copy.deepcopy(group.attrib)
-        for attr_name in sorted(attrib.keys()):
-            if not attr_name in attrib_handlers:
-                continue
-            attrib_handlers[attr_name](attrib, child, attr_name)
-            del attrib[attr_name]
-
-        if attrib:
-            raise ValueError(f"Unable to process group attrib {attrib}")
-
     def _ungroup(self, scope_el):
         """Push inherited attributes from group down, then remove the group.
 
@@ -461,6 +396,12 @@ class SVG:
 
         If result has multiple clip paths merge them.
         """
+        # move inheritable attributes down one level (e.g. a global 'fill' defined on
+        # the root <svg> element): https://github.com/googlefonts/nanoemoji/issues/275
+        for el in scope_el:
+            _inherit_group_attrib(scope_el, el, skip_unhandled_attrs=True)
+        _del_attrs(scope_el, *_INHERITABLE_GROUP_ATTRS)
+
         # nuke the groups that are not displayed
         display_none = [e for e in self.xpath(f".//svg:g[@display='none']", scope_el)]
         for group in display_none:
@@ -481,7 +422,7 @@ class SVG:
                 group.remove(child)
                 group.addnext(child)
 
-                self._inherit_group_attrib(group, child)
+                _inherit_group_attrib(group, child)
                 if "," in child.attrib.get("clip-path", ""):
                     multi_clips.append(child)
 
@@ -1244,3 +1185,84 @@ class SVG:
             with open(file_or_path) as f:
                 raw_svg = f.read()
         return cls.fromstring(raw_svg)
+
+
+def _inherit_copy(attrib, child, attr_name):
+    child.attrib[attr_name] = child.attrib.get(attr_name, attrib[attr_name])
+
+
+def _inherit_multiply(attrib, child, attr_name):
+    value = float(attrib[attr_name])
+    value *= float(child.attrib.get(attr_name, 1.0))
+    child.attrib[attr_name] = ntos(value)
+
+
+def _inherit_clip_path(attrib, child, attr_name):
+    clips = sorted(
+        child.attrib.get("clip-path", "").split(",") + [attrib.get("clip-path")]
+    )
+    child.attrib["clip-path"] = ",".join([c for c in clips if c])
+
+
+def _inherit_nondefault_overflow(attrib, child, attr_name):
+    value = attrib[attr_name]
+    if value != "visible":
+        _inherit_copy(attrib, child, attr_name)
+
+
+def _inherit_matrix_multiply(attrib, child, attr_name):
+    group_transform = Affine2D.fromstring(attrib[attr_name])
+    if attr_name in child.attrib:
+        transform = Affine2D.fromstring(child.attrib[attr_name])
+        transform = Affine2D.product(transform, group_transform)
+    else:
+        transform = group_transform
+    if transform != Affine2D.identity():
+        child.attrib[attr_name] = transform.tostring()
+    else:
+        del child.attrib[attr_name]
+
+
+def _do_not_inherit(*_):
+    return
+
+
+_GROUP_ATTRIB_HANDLERS = {
+    "clip-rule": _inherit_copy,
+    "fill": _inherit_copy,
+    "fill-rule": _inherit_copy,
+    "style": _inherit_copy,
+    "transform": _inherit_matrix_multiply,
+    "stroke": _inherit_copy,
+    "stroke-width": _inherit_copy,
+    "stroke-linecap": _inherit_copy,
+    "stroke-linejoin": _inherit_copy,
+    "stroke-miterlimit": _inherit_copy,
+    "stroke-dasharray": _inherit_copy,
+    "stroke-dashoffset": _inherit_copy,
+    "stroke-opacity": _inherit_multiply,
+    "fill-opacity": _inherit_multiply,
+    "opacity": _inherit_multiply,
+    "clip-path": _inherit_clip_path,
+    "id": _do_not_inherit,
+    "data-name": _do_not_inherit,
+    "enable-background": _do_not_inherit,
+    "overflow": _inherit_nondefault_overflow,
+}
+
+
+_INHERITABLE_GROUP_ATTRS = frozenset(
+    k for k, v in _GROUP_ATTRIB_HANDLERS.items() if v is not _do_not_inherit
+)
+
+
+def _inherit_group_attrib(group, child, skip_unhandled_attrs=False):
+    attrib = copy.deepcopy(group.attrib)
+    for attr_name in sorted(attrib.keys()):
+        if not attr_name in _GROUP_ATTRIB_HANDLERS:
+            continue
+        _GROUP_ATTRIB_HANDLERS[attr_name](attrib, child, attr_name)
+        del attrib[attr_name]
+
+    if attrib and not skip_unhandled_attrs:
+        raise ValueError(f"Unable to process group attrib {attrib}")
