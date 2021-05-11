@@ -212,6 +212,8 @@ def test_resolve_use(actual, expected_result):
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-after-ungroup.svg"),
         ("ungroup-transform-before.svg", "ungroup-transform-after.svg"),
         ("global-fill-none-before.svg", "global-fill-none-after.svg"),
+        ("fill-opacity-inherit-before.svg", "fill-opacity-inherit-after.svg"),
+        ("stroke-opacity-inherit-before.svg", "stroke-opacity-inherit-after.svg"),
     ],
 )
 def test_ungroup(actual, expected_result):
