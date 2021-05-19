@@ -1,0 +1,14 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="256" height="256"
+     viewBox="0 0 24 24">
+  <clipPath id="cl2" transform="translate(2,0)">
+    <path d="M9,16 A5,2 0 0 0 19,16 A5,2 0 0 0 9,16 z M0,0 H24 V24 H-24 z" transform="translate(1,0)" />
+  </clipPath>
+  <clipPath id="cl1" clip-path="url(#cl2)">
+    <ellipse cx="14" cy="16"
+             rx="10" ry="3" />
+  </clipPath>
+  <ellipse cx="14" cy="16"
+           rx="8" ry="4"
+           clip-path="url(#cl1)"/>
+</svg>

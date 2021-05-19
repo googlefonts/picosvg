@@ -8,8 +8,10 @@ Tool to simplify SVGs. Converts an input svg into a "pico" svg:
 
 *   Exactly 1 `<defs>` element, first child of root
 *   Only gradients defined under `<defs>`
-*   Only `<path>` elements without stroke or clipping after the initial `<defs>`
+*   After the initial `<defs>`, only `<g>` and `<path>`
+    * `<g>` is eliminated when possible, but may be retained for opacity
 *   Only absolute coordinates
+*   Only commands that specify full coordinates, no shorthand (H, S, etc)
 
 Clip paths and strokes are rendered into equivalent paths using [Skia](https://skia.org/) via [skia-pathops](https://github.com/fonttools/skia-pathops), `<use>` references are materialized, etc.
 

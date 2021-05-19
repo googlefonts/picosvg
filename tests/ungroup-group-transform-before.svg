@@ -1,0 +1,12 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="256" height="256"
+     viewBox="0 0 24 24">
+
+  <g transform="rotate(-45 12,16)">
+    <g>
+    <ellipse
+             cx="16" cy="16"
+             rx="8" ry="4" />
+    </g>
+  </g>
+</svg>

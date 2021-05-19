@@ -179,26 +179,6 @@ def test_iter(shape, expected_cmds):
 
 
 @pytest.mark.parametrize(
-    "actual, expected_result",
-    [
-        ("clip-rect.svg", "clip-rect-clipped.svg"),
-        ("clip-ellipse.svg", "clip-ellipse-clipped.svg"),
-        ("clip-curves.svg", "clip-curves-clipped.svg"),
-        ("clip-multirect.svg", "clip-multirect-clipped.svg"),
-        ("clip-groups.svg", "clip-groups-clipped.svg"),
-        ("clip-use.svg", "clip-use-clipped.svg"),
-        ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped.svg"),
-    ],
-)
-def test_apply_clip_path(actual, expected_result):
-    _test(
-        actual,
-        expected_result,
-        lambda svg: svg.apply_clip_paths(inplace=True).round_floats(3, inplace=True),
-    )
-
-
-@pytest.mark.parametrize(
     "actual, expected_result", [("use-ellipse.svg", "use-ellipse-resolved.svg")]
 )
 def test_resolve_use(actual, expected_result):
@@ -208,71 +188,36 @@ def test_resolve_use(actual, expected_result):
 @pytest.mark.parametrize(
     "actual, expected_result",
     [
-        ("ungroup-before.svg", "ungroup-after.svg"),
-        ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-after.svg"),
-        ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-after-ungroup.svg"),
-        ("ungroup-transform-before.svg", "ungroup-transform-after.svg"),
-        ("global-fill-none-before.svg", "global-fill-none-after.svg"),
-        ("fill-opacity-inherit-before.svg", "fill-opacity-inherit-after.svg"),
-        ("stroke-opacity-inherit-before.svg", "stroke-opacity-inherit-after.svg"),
-    ],
-)
-def test_ungroup(actual, expected_result):
-    _test(actual, expected_result, lambda svg: svg.ungroup(inplace=True))
-
-
-@pytest.mark.parametrize(
-    "actual, expected_result",
-    [
-        ("stroke-simplepath-before.svg", "stroke-simplepath-after.svg"),
-        ("stroke-path-before.svg", "stroke-path-after.svg"),
-        ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-after.svg"),
-        ("scale-strokes-before.svg", "scale-strokes-after.svg"),
-        ("stroke-fill-opacity-before.svg", "stroke-fill-opacity-after.svg"),
-        ("stroke-dasharray-before.svg", "stroke-dasharray-after.svg"),
-        ("stroke-circle-dasharray-before.svg", "stroke-circle-dasharray-after.svg"),
-    ],
-)
-def test_strokes_to_paths(actual, expected_result):
-    _test(
-        actual,
-        expected_result,
-        lambda svg: svg.strokes_to_paths(inplace=True).round_floats(3, inplace=True),
-    )
-
-
-@pytest.mark.parametrize(
-    "actual, expected_result",
-    [
-        ("rotated-rect.svg", "rotated-rect-after.svg"),
-        ("translate-rect.svg", "translate-rect-after.svg"),
-    ],
-)
-def test_transform(actual, expected_result):
-    _test(
-        actual,
-        expected_result,
-        lambda svg: svg.apply_transforms(inplace=True).round_floats(3, inplace=True),
-    )
-
-
-@pytest.mark.parametrize(
-    "actual, expected_result",
-    [
+        ("stroke-simplepath-before.svg", "stroke-simplepath-nano.svg"),
+        ("stroke-path-before.svg", "stroke-path-nano.svg"),
+        ("stroke-capjoinmiterlimit-before.svg", "stroke-capjoinmiterlimit-nano.svg"),
+        ("scale-strokes-before.svg", "scale-strokes-nano.svg"),
+        ("stroke-fill-opacity-before.svg", "stroke-fill-opacity-nano.svg"),
+        ("stroke-dasharray-before.svg", "stroke-dasharray-nano.svg"),
+        ("stroke-circle-dasharray-before.svg", "stroke-circle-dasharray-nano.svg"),
+        ("clip-rect.svg", "clip-rect-clipped-nano.svg"),
+        ("clip-ellipse.svg", "clip-ellipse-clipped-nano.svg"),
+        ("clip-curves.svg", "clip-curves-clipped-nano.svg"),
+        ("clip-multirect.svg", "clip-multirect-clipped-nano.svg"),
+        ("clip-groups.svg", "clip-groups-clipped-nano.svg"),
+        ("clip-use.svg", "clip-use-clipped-nano.svg"),
+        ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped-nano.svg"),
+        ("rotated-rect.svg", "rotated-rect-nano.svg"),
+        ("translate-rect.svg", "translate-rect-nano.svg"),
         ("ungroup-before.svg", "ungroup-nano.svg"),
         ("ungroup-multiple-children-before.svg", "ungroup-multiple-children-nano.svg"),
         ("group-stroke-before.svg", "group-stroke-nano.svg"),
         ("arcs-before.svg", "arcs-nano.svg"),
         ("invisible-before.svg", "invisible-nano.svg"),
         ("transform-before.svg", "transform-nano.svg"),
-        ("group-data-name-before.svg", "group-data-name-after.svg"),
+        ("group-data-name-before.svg", "group-data-name-nano.svg"),
         ("matrix-before.svg", "matrix-nano.svg"),
         ("degenerate-before.svg", "degenerate-nano.svg"),
         ("fill-rule-evenodd-before.svg", "fill-rule-evenodd-nano.svg"),
         ("twemoji-lesotho-flag-before.svg", "twemoji-lesotho-flag-nano.svg"),
         ("inline-css-style-before.svg", "inline-css-style-nano.svg"),
         ("clipped-strokes-before.svg", "clipped-strokes-nano.svg"),
-        ("drop-anon-symbols-before.svg", "drop-anon-symbols-after.svg"),
+        ("drop-anon-symbols-before.svg", "drop-anon-symbols-nano.svg"),
         ("scale-strokes-before.svg", "scale-strokes-nano.svg"),
         ("ungroup-with-ids-before.svg", "ungroup-with-ids-nano.svg"),
         ("stroke-with-id-before.svg", "stroke-with-id-nano.svg"),
@@ -287,6 +232,25 @@ def test_transform(actual, expected_result):
         ("nested-svg-slovenian-flag-before.svg", "nested-svg-slovenian-flag-nano.svg"),
         ("global-fill-none-before.svg", "global-fill-none-nano.svg"),
         ("stroke-polyline-before.svg", "stroke-polyline-nano.svg"),
+        ("clip-the-clip-before.svg", "clip-the-clip-nano.svg"),
+        ("ungroup-group-transform-before.svg", "ungroup-group-transform-nano.svg"),
+        ("ungroup-transform-clip-before.svg", "ungroup-transform-clip-nano.svg"),
+        (
+            "ungroup-retain-for-opacity-before.svg",
+            "ungroup-retain-for-opacity-nano.svg",
+        ),
+        (
+            "transform-radial-userspaceonuse-before.svg",
+            "transform-radial-userspaceonuse-nano.svg",
+        ),
+        # (
+        #     "transform-linear-objectbbox-before.svg",
+        #     "transform-linear-objectbbox-nano.svg",
+        # ),
+        # (
+        #     "transform-radial-objectbbox-before.svg",
+        #     "transform-radial-objectbbox-nano.svg",
+        # ),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -318,14 +282,14 @@ def test_remove_unpainted_shapes(actual, expected_result):
             "bad-defs-0.svg",
             (
                 "BadElement: /svg[0]/defs[1]",
-                "BadElement: /svg[0]/donkey[2]",
+                "BadElement: /svg[0]/donkey[0]",
             ),
         ),
-        ("bad-defs-1.svg", ("BadElement: /svg[0]/path[0]",)),
+        ("bad-defs-1.svg", ("MissingElement: /svg[0]/defs[0]",)),
         (
             "bad-ids-1.svg",
             (
-                'BadElement: /svg[0]/path[2] reuses id="not_so_unique", first seen at /svg[0]/path[1]',
+                'BadElement: /svg[0]/path[1] reuses id="not_so_unique", first seen at /svg[0]/path[0]',
             ),
         ),
     ],

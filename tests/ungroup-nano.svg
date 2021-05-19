@@ -7,10 +7,6 @@
         opacity="0.25"
         d="M9,9 L11,9 L11,11 L9,11 Z"
         />
-  <path stroke-width="0.956"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-opacity="0.6"
-        d="M5,5 H15 V15 H5 V5 Z" />
+  <path d="M5,5 L15,5 L15,15 L5,15 L5,5 Z" />
 </svg>
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
   <defs/>
-  <path fill="orange" d="M0,0 H800 V400 H0 V0 Z"/>
+  <path fill="orange" d="M0,0 L800,0 L800,400 L0,400 L0,0 Z"/>
   <path id="o" d="M140,80 L127.639,118.042 L146.66,124.223 Z"/>
   <path d="M140,80 L152.361,118.042 L133.34,124.223 Z"/>
   <path d="M178.042,107.639 L138.042,107.639 L138.042,127.639 Z"/>
