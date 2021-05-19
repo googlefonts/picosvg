@@ -1159,14 +1159,7 @@ class SVG:
         return copy.deepcopy(self.svg_root)
 
     def tostring(self, pretty_print=False):
-        tree = self.toetree()
-        if pretty_print:
-            # lxml really likes to retain whitespace
-            for e in tree.iter("*"):
-                if e.text is not None and not e.text.strip():
-                    e.text = None
-                e.tail = None
-        return etree.tostring(tree, pretty_print=pretty_print).decode("utf-8")
+        return etree.tostring(self.toetree(), pretty_print=pretty_print).decode("utf-8")
 
     @classmethod
     def fromstring(cls, string):
