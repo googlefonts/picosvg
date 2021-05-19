@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+from textwrap import dedent
 from lxml import etree
 import os
 import pytest
@@ -541,4 +542,38 @@ def test_resolve_nested_svgs(actual, expected_result):
         actual,
         expected_result,
         lambda svg: svg.resolve_nested_svgs(),
+    )
+
+
+def test_tostring_pretty_print():
+    svg = SVG.fromstring(
+        '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">\n'
+        "<g>  \n"
+        "\t  <g>  \r\n"
+        '\t\t  <path d="M60,30 L100,30 L100,70 L60,70 Z"/>\n\n'
+        "\t  </g>  \r"
+        "</g> \n"
+        "</svg>"
+    )
+
+    assert svg.tostring(pretty_print=False) == (
+        '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">'
+        "<g>"
+        "<g>"
+        '<path d="M60,30 L100,30 L100,70 L60,70 Z"/>'
+        "</g>"
+        "</g>"
+        "</svg>"
+    )
+
+    assert svg.tostring(pretty_print=True) == dedent(
+        """\
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">
+          <g>
+            <g>
+              <path d="M60,30 L100,30 L100,70 L60,70 Z"/>
+            </g>
+          </g>
+        </svg>
+        """
     )

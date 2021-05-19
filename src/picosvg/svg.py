@@ -1158,8 +1158,15 @@ class SVG:
         self.svg_root = _fix_xlink_ns(self.svg_root)
         return copy.deepcopy(self.svg_root)
 
-    def tostring(self):
-        return etree.tostring(self.toetree()).decode("utf-8")
+    def tostring(self, pretty_print=False):
+        tree = self.toetree()
+        if pretty_print:
+            # lxml really likes to retain whitespace
+            for e in tree.iter("*"):
+                if e.text is not None and not e.text.strip():
+                    e.text = None
+                e.tail = None
+        return etree.tostring(tree, pretty_print=pretty_print).decode("utf-8")
 
     @classmethod
     def fromstring(cls, string):
