@@ -48,7 +48,7 @@ def _test(actual, expected_result, op):
     ],
 )
 def test_common_attrib(shape, expected_fields):
-    svg = SVG.fromstring(shape)
+    svg = SVG.fromstring(svg_string(shape))
     field_values = dataclasses.asdict(svg.shapes()[0])
     for field_name, expected_value in expected_fields.items():
         assert field_values.get(field_name, "") == expected_value, field_name
