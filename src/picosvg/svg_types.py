@@ -15,6 +15,7 @@
 import copy
 import dataclasses
 from itertools import zip_longest
+import math
 import re
 from picosvg.geometric_types import Point, Rect
 from picosvg.svg_meta import (
@@ -836,10 +837,13 @@ class SVGRadialGradient:
     def from_element(el, view_box) -> "SVGRadialGradient":
         self = SVGRadialGradient()
         width, height = _parse_common_gradient_parts(self, el, view_box)
+        # lengths are calculated as percentages of the "normalized diagonal" of the
+        # SVG viewport. See formula at https://www.w3.org/TR/SVG2/coords.html#Units
+        diagonal = math.hypot(width, height) / math.sqrt(2)
 
         self.cx = number_or_percentage(el.attrib.get("cx", "50%"), width)
         self.cy = number_or_percentage(el.attrib.get("cy", "50%"), height)
-        self.r = number_or_percentage(el.attrib.get("r", "50%"), width)
+        self.r = number_or_percentage(el.attrib.get("r", "50%"), diagonal)
 
         raw_fx = el.attrib.get("fx")
         self.fx = number_or_percentage(raw_fx, width) if raw_fx is not None else self.cx
@@ -847,7 +851,7 @@ class SVGRadialGradient:
         self.fy = (
             number_or_percentage(raw_fy, height) if raw_fy is not None else self.cy
         )
-        self.fr = number_or_percentage(el.attrib.get("fr", "0%"), width)
+        self.fr = number_or_percentage(el.attrib.get("fr", "0%"), diagonal)
         return self
 
 

@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import pytest
+from picosvg.geometric_types import Rect
 from picosvg.svg_transform import Affine2D
-from picosvg.svg_types import SVGPath, SVGRect, Rect
+from picosvg.svg_types import (
+    SVGPath,
+    SVGRect,
+    SVGLinearGradient,
+    SVGRadialGradient,
+)
 from svg_test_helpers import *
 
 
@@ -335,3 +342,114 @@ def test_round_multiple(path: str, multiple_of: float, expected_result: str):
 )
 def test_normalize_opacity(shape, expected):
     assert shape.normalize_opacity() == expected
+
+
+@pytest.mark.parametrize(
+    "el, view_box, expected",
+    [
+        # default linearGradient
+        (
+            etree.Element("linearGradient"),
+            Rect(0, 0, 10, 10),
+            SVGLinearGradient(
+                x1=0.0,
+                y1=0.0,
+                x2=1.0,
+                y2=0.0,
+                gradientUnits=Rect(0, 0, 1, 1),
+            ),
+        ),
+        # default radialGradient
+        (
+            etree.Element("radialGradient"),
+            Rect(0, 0, 10, 10),
+            SVGRadialGradient(
+                cx=0.5,
+                cy=0.5,
+                r=0.5,
+                fx=0.5,
+                fy=0.5,
+                fr=0.0,
+                gradientUnits=Rect(0, 0, 1, 1),
+            ),
+        ),
+        # radialGradient with gradientUnits="userSpaceOnUse" on square viewport
+        (
+            etree.Element("radialGradient", {"gradientUnits": "userSpaceOnUse"}),
+            Rect(0, 0, 10, 10),
+            SVGRadialGradient(
+                cx=5.0,
+                cy=5.0,
+                r=5.0,
+                fx=5.0,
+                fy=5.0,
+                fr=0.0,
+                gradientUnits=Rect(0, 0, 10, 10),
+            ),
+        ),
+        # userSpaceOnUse & nonsquare viewport, default 'r' is 50% of normalized diagonal
+        (
+            etree.Element("radialGradient", {"gradientUnits": "userSpaceOnUse"}),
+            Rect(0, 0, 10, 5),
+            SVGRadialGradient(
+                cx=5.0,
+                cy=2.5,
+                r=0.5 * math.hypot(10, 5) / math.sqrt(2),  # 3.952847
+                fx=5.0,
+                fy=2.5,
+                fr=0.0,
+                gradientUnits=Rect(0, 0, 10, 5),
+            ),
+        ),
+        # fx/fy default to cx/cy when not explicitly set
+        (
+            etree.Element("radialGradient", {"cx": "20%", "cy": "40%"}),
+            Rect(0, 0, 10, 5),
+            SVGRadialGradient(
+                cx=0.2,
+                cy=0.4,
+                r=0.5,
+                fx=0.2,
+                fy=0.4,
+                fr=0.0,
+                gradientUnits=Rect(0, 0, 1, 1),
+            ),
+        ),
+        # fx/fy explicitly set
+        (
+            etree.Element("radialGradient", {"fx": "20%", "fy": "40%"}),
+            Rect(0, 0, 10, 5),
+            SVGRadialGradient(
+                cx=0.5,
+                cy=0.5,
+                r=0.5,
+                fx=0.2,
+                fy=0.4,
+                fr=0.0,
+                gradientUnits=Rect(0, 0, 1, 1),
+            ),
+        ),
+        # linearGradient with gradientTransform and spreadMethod
+        (
+            etree.Element(
+                "linearGradient",
+                {
+                    "gradientTransform": "matrix(1, 0.3, 0, 1, 0, 0)",
+                    "spreadMethod": "reflect",
+                },
+            ),
+            Rect(0, 0, 10, 10),
+            SVGLinearGradient(
+                x1=0.0,
+                y1=0.0,
+                x2=1.0,
+                y2=0.0,
+                gradientTransform=Affine2D(1, 0.3, 0, 1, 0, 0),
+                spreadMethod="reflect",
+            ),
+        ),
+    ],
+)
+def test_gradient_from_element(el, view_box, expected):
+    klass = type(expected)
+    assert klass.from_element(el, view_box) == expected
