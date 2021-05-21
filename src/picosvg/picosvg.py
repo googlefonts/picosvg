@@ -33,11 +33,6 @@ flags.DEFINE_bool("clip_to_viewbox", False, "Whether to clip content outside vie
 flags.DEFINE_string("output_file", "-", "Output SVG file ('-' means stdout)")
 
 
-def _reduce_text(text):
-    text = text.strip() if text else None
-    return text if text else None
-
-
 def _run(argv):
     try:
         input_file = argv[1]
@@ -52,14 +47,7 @@ def _run(argv):
     if FLAGS.clip_to_viewbox:
         svg.clip_to_viewbox(inplace=True)
 
-    tree = svg.toetree()
-
-    # lxml really likes to retain whitespace
-    for e in tree.iter("*"):
-        e.text = _reduce_text(e.text)
-        e.tail = _reduce_text(e.tail)
-
-    output = etree.tostring(tree, pretty_print=True).decode("utf-8")
+    output = svg.tostring(pretty_print=True)
 
     if FLAGS.output_file == "-":
         print(output)

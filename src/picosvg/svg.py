@@ -1158,8 +1158,8 @@ class SVG:
         self.svg_root = _fix_xlink_ns(self.svg_root)
         return copy.deepcopy(self.svg_root)
 
-    def tostring(self):
-        return etree.tostring(self.toetree()).decode("utf-8")
+    def tostring(self, pretty_print=False):
+        return etree.tostring(self.toetree(), pretty_print=pretty_print).decode("utf-8")
 
     @classmethod
     def fromstring(cls, string):
