@@ -49,18 +49,15 @@ def _parse_args(cmd: str, args: str) -> Generator[float, None, None]:
     if not raw_args:
         return
 
-    # reverse so we can pop()/append() like a stack, quicker than pop(0)/insert(0)
-    raw_args.reverse()
-
     if cmd.upper() == "A":
         arg_types = _ARC_ARGUMENT_TYPES
     else:
         arg_types = ((float, _FLOAT_RE),)
     n = len(arg_types)
 
-    i = 0
-    while raw_args:
-        arg = raw_args.pop()
+    i = j = 0
+    while j < len(raw_args):
+        arg = raw_args[j]
         # modulo to wrap around
         converter, regex = arg_types[i % n]
         m = regex.match(arg)
@@ -70,9 +67,10 @@ def _parse_args(cmd: str, args: str) -> Generator[float, None, None]:
         start, end = m.span()
         yield converter(arg[start:end])
 
-        tail = arg[end:]
-        if tail:
-            raw_args.append(tail)
+        if end < len(arg):
+            raw_args[j] = arg[end:]
+        else:
+            j += 1
         i += 1
 
 
