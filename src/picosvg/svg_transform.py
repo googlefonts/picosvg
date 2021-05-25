@@ -79,7 +79,10 @@ class Affine2D(NamedTuple):
         return f'matrix({" ".join(ntos(v) for v in self)})'
 
     def __matmul__(self, other: "Affine2D") -> "Affine2D":
-        """Returns the product of first × second. Order matters.
+        """Returns the product of self × other. Order matters.
+
+        The combined affine matrix can be thought of mapping by other before applying self.
+
         https://en.wikipedia.org/wiki/Matrix_multiplication
 
                 | a₁  c₁  e₁ |
