@@ -19,6 +19,7 @@ Focuses on converting to a sequence of affine matrices.
 import collections
 from functools import reduce
 from math import cos, sin, radians, tan, hypot
+import operator
 import re
 from typing import NamedTuple, Sequence, Tuple
 from sys import float_info
@@ -77,23 +78,53 @@ class Affine2D(NamedTuple):
             return f'translate({", ".join(ntos(v) for v in self.gettranslate())})'
         return f'matrix({" ".join(ntos(v) for v in self)})'
 
-    @staticmethod
-    def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
-        """Returns the product of first x second.
+    def __matmul__(self, other: "Affine2D") -> "Affine2D":
+        """Returns the product of self × other. Order matters.
 
-        Order matters; meant to make that a bit more explicit.
+        The combined affine matrix can be thought of mapping by other before applying self.
+
+        https://en.wikipedia.org/wiki/Matrix_multiplication
+
+                | a₁  c₁  e₁ |
+        first = | b₁  d₁  f₁ |
+                | 0   0   1  |
+
+                 | a₂  c₂  e₂ |
+        second = | b₂  d₂  f₂ |
+                 | 0   0   1  |
+
+                         | a₁·a₂ + c₁·b₂ + e₁·0  a₁·c₂ + c₁·d₂ + e₁·0  a₁·e₂ + c₁·f₂ + e₁·1 |
+        first × second = | b₁·a₂ + d₁·b₂ + f₁·0  b₁·c₂ + d₁·d₂ + f₁·0  b₁·e₂ + d₁·f₂ + f₁·1 |
+                         |  0·a₂ +  0·b₂ +  1·0   0·c₂ +  0·d₂ +  1·0   0·e₂ +  0·f₂ +  1·1 |
         """
+        if not isinstance(other, Affine2D):
+            return NotImplemented
         return Affine2D(
-            first.a * second.a + first.b * second.c,
-            first.a * second.b + first.b * second.d,
-            first.c * second.a + first.d * second.c,
-            first.c * second.b + first.d * second.d,
-            second.a * first.e + second.c * first.f + second.e,
-            second.b * first.e + second.d * first.f + second.f,
+            a=self.a * other.a + self.c * other.b,  # + self.e * 0
+            b=self.b * other.a + self.d * other.b,  # + self.f * 0
+            c=self.a * other.c + self.c * other.d,  # + self.e * 0
+            d=self.b * other.c + self.d * other.d,  # + self.f * 0
+            e=self.a * other.e + self.c * other.f + self.e,  # * 1
+            f=self.b * other.e + self.d * other.f + self.f,  # * 1
         )
 
+    __imatmul__ = __matmul__
+
+    @staticmethod
+    def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
+        """Returns the product of second x first. DEPRECATED - use '@' infix operator"""
+        import warnings
+
+        warnings.warn(
+            "'product' is deprecated; use '@' infix operator",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return second @ first
+
     def matrix(self, a, b, c, d, e, f):
-        return Affine2D.product(Affine2D(a, b, c, d, e, f), self)
+        return self @ Affine2D(a, b, c, d, e, f)
 
     # https://www.w3.org/TR/SVG11/coords.html#TranslationDefined
     def translate(self, tx, ty=0):
@@ -168,9 +199,7 @@ class Affine2D(NamedTuple):
 
         Affines apply like functions - f(g(x)) - so we merge them in reverse order.
         """
-        return reduce(
-            lambda acc, a: cls.product(a, acc), reversed(affines), cls.identity()
-        )
+        return reduce(operator.matmul, reversed(affines), cls.identity())
 
     def round(self, digits: int) -> "Affine2D":
         return Affine2D(*(round(v, digits) for v in self))
