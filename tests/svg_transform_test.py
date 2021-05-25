@@ -263,24 +263,23 @@ class TestAffine2D:
         affine1 = Affine2D.identity().rotate(pi / 2)
         affine2 = Affine2D.identity().translate(1, 1)
         p0 = Point(1, 1)
-        assert Affine2D.product(affine1, affine2).map_point(p0).round(
-            2
-        ) == affine2.map_point(affine1.map_point(p0)).round(2)
+        expected = affine2.map_point(affine1.map_point(p0)).round(2)
+        assert (affine2 @ affine1).map_point(p0).round(2) == expected
+        # deprecated
+        assert Affine2D.product(affine1, affine2).map_point(p0).round(2) == expected
 
     def test_product_ordering(self):
         affine1 = Affine2D.identity().rotate(pi / 2)
         affine2 = Affine2D.identity().rotate(pi / 2, cx=0, cy=1)
 
-        assert Affine2D.product(affine1, affine2) != Affine2D.product(affine2, affine1)
+        assert (affine2 @ affine1) != (affine1 @ affine2)
 
         # Start at 1,0.
         # Rotate 90° around 0,0 to get 0,1
         # Rotate a further 90° around 0,1 to get ... still 0,1
         # Truly mind blowing stuff.
         p0 = Point(1, 0)
-        assert (Affine2D.product(affine1, affine2).map_point(p0).round(2)) == Point(
-            0, 1
-        ).round(2)
+        assert ((affine2 @ affine1).map_point(p0).round(2)) == Point(0, 1).round(2)
 
     def test_gettranslate(self):
         af = Affine2D.identity()

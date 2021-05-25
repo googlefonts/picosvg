@@ -649,8 +649,8 @@ class SVG:
             transform = Affine2D.identity()
             while el is not None:
                 if "transform" in el.attrib:
-                    transform = Affine2D.product(
-                        transform, Affine2D.fromstring(el.attrib["transform"])
+                    transform = Affine2D.compose_ltr(
+                        (transform, Affine2D.fromstring(el.attrib["transform"]))
                     )
                 el = el.getparent()
             if transform == Affine2D.identity():
@@ -1211,12 +1211,11 @@ def _inherit_nondefault_overflow(attrib, child, attr_name):
 
 
 def _inherit_matrix_multiply(attrib, child, attr_name):
-    group_transform = Affine2D.fromstring(attrib[attr_name])
+    transform = Affine2D.fromstring(attrib[attr_name])
     if attr_name in child.attrib:
-        transform = Affine2D.fromstring(child.attrib[attr_name])
-        transform = Affine2D.product(transform, group_transform)
-    else:
-        transform = group_transform
+        transform = Affine2D.compose_ltr(
+            (Affine2D.fromstring(child.attrib[attr_name]), transform)
+        )
     if transform != Affine2D.identity():
         child.attrib[attr_name] = transform.tostring()
     else:
