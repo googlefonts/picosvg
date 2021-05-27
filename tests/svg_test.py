@@ -414,13 +414,13 @@ def test_apply_style_attributes(actual, expected_result):
         # No transform, no change
         (
             '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
-            '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
+            '<linearGradient id="c" x1="63.85" y1="4245" x2="63.85" y2="4137.3" gradientUnits="userSpaceOnUse"/>',
         ),
         # Real example from emoji_u1f392.svg w/ dx changed from 0 to 1
         # scale, translate
         (
             '<linearGradient id="c" x1="63.85" x2="63.85" y1="4245" y2="4137.3" gradientTransform="translate(1 -4122)" gradientUnits="userSpaceOnUse"/>',
-            '<linearGradient id="c" x1="64.85" x2="64.85" y1="123" y2="15.3" gradientUnits="userSpaceOnUse"/>',
+            '<linearGradient id="c" x1="64.85" y1="123" x2="64.85" y2="15.3" gradientUnits="userSpaceOnUse"/>',
         ),
         # Real example from emoji_u1f392.svg w/sx changed from 1 to 0.5
         # scale, translate
@@ -437,7 +437,7 @@ def test_apply_style_attributes(actual, expected_result):
         # Manually constructed objectBBox
         (
             '<radialGradient id="mbbox" cx="0.75" cy="0.75" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0.5 0)" gradientUnits="objectBoundingBox"/>',
-            '<radialGradient id="mbbox" cx="0.748907" cy="0.11353" r="0.40" gradientTransform="matrix(1 1 -0.7873 -0.001717 0 0)" gradientUnits="objectBoundingBox"/>',
+            '<radialGradient id="mbbox" cx="0.748907" cy="0.11353" r="0.4" gradientTransform="matrix(1 1 -0.7873 -0.001717 0 0)"/>',
         ),
         # Real example from emoji_u26BE
         # https://github.com/googlefonts/picosvg/issues/129

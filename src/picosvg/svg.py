@@ -39,6 +39,7 @@ from picosvg.svg_meta import (
     xlinkns,
     parse_css_declarations,
     parse_view_box,
+    _LinkedDefault,
 )
 from picosvg.svg_types import *
 from picosvg.svg_transform import Affine2D
@@ -53,13 +54,15 @@ _SHAPE_CLASSES = {
     "polyline": SVGPolyline,
     "rect": SVGRect,
 }
-_CLASS_ELEMENTS = {v: f"{{{svgns()}}}{k}" for k, v in _SHAPE_CLASSES.items()}
-_SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
-
 _GRADIENT_CLASSES = {
     "linearGradient": SVGLinearGradient,
     "radialGradient": SVGRadialGradient,
 }
+_CLASS_ELEMENTS = {
+    v: f"{{{svgns()}}}{k}" for k, v in {**_SHAPE_CLASSES, **_GRADIENT_CLASSES}.items()
+}
+_SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
+
 _GRADIENT_ATTRS = {
     tag: tuple(f.name for f in dataclasses.fields(klass))
     for tag, klass in _GRADIENT_CLASSES.items()
@@ -189,11 +192,18 @@ def to_element(data_obj):
     data = dataclasses.asdict(data_obj)
     for field in dataclasses.fields(data_obj):
         field_value = data[field.name]
-        if field_value == field.default:
+        # omit attributes whose value == the respective default
+        if isinstance(field.default, _LinkedDefault):
+            default_value = field.default(data_obj)
+        else:
+            default_value = field.default
+        if field_value == default_value:
             continue
         attrib_value = field_value
         if isinstance(attrib_value, numbers.Number):
             attrib_value = ntos(attrib_value)
+        elif isinstance(attrib_value, Affine2D):
+            attrib_value = attrib_value.tostring()
         el.attrib[_attr_name(field.name)] = attrib_value
     return el
 
@@ -545,18 +555,23 @@ class SVG:
                 )
                 frontier.append(child_context)
 
-    def _transformed_gradient(self, url, transform):
+    def _transformed_gradient(self, url, transform, shape_bbox):
         fill_el = self.resolve_url(url, "*")
         assert _is_gradient(fill_el), f"Not sure how to fill from {fill_el.tag}"
 
-        new_fill = copy.deepcopy(fill_el)
-        new_fill.attrib["gradientTransform"] = (
-            _element_transform(fill_el, transform)
-            .round(_GRADIENT_TRANSFORM_NDIGITS)
-            .tostring()
+        gradient = (
+            _GRADIENT_CLASSES[strip_ns(fill_el.tag)]
+            .from_element(fill_el, self.view_box())
+            .as_user_space_units(shape_bbox, inplace=True)
         )
-        new_fill_id = self._new_id(fill_el.attrib["id"] + "_%d")
-        new_fill.attrib["id"] = new_fill_id
+        gradient.gradientTransform = Affine2D.compose_ltr(
+            (gradient.gradientTransform, transform)
+        ).round(_GRADIENT_TRANSFORM_NDIGITS)
+        gradient.id = self._new_id(gradient.id + "_%d")
+
+        new_fill = to_element(gradient)
+        # TODO normalize stop elements too
+        new_fill.extend(copy.deepcopy(stop) for stop in fill_el)
 
         fill_el.addnext(new_fill)
         return new_fill
@@ -591,7 +606,9 @@ class SVG:
                     "fill", ""
                 ):
                     fill_el = self._transformed_gradient(
-                        el.attrib["fill"], context.transform
+                        el.attrib["fill"],
+                        context.transform,
+                        from_element(el).bounding_box(),
                     )
                     fill_id = fill_el.attrib["id"]
                     el.attrib["fill"] = f"url(#{fill_id})"
@@ -1030,33 +1047,26 @@ class SVG:
             gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(
                 el, self.view_box()
             )
-            a, b, c, d, e, f = (
-                round(v, _GRADIENT_TRANSFORM_NDIGITS)
-                for v in gradient.gradientTransform
-            )
-            affine = Affine2D(a, b, c, d, e, f)
-            #  no translate? nop!
-            if (e, f) == (0, 0):
-                continue
+            affine = gradient.gradientTransform
 
             # split translation from rest of the transform and apply to gradient coords
             translate, affine_prime = affine.decompose_translation()
-            for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
-                # if at default just ignore
-                if x_attr not in el.attrib and y_attr not in el.attrib:
-                    continue
-                x = getattr(gradient, x_attr)
-                y = getattr(gradient, y_attr)
-                x_prime, y_prime = translate.map_point((x, y))
-                el.attrib[x_attr] = ntos(round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
-                el.attrib[y_attr] = ntos(round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
+            if translate.round(_GRADIENT_TRANSFORM_NDIGITS) != Affine2D.identity():
+                for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
+                    x = getattr(gradient, x_attr)
+                    y = getattr(gradient, y_attr)
+                    x_prime, y_prime = translate.map_point((x, y))
+                    setattr(
+                        gradient, x_attr, round(x_prime, _GRADIENT_TRANSFORM_NDIGITS)
+                    )
+                    setattr(
+                        gradient, y_attr, round(y_prime, _GRADIENT_TRANSFORM_NDIGITS)
+                    )
 
-            if affine_prime != Affine2D.identity():
-                el.attrib["gradientTransform"] = (
-                    "matrix(" + " ".join(ntos(v) for v in affine_prime) + ")"
-                )
-            else:
-                del el.attrib["gradientTransform"]
+            gradient.gradientTransform = affine_prime.round(_GRADIENT_TRANSFORM_NDIGITS)
+
+            el.attrib.clear()
+            el.attrib.update(to_element(gradient).attrib)
 
     def _resolve_gradient_templates(self, inplace=False):
         # Gradients can have an 'href' attribute that specifies another gradient as
