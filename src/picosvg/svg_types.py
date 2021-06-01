@@ -27,12 +27,13 @@ from picosvg.svg_meta import (
     strip_ns,
     SVGCommand,
     SVGCommandSeq,
+    _LinkedDefault,
 )
 from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
-from typing import Generator, Iterable
+from typing import Generator, Iterable, Mapping, MutableMapping, Tuple
 
 
 def _round_multiple(f: float, of: float) -> float:
@@ -768,90 +769,131 @@ class SVGRect(SVGShape):
         return path
 
 
-def _get_gradient_units_relative_scale(grad_el, view_box):
-    gradient_units = grad_el.attrib.get("gradientUnits", "objectBoundingBox")
-    if gradient_units == "userSpaceOnUse":
-        # For gradientUnits="userSpaceOnUse", percentages represent values relative to
-        # the current viewport.
-        return view_box
-    elif gradient_units == "objectBoundingBox":
-        # For gradientUnits="objectBoundingBox", percentages represent values relative
-        # to the object bounding box. The latter defines an abstract coordinate system
-        # with origin at (0,0) and a nominal width and height = 1.
-        return Rect(0, 0, 1, 1)
-    else:
-        raise ValueError(
-            f'{strip_ns(grad_el.tag)} gradientUnits="{gradient_units}" not supported'
-        )
+_UNIT_RECT = Rect(0, 0, 1, 1)
 
 
-def _parse_common_gradient_parts(gradient, el, view_box):
-    self = gradient
-    self.gradientUnits = _get_gradient_units_relative_scale(el, view_box)
-    if "gradientTransform" in el.attrib:
-        self.gradientTransform = Affine2D.fromstring(el.attrib["gradientTransform"])
-    if "spreadMethod" in el.attrib:
-        self.spreadMethod = el.attrib["spreadMethod"]
-    return self.gradientUnits.w, self.gradientUnits.h
+class _SVGGradient:
+    id: str
+    gradientTransform: Affine2D
+    gradientUnits: str
+    spreadMethod: str
+
+    @staticmethod
+    def _get_gradient_units_relative_scale(
+        attrib: Mapping[str, str], view_box: Rect
+    ) -> Rect:
+        gradient_units = attrib.get("gradientUnits", "objectBoundingBox")
+        if gradient_units == "userSpaceOnUse":
+            # For gradientUnits="userSpaceOnUse", percentages represent values relative to
+            # the current viewport.
+            return view_box
+        elif gradient_units == "objectBoundingBox":
+            # For gradientUnits="objectBoundingBox", percentages represent values relative
+            # to the object bounding box. The latter defines an abstract coordinate system
+            # with origin at (0,0) and a nominal width and height = 1.
+            return _UNIT_RECT
+        else:
+            raise ValueError(f'gradientUnits="{gradient_units}" not supported')
+
+    @staticmethod
+    def _parse_common_gradient_parts(attrib: MutableMapping[str, str]):
+        result = {}
+        for attr_name in ("id", "gradientUnits", "spreadMethod"):
+            if attr_name in attrib:
+                result[attr_name] = attrib.pop(attr_name)
+        if "gradientTransform" in attrib:
+            result["gradientTransform"] = Affine2D.fromstring(
+                attrib.pop("gradientTransform")
+            )
+        return result
+
+    def as_user_space_units(self, shape_bbox, inplace=False) -> "_SVGGradient":
+        # objectBoundingBox -> userSpaceOnUse
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+        if self.gradientUnits == "objectBoundingBox":
+            target.gradientTransform = Affine2D.compose_ltr(
+                (self.gradientTransform, Affine2D.rect_to_rect(_UNIT_RECT, shape_bbox))
+            )
+            target.gradientUnits = "userSpaceOnUse"
+        return target
+
+    @classmethod
+    def from_element(cls, el, view_box: Rect) -> "_SVGGradient":
+        raise NotImplementedError
 
 
 # https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient
 # Should be parsed with from_element
 @dataclasses.dataclass
-class SVGLinearGradient:
-    x1: float = 0.0
-    x2: float = 0.0
-    y1: float = 0.0
-    y2: float = 0.0
-    gradientUnits: Rect = Rect(0, 0, 1, 1)
+class SVGLinearGradient(_SVGGradient):
+    id: str
+    x1: float
+    y1: float
+    x2: float
+    y2: float
     gradientTransform: Affine2D = Affine2D.identity()
+    gradientUnits: str = "objectBoundingBox"
     spreadMethod: str = "pad"
 
-    @staticmethod
-    def from_element(el, view_box) -> "SVGLinearGradient":
-        self = SVGLinearGradient()
-        width, height = _parse_common_gradient_parts(self, el, view_box)
-
-        self.x1 = number_or_percentage(el.attrib.get("x1", "0%"), width)
-        self.y1 = number_or_percentage(el.attrib.get("y1", "0%"), height)
-        self.x2 = number_or_percentage(el.attrib.get("x2", "100%"), width)
-        self.y2 = number_or_percentage(el.attrib.get("y2", "0%"), height)
+    @classmethod
+    def from_element(cls, el, view_box) -> "SVGLinearGradient":
+        attrib = dict(el.attrib)
+        scale = cls._get_gradient_units_relative_scale(attrib, view_box)
+        self = cls(
+            x1=number_or_percentage(attrib.pop("x1", "0%"), scale.w),
+            y1=number_or_percentage(attrib.pop("y1", "0%"), scale.h),
+            x2=number_or_percentage(attrib.pop("x2", "100%"), scale.w),
+            y2=number_or_percentage(attrib.pop("y2", "0%"), scale.h),
+            **cls._parse_common_gradient_parts(attrib),
+        )
+        if attrib:
+            raise ValueError(f"unknown attributes in gradient {self.id!r}: {attrib!r}")
         return self
 
 
 # https://developer.mozilla.org/en-US/docs/Web/SVG/Element/radialGradient
 # Should be parsed with from_element
 @dataclasses.dataclass
-class SVGRadialGradient:
-    cx: float = 0.0
-    cy: float = 0.0
-    r: float = 0.0
+class SVGRadialGradient(_SVGGradient):
+    id: str
+    cx: float
+    cy: float
+    r: float
+    fx: float = _LinkedDefault("cx")
+    fy: float = _LinkedDefault("cy")
     fr: float = 0.0
-    fx: float = 0.0
-    fy: float = 0.0
-    gradientUnits: Rect = Rect(0, 0, 1, 1)
     gradientTransform: Affine2D = Affine2D.identity()
+    gradientUnits: str = "objectBoundingBox"
     spreadMethod: str = "pad"
 
-    @staticmethod
-    def from_element(el, view_box) -> "SVGRadialGradient":
-        self = SVGRadialGradient()
-        width, height = _parse_common_gradient_parts(self, el, view_box)
-        # lengths are calculated as percentages of the "normalized diagonal" of the
-        # SVG viewport. See formula at https://www.w3.org/TR/SVG2/coords.html#Units
-        diagonal = math.hypot(width, height) / math.sqrt(2)
+    def __post_init__(self):
+        for field in dataclasses.fields(self):
+            value = getattr(self, field.name)
+            if isinstance(value, _LinkedDefault):
+                setattr(self, field.name, value(self))
 
-        self.cx = number_or_percentage(el.attrib.get("cx", "50%"), width)
-        self.cy = number_or_percentage(el.attrib.get("cy", "50%"), height)
-        self.r = number_or_percentage(el.attrib.get("r", "50%"), diagonal)
+    @classmethod
+    def from_element(cls, el, view_box) -> "SVGRadialGradient":
+        attrib = dict(el.attrib)
+        scale = cls._get_gradient_units_relative_scale(attrib, view_box)
+        diagonal = scale.normalized_diagonal()
 
-        raw_fx = el.attrib.get("fx")
-        self.fx = number_or_percentage(raw_fx, width) if raw_fx is not None else self.cx
-        raw_fy = el.attrib.get("fy")
-        self.fy = (
-            number_or_percentage(raw_fy, height) if raw_fy is not None else self.cy
+        kwargs = dict(
+            cx=number_or_percentage(attrib.pop("cx", "50%"), scale.w),
+            cy=number_or_percentage(attrib.pop("cy", "50%"), scale.h),
+            r=number_or_percentage(attrib.pop("r", "50%"), diagonal),
+            fr=number_or_percentage(attrib.pop("fr", "0%"), diagonal),
         )
-        self.fr = number_or_percentage(el.attrib.get("fr", "0%"), diagonal)
+        if "fx" in attrib:
+            kwargs["fx"] = number_or_percentage(attrib.pop("fx"), scale.w)
+        if "fy" in attrib:
+            kwargs["fy"] = number_or_percentage(attrib.pop("fy"), scale.h)
+        kwargs.update(cls._parse_common_gradient_parts(attrib))
+        self = cls(**kwargs)
+        if attrib:
+            raise ValueError(f"unknown attributes in gradient {self.id!r}: {attrib!r}")
         return self
 
 
