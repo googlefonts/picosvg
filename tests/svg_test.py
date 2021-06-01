@@ -243,14 +243,14 @@ def test_resolve_use(actual, expected_result):
             "transform-radial-userspaceonuse-before.svg",
             "transform-radial-userspaceonuse-nano.svg",
         ),
-        # (
-        #     "transform-linear-objectbbox-before.svg",
-        #     "transform-linear-objectbbox-nano.svg",
-        # ),
-        # (
-        #     "transform-radial-objectbbox-before.svg",
-        #     "transform-radial-objectbbox-nano.svg",
-        # ),
+        (
+            "transform-linear-objectbbox-before.svg",
+            "transform-linear-objectbbox-nano.svg",
+        ),
+        (
+            "transform-radial-objectbbox-before.svg",
+            "transform-radial-objectbbox-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
