@@ -189,9 +189,8 @@ def from_element(el):
 
 def to_element(data_obj):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
-    data = dataclasses.asdict(data_obj)
     for field in dataclasses.fields(data_obj):
-        field_value = data[field.name]
+        field_value = getattr(data_obj, field.name)
         # omit attributes whose value == the respective default
         if isinstance(field.default, _LinkedDefault):
             default_value = field.default(data_obj)
