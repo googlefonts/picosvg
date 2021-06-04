@@ -577,3 +577,17 @@ def test_tostring_pretty_print():
         </svg>
         """
     )
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        ("fill-rule-evenodd-before.svg", "fill-rule-evenodd-after.svg"),
+    ],
+)
+def test_evenodd_to_nonzero_winding(actual, expected_result):
+    _test(
+        actual,
+        expected_result,
+        lambda svg: svg.evenodd_to_nonzero_winding().round_floats(3, inplace=True),
+    )

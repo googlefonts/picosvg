@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 220 120">
+  <!-- Default value for fill-rule -->
+  <polygon stroke="red" points="50,0 21,90 98,35 2,35 79,90"/>
+  <!--
+  The center of the shape has two
+  path segments (shown by the red stroke)
+  between it and infinity. It is therefore
+  considered outside the shape, and not filled.
+  -->
+  <path stroke="red" d="M150,0 L161.278,35 L138.722,35 Z M131.852,56.323 L102,35 L138.722,35 L131.852,56.323 Z M198,35 L168.148,56.323 L161.278,35 L198,35 Z M121,90 L131.852,56.323 L150,69.286 L121,90 Z M168.148,56.323 L179,90 L150,69.286 L168.148,56.323 Z"/>
+</svg>
