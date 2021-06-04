@@ -672,9 +672,11 @@ class SVG:
             svg.evenodd_to_nonzero_winding(inplace=True)
             return svg
 
-        for shape in self.shapes():
+        for idx, (el, (shape,)) in enumerate(self._elements()):
             if shape.fill_rule == "evenodd":
-                shape.remove_overlaps(inplace=True)
+                path = shape.as_path().remove_overlaps(inplace=True)
+                self._set_element(idx, el, (path,))
+
         return self
 
     def round_floats(self, ndigits: int, inplace=False):
