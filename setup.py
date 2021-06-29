@@ -28,7 +28,6 @@ setup_args = dict(
     setup_requires=["setuptools_scm"],
     install_requires=[
         "absl-py>=0.9.0",
-        "dataclasses>=0.7; python_version < '3.7'",
         "lxml>=4.0",
         "skia-pathops>=0.6.0",
     ],
@@ -40,7 +39,8 @@ setup_args = dict(
             "pytype==2020.11.23; python_version < '3.9'",
         ],
     },
-    python_requires=">=3.6",
+    # this is so we can use the built-in dataclasses module
+    python_requires=">=3.7",
 
     # this is for type checker to use our inline type hints:
     # https://www.python.org/dev/peps/pep-0561/#id18
