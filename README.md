@@ -25,6 +25,8 @@ pip install -e .
 picosvg mysvg.svg
 ```
 
+Requires Python 3.7 or greater.
+
 ## Test
 
 Install the dev dependencies specified in [`extras_require`](https://github.com/googlefonts/picosvg/blob/main/setup.py#L36-L40).
