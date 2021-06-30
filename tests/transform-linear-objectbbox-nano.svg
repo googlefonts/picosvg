@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" width="256" height="256" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="lingrad" x1="0" y1="0" x2="1" y2="0" gradientTransform="matrix(0 1 -1 0 0 0)">
+      <stop offset="25%" stop-color="black"/>
+      <stop offset="50%" stop-color="gray"/>
+      <stop offset="75%" stop-color="black"/>
+    </linearGradient>
+    <linearGradient id="lingrad_0" x1="1.179379" y1="0.824524" x2="2.179379" y2="0.824524" gradientTransform="matrix(5.656854 5.656854 -11.313708 11.313708 0 0)" gradientUnits="userSpaceOnUse">
+      <stop offset="25%" stop-color="black"/>
+      <stop offset="50%" stop-color="gray"/>
+      <stop offset="75%" stop-color="black"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#lingrad)" d="M10.659,18.978 C12.932,18.126 14.2,17.085 14.2,16 C14.2,14.915 12.932,13.874 10.659,13.022 C12.075,12.387 13.947,12 16,12 C17.183,12 18.307,12.128 19.317,12.359 C17.72,13.298 16.8,14.613 16.8,16 C16.8,17.387 17.72,18.702 19.317,19.641 C18.307,19.872 17.183,20 16,20 C13.947,20 12.075,19.613 10.659,18.978 Z"/>
+  <path fill="url(#lingrad_0)" d="M5.599,8.251 C5.134,10.045 5.414,11.625 6.394,12.606 C7.375,13.586 8.955,13.866 10.749,13.401 C10.198,14.277 9.495,15.161 8.66,15.997 L8.657,16 L8.654,16.003 C7.203,17.453 5.607,18.502 4.158,19.054 C5.163,16.845 5.323,15.212 4.556,14.444 C3.788,13.677 2.155,13.837 -0.054,14.842 C0.498,13.392 1.547,11.796 2.997,10.346 L3,10.343 L3.003,10.341 C3.839,9.505 4.723,8.802 5.599,8.251 Z"/>
+</svg>

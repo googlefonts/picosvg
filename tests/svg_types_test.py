@@ -349,84 +349,94 @@ def test_normalize_opacity(shape, expected):
     [
         # default linearGradient
         (
-            etree.Element("linearGradient"),
+            etree.Element("linearGradient", {"id": "lg1"}),
             Rect(0, 0, 10, 10),
             SVGLinearGradient(
+                id="lg1",
                 x1=0.0,
                 y1=0.0,
                 x2=1.0,
                 y2=0.0,
-                gradientUnits=Rect(0, 0, 1, 1),
+                gradientUnits="objectBoundingBox",
             ),
         ),
         # default radialGradient
         (
-            etree.Element("radialGradient"),
+            etree.Element("radialGradient", {"id": "rg2"}),
             Rect(0, 0, 10, 10),
             SVGRadialGradient(
+                id="rg2",
                 cx=0.5,
                 cy=0.5,
                 r=0.5,
                 fx=0.5,
                 fy=0.5,
                 fr=0.0,
-                gradientUnits=Rect(0, 0, 1, 1),
+                gradientUnits="objectBoundingBox",
             ),
         ),
         # radialGradient with gradientUnits="userSpaceOnUse" on square viewport
         (
-            etree.Element("radialGradient", {"gradientUnits": "userSpaceOnUse"}),
+            etree.Element(
+                "radialGradient", {"id": "rg3", "gradientUnits": "userSpaceOnUse"}
+            ),
             Rect(0, 0, 10, 10),
             SVGRadialGradient(
+                id="rg3",
                 cx=5.0,
                 cy=5.0,
                 r=5.0,
                 fx=5.0,
                 fy=5.0,
                 fr=0.0,
-                gradientUnits=Rect(0, 0, 10, 10),
+                gradientUnits="userSpaceOnUse",
             ),
         ),
         # userSpaceOnUse & nonsquare viewport, default 'r' is 50% of normalized diagonal
         (
-            etree.Element("radialGradient", {"gradientUnits": "userSpaceOnUse"}),
+            etree.Element(
+                "radialGradient", {"id": "rg4", "gradientUnits": "userSpaceOnUse"}
+            ),
             Rect(0, 0, 10, 5),
             SVGRadialGradient(
+                id="rg4",
                 cx=5.0,
                 cy=2.5,
                 r=0.5 * math.hypot(10, 5) / math.sqrt(2),  # 3.952847
                 fx=5.0,
                 fy=2.5,
                 fr=0.0,
-                gradientUnits=Rect(0, 0, 10, 5),
+                gradientUnits="userSpaceOnUse",
             ),
         ),
         # fx/fy default to cx/cy when not explicitly set
         (
-            etree.Element("radialGradient", {"cx": "20%", "cy": "40%"}),
+            etree.Element("radialGradient", {"id": "rg5", "cx": "20%", "cy": "40%"}),
             Rect(0, 0, 10, 5),
             SVGRadialGradient(
+                id="rg5",
                 cx=0.2,
                 cy=0.4,
                 r=0.5,
                 fx=0.2,
                 fy=0.4,
                 fr=0.0,
-                gradientUnits=Rect(0, 0, 1, 1),
+                gradientUnits="objectBoundingBox",
             ),
         ),
         # fx/fy explicitly set
         (
-            etree.Element("radialGradient", {"fx": "20%", "fy": "40%"}),
+            etree.Element("radialGradient", {"id": "rg6", "fx": "20%", "fy": "40%"}),
             Rect(0, 0, 10, 5),
             SVGRadialGradient(
+                id="rg6",
                 cx=0.5,
                 cy=0.5,
                 r=0.5,
                 fx=0.2,
                 fy=0.4,
                 fr=0.0,
-                gradientUnits=Rect(0, 0, 1, 1),
+                gradientUnits="objectBoundingBox",
             ),
         ),
         # linearGradient with gradientTransform and spreadMethod
@@ -434,12 +444,14 @@ def test_normalize_opacity(shape, expected):
             etree.Element(
                 "linearGradient",
                 {
+                    "id": "lg7",
                     "gradientTransform": "matrix(1, 0.3, 0, 1, 0, 0)",
                     "spreadMethod": "reflect",
                 },
             ),
             Rect(0, 0, 10, 10),
             SVGLinearGradient(
+                id="lg7",
                 x1=0.0,
                 y1=0.0,
                 x2=1.0,

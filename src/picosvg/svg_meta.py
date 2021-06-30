@@ -179,3 +179,16 @@ def parse_view_box(s: str) -> Rect:
     if len(box) != 4:
         raise ValueError(f"Unable to parse viewBox: {s!r}")
     return Rect(*box)
+
+
+# sentinel object to check if special linked fields such as fx/fy are explicitly set;
+# using a float type instead of None to make the typechecker happy, and also so that one
+# doesn't need to unwrap Optional type whenever accessing those fields
+class _LinkedDefault(float):
+    def __new__(cls, attr_name):
+        self = float.__new__(cls, "NaN")
+        self.attr_name = attr_name
+        return self
+
+    def __call__(self, data_obj):
+        return getattr(data_obj, self.attr_name)

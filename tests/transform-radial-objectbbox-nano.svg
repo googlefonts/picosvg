@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" width="256" height="256" viewBox="0 0 24 24">
+  <defs>
+    <radialGradient id="radgrad" cx="-0.183013" cy="0.883013" r="0.5" gradientTransform="matrix(0.5 -0.866025 0.866025 0.5 0 0)">
+      <stop offset="5%" stop-color="red"/>
+      <stop offset="50%" stop-color="gold"/>
+      <stop offset="95%" stop-color="red"/>
+    </radialGradient>
+    <radialGradient id="radgrad_0" cx="1.78923" cy="-0.499038" r="0.5" gradientTransform="matrix(5 8.660254 -8.660254 5 0 0)" gradientUnits="userSpaceOnUse">
+      <stop offset="5%" stop-color="red"/>
+      <stop offset="50%" stop-color="gold"/>
+      <stop offset="95%" stop-color="red"/>
+    </radialGradient>
+  </defs>
+  <path id="circ" fill="url(#radgrad)" d="M10,12 A5 5 0 1 1 0,12 A5 5 0 1 1 10,12 Z"/>
+  <path fill="url(#radgrad_0)" d="M12.5,16.33 C10.109,14.949 9.289,11.891 10.67,9.5 C12.051,7.109 15.109,6.289 17.5,7.67 C19.891,9.051 20.711,12.109 19.33,14.5 C17.949,16.891 14.891,17.711 12.5,16.33 Z"/>
+</svg>

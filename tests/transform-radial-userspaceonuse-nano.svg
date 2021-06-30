@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="g1_1" cx="64" cy="64" r="24" gradientTransform="matrix(1 0 0.267949 1 0 0)" gradientUnits="userSpaceOnUse">
+      <stop offset="0.1" stop-color="gold"/>
+      <stop offset="0.95" stop-color="red"/>
+    </radialGradient>
+    <radialGradient id="g1_0" cx="64" cy="64" r="24" gradientTransform="matrix(1 0 -0.309401 1 0 0)" gradientUnits="userSpaceOnUse">
+      <stop offset="0.1" stop-color="gold"/>
+      <stop offset="0.95" stop-color="red"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#g1_1)" d="M50.718,40 L98.718,40 L111.58,88 L63.58,88 L50.718,40 Z"/>
+  <path fill="url(#g1_0)" d="M27.624,40 L75.624,40 L60.773,88 L12.773,88 L27.624,40 Z"/>
+</svg>

@@ -1,0 +1,13 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <g opacity="0.4" fill="none" stroke="black" stroke-width="10">
+    <rect x="24" y="16" width="32" height="100"/>
+  </g>
+  <g opacity="0.6">
+     <path fill="red" d="M10,30 H100 V120 H10 V30 z"/>
+     <path fill="blue" d="M5,25 L105,25 L105,125 L5,125 Z M15,35 L15,115 L95,115 L95,35 Z"/>
+  </g>
+  <g opacity="1" fill="none">
+    <ellipse cx="85" cy="50" rx="15" ry="40" stroke-width="10" stroke="black"/>
+    <ellipse cx="85" cy="60" rx="10" ry="5"/>
+  </g>
+</svg>

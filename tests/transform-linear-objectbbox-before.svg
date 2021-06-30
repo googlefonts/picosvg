@@ -1,0 +1,27 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="256" height="256"
+     viewBox="0 0 24 24">
+  <!-- gradientUnits defaults to objectBoundingBox -->
+  <linearGradient id="lingrad" gradientTransform="rotate(90)">
+    <stop offset="25%"  stop-color="black" />
+    <stop offset="50%" stop-color="gray" />
+    <stop offset="75%"  stop-color="black" />
+  </linearGradient>
+  <clipPath id="c1">
+    <path d="M0,12 L20,12 L20,20 L0,20 A18,5 0 0 0 0,12 z" transform="translate(7,0)" />
+  </clipPath>
+  <clipPath id="c2">
+    <path d="M0,12 L20,12 A8,5 0 0 0 20,20 L0,20 z" />
+  </clipPath>
+  <g id="copyme" clip-path="url(#c1)">
+    <ellipse clip-path="url(#c2)"
+             cx="16" cy="16"
+             rx="8" ry="4"
+             fill="url(#lingrad)"/>
+  </g>
+  <g transform="translate(-9,0)">
+    <g transform="rotate(-45 12,16)">
+      <use xlink:href="#copyme" />
+    </g>
+  </g>
+</svg>

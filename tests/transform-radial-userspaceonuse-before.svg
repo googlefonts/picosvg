@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="g1" gradientUnits="userSpaceOnUse" cx="64" cy="64" r="24">
+      <stop offset="0.1" stop-color="gold" />
+      <stop offset="0.95" stop-color="red" />
+    </radialGradient>
+  </defs>
+  <g transform="skewX(15)">
+    <rect x="40" y="40" width="48" height="48" fill="url(#g1)"/>
+    <g transform="skewX(-30)">
+      <rect x="40" y="40" width="48" height="48" fill="url(#g1)"/>
+    </g>
+  </g>
+</svg>

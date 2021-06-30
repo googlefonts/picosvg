@@ -12,14 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
+from collections import defaultdict, deque
 import copy
 import dataclasses
 from functools import reduce
 import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
-from typing import Generator, Iterable, List, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Generator,
+    Iterable,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from picosvg.svg_meta import (
     number_or_percentage,
     ntos,
@@ -29,6 +39,7 @@ from picosvg.svg_meta import (
     xlinkns,
     parse_css_declarations,
     parse_view_box,
+    _LinkedDefault,
 )
 from picosvg.svg_types import *
 from picosvg.svg_transform import Affine2D
@@ -43,13 +54,15 @@ _SHAPE_CLASSES = {
     "polyline": SVGPolyline,
     "rect": SVGRect,
 }
-_CLASS_ELEMENTS = {v: f"{{{svgns()}}}{k}" for k, v in _SHAPE_CLASSES.items()}
-_SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
-
 _GRADIENT_CLASSES = {
     "linearGradient": SVGLinearGradient,
     "radialGradient": SVGRadialGradient,
 }
+_CLASS_ELEMENTS = {
+    v: f"{{{svgns()}}}{k}" for k, v in {**_SHAPE_CLASSES, **_GRADIENT_CLASSES}.items()
+}
+_SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
+
 _GRADIENT_ATTRS = {
     tag: tuple(f.name for f in dataclasses.fields(klass))
     for tag, klass in _GRADIENT_CLASSES.items()
@@ -62,6 +75,9 @@ _GRADIENT_COORDS = {
 _XLINK_TEMP = "xlink_"
 
 
+_ATTRIB_W_CUSTOM_INHERITANCE = frozenset({"clip-path", "transform"})
+
+
 # How much error, as pct of viewbox max(w,h), is allowed on lossy ops
 # For example, for a Noto Emoji with a viewBox 0 0 128 128 permit error of 0.128
 _MAX_PCT_ERROR = 0.1
@@ -72,6 +88,10 @@ _DEFAULT_DEFAULT_TOLERENCE = 0.1
 
 # Rounding for rewritten gradient matrices
 _GRADIENT_TRANSFORM_NDIGITS = 6
+
+
+def _clamp(value: float, minv: float = 0.0, maxv: float = 1.0) -> float:
+    return max(min(value, maxv), minv)
 
 
 def _xlink_href_attr_name() -> str:
@@ -131,8 +151,31 @@ def _field_name(attr_name):
     return attr_name.replace("-", "_")
 
 
+def _is_shape(tag):
+    return strip_ns(tag) in _SHAPE_CLASSES
+
+
+def _is_gradient(tag):
+    return strip_ns(tag) in _GRADIENT_CLASSES
+
+
+def _is_group(tag):
+    return strip_ns(tag) == "g"
+
+
+def _element_transform(el, current_transform=Affine2D.identity()):
+    attr_name = "transform"
+    if _is_gradient(el.tag):
+        attr_name = "gradientTransform"
+
+    raw = el.attrib.get(attr_name, None)
+    if raw:
+        return Affine2D.compose_ltr((Affine2D.fromstring(raw), current_transform))
+    return current_transform
+
+
 def from_element(el):
-    if el.tag not in _SHAPE_CLASSES:
+    if not _is_shape(el.tag):
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _SHAPE_CLASSES[el.tag]
     parse_fn = getattr(data_type, "from_element", None)
@@ -146,14 +189,20 @@ def from_element(el):
 
 def to_element(data_obj):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
-    data = dataclasses.asdict(data_obj)
     for field in dataclasses.fields(data_obj):
-        field_value = data[field.name]
-        if field_value == field.default:
+        field_value = getattr(data_obj, field.name)
+        # omit attributes whose value == the respective default
+        if isinstance(field.default, _LinkedDefault):
+            default_value = field.default(data_obj)
+        else:
+            default_value = field.default
+        if field_value == default_value:
             continue
         attrib_value = field_value
         if isinstance(attrib_value, numbers.Number):
             attrib_value = ntos(attrib_value)
+        elif isinstance(attrib_value, Affine2D):
+            attrib_value = attrib_value.tostring()
         el.attrib[_attr_name(field.name)] = attrib_value
     return el
 
@@ -168,6 +217,53 @@ def _safe_remove(el: etree.Element):
     parent = el.getparent()
     if parent is not None:
         parent.remove(el)
+
+
+def _id_of_target(url):
+    match = re.match(r"^url[(]#([\w-]+)[)]$", url)
+    if not match:
+        raise ValueError(f'Unrecognized url "{url}"')
+    return match.group(1)
+
+
+def _xpath_for_url(url, el_tag):
+    return f'//svg:{el_tag}[@id="{_id_of_target(url)}"]'
+
+
+def _attrib_to_pass_on(el, current_attrib, skips=_ATTRIB_W_CUSTOM_INHERITANCE):
+    attr_catcher = etree.Element("dummy")
+    _inherit_attrib(el.attrib, attr_catcher, skips=skips, skip_unhandled=True)
+    _inherit_attrib(current_attrib, attr_catcher, skips=skips)
+    return dict(attr_catcher.attrib)
+
+
+def _replace_el(el, replacements):
+    parent = el.getparent()
+    idx = parent.index(el)
+    parent.remove(el)
+    for child_idx, child in enumerate(replacements):
+        parent.insert(idx + child_idx, child)
+
+
+class SVGTraverseContext(NamedTuple):
+    nth_of_type: int
+    element: etree.Element
+    path: str
+    transform: Affine2D
+    clips: Tuple[SVGPath, ...]
+    attrib: Mapping[str, Any]  # except _ATTRIB_W_CUSTOM_INHERITANCE
+
+    def depth(self) -> int:
+        return self.path.count("/") - 1
+
+    def shape(self) -> SVGShape:
+        return from_element(self.element)
+
+    def is_shape(self):
+        return _is_shape(self.element)
+
+    def is_group(self):
+        return _is_group(self.element)
 
 
 class SVG:
@@ -218,6 +314,10 @@ class SVG:
         return self._default_tolerance()
 
     def shapes(self):
+        """Returns all shapes in order encountered.
+
+        Use to operate per-shape; if you want to iterate over graph use breadth_first.
+        """
         return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
 
     def absolute(self, inplace=False):
@@ -244,6 +344,20 @@ class SVG:
             self.elements[idx] = (el, (shape.as_path(),))
         return self
 
+    def expand_shorthand(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.expand_shorthand(inplace=True)
+            return svg
+
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            if isinstance(shape, SVGPath):
+                self.elements[idx] = (
+                    el,
+                    (shape.explicit_lines().expand_shorthand(inplace=True),),
+                )
+        return self
+
     def _apply_styles(self, el: etree.Element):
         parse_css_declarations(el.attrib.pop("style", ""), el.attrib)
 
@@ -266,22 +380,21 @@ class SVG:
 
         return self
 
-    def xpath(self, xpath, el=None):
+    def xpath(self, xpath: str, el: etree.Element = None, expected_result_range=None):
         if el is None:
             el = self.svg_root
-        return el.xpath(xpath, namespaces={"svg": svgns()})
+        results = el.xpath(xpath, namespaces={"svg": svgns()})
+        if expected_result_range and len(results) not in expected_result_range:
+            raise ValueError(
+                f"Expected {xpath} matches in {expected_result_range}, {len(results)} results"
+            )
+        return results
 
     def xpath_one(self, xpath):
-        els = self.xpath(xpath)
-        if len(els) != 1:
-            raise ValueError(f"Need exactly 1 match for {xpath}, got {len(els)}")
-        return els[0]
+        return self.xpath(xpath, expected_result_range=range(1, 2))[0]
 
     def resolve_url(self, url, el_tag):
-        match = re.match(r"^url[(]#([\w-]+)[)]$", url)
-        if not match:
-            raise ValueError(f'Unrecognized url "{url}"')
-        return self.xpath_one(f'//svg:{el_tag}[@id="{match.group(1)}"]')
+        return self.xpath_one(_xpath_for_url(url, el_tag))
 
     def _resolve_use(self, scope_el):
         attrib_not_copied = {
@@ -359,14 +472,27 @@ class SVG:
         self._resolve_use(self.svg_root)
         return self
 
-    def _resolve_clip_path(self, clip_path_url) -> SVGPath:
+    def _resolve_clip_path(
+        self, clip_path_url, transform=Affine2D.identity()
+    ) -> SVGPath:
         clip_path_el = self.resolve_url(clip_path_url, "clipPath")
         self._resolve_use(clip_path_el)
-        self._ungroup(clip_path_el)
 
-        # union all the shapes under the clipPath
-        # Fails if there are any non-shapes under clipPath
-        return SVGPath.from_commands(union([from_element(e) for e in clip_path_el]))
+        transform = _element_transform(clip_path_el, transform)
+        clip_paths = [
+            from_element(e).apply_transform(_element_transform(e, transform))
+            for e in clip_path_el
+        ]
+        clip = SVGPath.from_commands(union(clip_paths))
+
+        if "clip-path" in clip_path_el.attrib:
+            # TODO cycle detection
+            clip_clop = self._resolve_clip_path(
+                clip_path_el.attrib["clip-path"], transform
+            )
+            clip = SVGPath.from_commands(intersection([clip, clip_clop]))
+
+        return clip
 
     def append_to(self, xpath, el):
         self._update_etree()
@@ -381,111 +507,163 @@ class SVG:
             return clip_paths[0]
         return SVGPath.from_commands(intersection(clip_paths))
 
-    def _new_id(self, tag, template):
-        for i in range(100):
+    def _new_id(self, template):
+        for i in range(1 << 16):
             potential_id = template % i
-            existing = self.xpath(f'//svg:{tag}[@id="{potential_id}"]')
+            existing = self.xpath(f'//svg:*[@id="{potential_id}"]')
             if not existing:
                 return potential_id
         raise ValueError(f"No free id for {template}")
 
-    def _ungroup(self, scope_el):
-        """Push inherited attributes from group down, then remove the group.
-
-        Drop groups that are not displayed.
-
-        If result has multiple clip paths merge them.
-        """
-        # move inheritable attributes down one level (e.g. a global 'fill' defined on
-        # the root <svg> element): https://github.com/googlefonts/nanoemoji/issues/275
-        for el in scope_el:
-            _inherit_group_attrib(scope_el, el, skip_unhandled_attrs=True)
-        _del_attrs(scope_el, *_INHERITABLE_GROUP_ATTRS)
-
-        # nuke the groups that are not displayed
-        display_none = [e for e in self.xpath(f".//svg:g[@display='none']", scope_el)]
-        for group in display_none:
-            _safe_remove(group)
-
-        # Any groups left are displayed
-        groups = [e for e in self.xpath(f".//svg:g", scope_el)]
-        multi_clips = []
-        for group in groups:
-            # sneaky little styles, we hates it precious
-            self._apply_styles(group)
-
-            # move groups children up
-            # reverse because "for each addnext" effectively reverses
-            children = list(group)
-            children.reverse()
-            for child in children:
-                group.remove(child)
-                group.addnext(child)
-
-                _inherit_group_attrib(group, child)
-                if "," in child.attrib.get("clip-path", ""):
-                    multi_clips.append(child)
-
-        # nuke the groups
-        for group in groups:
-            _safe_remove(group)
-
-        # if we have new combinations of clip paths dedup & materialize them
-        new_clip_paths = {}
-        old_clip_paths = []
-        for clipped_el in multi_clips:
-            clip_refs = clipped_el.attrib["clip-path"]
-            clip_ref_urls = clip_refs.split(",")
-            old_clip_paths.extend(
-                [self.resolve_url(ref, "clipPath") for ref in clip_ref_urls]
+    def breadth_first(self):
+        frontier = [
+            SVGTraverseContext(
+                0,
+                self.svg_root,
+                "/svg[0]",
+                Affine2D.identity(),
+                (),
+                _attrib_to_pass_on(self.svg_root, {}),
             )
-            clip_paths = [self._resolve_clip_path(ref) for ref in clip_ref_urls]
-            clip_path = self._combine_clip_paths(clip_paths)
-            if clip_path.d not in new_clip_paths:
-                new_el = etree.SubElement(
-                    self.svg_root, f"{{{svgns()}}}clipPath", nsmap=self.svg_root.nsmap
+        ]
+        while frontier:
+            context = frontier.pop(0)
+            yield context
+
+            child_idxs = defaultdict(int)
+            for child in context.element:
+                if child.tag is etree.Comment:
+                    continue
+                transform = _element_transform(child, context.transform)
+                clips = context.clips
+                if "clip-path" in child.attrib:
+                    clips += (
+                        self._resolve_clip_path(child.attrib["clip-path"], transform),
+                    )
+
+                nth_of_type = child_idxs[strip_ns(child.tag)]
+                child_idxs[strip_ns(child.tag)] += 1
+                path = f"{context.path}/{strip_ns(child.tag)}[{nth_of_type}]"
+                child_context = SVGTraverseContext(
+                    nth_of_type,
+                    child,
+                    path,
+                    transform,
+                    clips,
+                    _attrib_to_pass_on(child, context.attrib),
                 )
-                new_el.attrib["id"] = self._new_id("clipPath", "merged-clip-%d")
-                new_el.append(to_element(clip_path))
-                new_clip_paths[clip_path.d] = new_el
+                frontier.append(child_context)
 
-            new_ref_id = new_clip_paths[clip_path.d].attrib["id"]
-            clipped_el.attrib["clip-path"] = f"url(#{new_ref_id})"
+    def _transformed_gradient(self, url, transform, shape_bbox):
+        fill_el = self.resolve_url(url, "*")
+        assert _is_gradient(fill_el), f"Not sure how to fill from {fill_el.tag}"
 
-        # destroy unreferenced clip paths
-        for old_clip_path in old_clip_paths:
-            if old_clip_path.getparent() is None:
-                continue
-            old_id = old_clip_path.attrib["id"]
-            if not self.xpath(f'//svg:*[@clip-path="url(#{old_id})"]'):
-                _safe_remove(old_clip_path)
+        gradient = (
+            _GRADIENT_CLASSES[strip_ns(fill_el.tag)]
+            .from_element(fill_el, self.view_box())
+            .as_user_space_units(shape_bbox, inplace=True)
+        )
+        gradient.gradientTransform = Affine2D.compose_ltr(
+            (gradient.gradientTransform, transform)
+        ).round(_GRADIENT_TRANSFORM_NDIGITS)
+        gradient.id = self._new_id(gradient.id + "_%d")
 
-    def _compute_clip_path(self, el):
-        """Resolve clip path for element, including inherited clipping.
+        new_fill = to_element(gradient)
+        # TODO normalize stop elements too
+        new_fill.extend(copy.deepcopy(stop) for stop in fill_el)
 
-        None if there is no clipping.
+        fill_el.addnext(new_fill)
+        return new_fill
 
-        https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
+    def _simplify(self):
         """
-        clip_paths = []
-        while el is not None:
-            clip_url = el.attrib.get("clip-path", None)
-            if clip_url:
-                clip_paths.append(self._resolve_clip_path(clip_url))
-            el = el.getparent()
+        Removes groups where possible, applies transforms, applies clip paths.
 
-        if not clip_paths:
-            return None
-        return self._combine_clip_paths(clip_paths)
+        Groups with 0 < opacity < 1 and multiple children are retained.
+        """
+        # Reversed: we want leaves first
+        to_process = reversed(tuple(c for c in self.breadth_first()))
 
-    def ungroup(self, inplace=False):
+        for context in to_process:
+            if "clipPath" in context.path:
+                _safe_remove(context.element)
+                continue
+
+            el = context.element
+            _del_attrs(el, "clip-path", "transform")  # handled separately
+
+            skips = _ATTRIB_W_CUSTOM_INHERITANCE | {"opacity"}  # handled separately
+            _inherit_attrib(context.attrib, el, skips=skips)
+
+            # Only some elements change
+            if _is_shape(el.tag):
+                assert len(el) == 0, "Shapes shouldn't have children"
+
+                # If we are transformed and we use a gradient we may need to
+                # emit the transformed gradient
+                if context.transform != Affine2D.identity() and "url" in el.attrib.get(
+                    "fill", ""
+                ):
+                    fill_el = self._transformed_gradient(
+                        el.attrib["fill"],
+                        context.transform,
+                        from_element(el).bounding_box(),
+                    )
+                    fill_id = fill_el.attrib["id"]
+                    el.attrib["fill"] = f"url(#{fill_id})"
+
+                paths = [from_element(el).as_path().absolute(inplace=True)]
+                initial_path = copy.deepcopy(paths[0])
+
+                # stroke may introduce multiple paths
+                assert len(paths) == 1  # oh ye of little faith
+                if paths[0].stroke != "none":
+                    paths = list(self._stroke(paths[0]))
+
+                # Any remaining stroke attributes don't do anything
+                # For example, a stroke-width with no stroke set is removed
+                for path in paths:
+                    _reset_attrs(path, lambda field: field.name.startswith("stroke"))
+
+                if context.transform != Affine2D.identity():
+                    paths = [p.apply_transform(context.transform) for p in paths]
+
+                if context.clips:
+                    clip = SVGPath.from_commands(intersection(context.clips))
+                    paths = [
+                        p.update_path(intersection((p, clip)), inplace=True)
+                        for p in paths
+                    ]
+
+                if len(paths) != 1 or paths[0] != initial_path:
+                    _replace_el(el, [to_element(p) for p in paths])
+
+            elif _is_group(el.tag):
+                # A group with 0 < opacity < 1 *and* multiple children must be retained
+                # This over-retains groups; no difference unless children overlap
+                opacity = _clamp(float(el.attrib.get("opacity", 1.0)))
+                keep_group = len(el) > 1 and opacity not in {0.0, 1.0}
+
+                if keep_group:
+                    el.attrib.clear()
+                    el.attrib["opacity"] = ntos(opacity)
+                else:
+                    if opacity < 1.0:
+                        for child in el:
+                            _inherit_attrib({"opacity": ntos(opacity)}, child)
+                    _replace_el(el, list(el))
+
+        # https://github.com/googlefonts/nanoemoji/issues/275
+        _del_attrs(self.svg_root, *_INHERITABLE_ATTRIB)
+
+    def simplify(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.ungroup(inplace=True)
+            svg.simplify(inplace=True)
             return svg
 
         self._update_etree()
-        self._ungroup(self.svg_root)
+        self._simplify()
         return self
 
     def _stroke(self, shape):
@@ -522,72 +700,6 @@ class SVG:
         shape.id = stroke.id = ""
 
         return (shape, stroke)
-
-    def strokes_to_paths(self, inplace=False):
-        """Convert stroked shapes to equivalent filled shape + path for stroke."""
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg.strokes_to_paths(inplace=True)
-            return svg
-
-        self._update_etree()
-
-        # Find stroked things
-        stroked = []
-        for idx, (el, (shape,)) in enumerate(self._elements()):
-            if shape.stroke == "none":
-                continue
-            stroked.append(idx)
-
-        # Stroke 'em
-        for idx in stroked:
-            el, shapes = self.elements[idx]
-            shapes = sum((self._stroke(s) for s in shapes), ())
-            self._set_element(idx, el, shapes)
-
-        # Update the etree
-        self._update_etree()
-
-        return self
-
-    def apply_clip_paths(self, inplace=False):
-        """Apply clipping to shapes and remove the clip paths."""
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg.apply_clip_paths(inplace=True)
-            return svg
-
-        self._update_etree()
-
-        # find elements with clip paths
-        clips = []  # 2-tuples of element index, clip path to apply
-        clip_path_els = []
-        for idx, (el, shape) in enumerate(self._elements()):
-            clip_path = self._compute_clip_path(el)
-            if not clip_path:
-                continue
-            clips.append((idx, clip_path))
-
-        # apply clip path to target
-        for el_idx, clip_path in clips:
-            el, (target,) = self.elements[el_idx]
-            target = (
-                target.as_path()
-                .absolute(inplace=True)
-                .update_path(intersection((target, clip_path)), inplace=True)
-            )
-            target.clip_path = ""
-
-            self._set_element(el_idx, el, (target,))
-
-        # destroy clip path elements
-        for clip_path_el in self.xpath("//svg:clipPath"):
-            _safe_remove(clip_path_el)
-
-        # destroy clip-path attributes
-        self.remove_attributes(["clip-path"], xpath="//svg:*[@clip-path]", inplace=True)
-
-        return self
 
     def clip_to_viewbox(self, inplace=False):
         if not inplace:
@@ -628,41 +740,6 @@ class SVG:
 
         # Update the etree
         self._update_etree()
-
-        return self
-
-    def apply_transforms(self, inplace=False):
-        """Naively transforms to shapes and removes the transform attribute.
-
-        Naive: just applies any transform on a parent element.
-        """
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg.apply_transforms(inplace=True)
-            return svg
-
-        self._update_etree()
-
-        # figure out the sequence of transforms, if any, for each shape
-        new_shapes = []
-        for idx, (el, (shape,)) in enumerate(self._elements()):
-            transform = Affine2D.identity()
-            while el is not None:
-                if "transform" in el.attrib:
-                    transform = Affine2D.compose_ltr(
-                        (transform, Affine2D.fromstring(el.attrib["transform"]))
-                    )
-                el = el.getparent()
-            if transform == Affine2D.identity():
-                continue
-            new_shapes.append((idx, shape.apply_transform(transform)))
-
-        for el_idx, new_shape in new_shapes:
-            el, _ = self.elements[el_idx]
-            self._set_element(el_idx, el, (new_shape,))
-
-        # destroy all transform attributes
-        self.remove_attributes(["transform"], xpath="//svg:*[@transform]", inplace=True)
 
         return self
 
@@ -883,9 +960,25 @@ class SVG:
         if transform != Affine2D.identity():
             g.attrib["transform"] = transform.tostring()
 
-        # TODO Define a viewport-sized clipPath once transform+clip-path issue is fixed
-        # https://github.com/googlefonts/picosvg/issues/200
-        return (g,)
+        # non-root svg elements by default have overflow="hidden" which means a clip path
+        # the size of the SVG viewport is applied; if overflow="visible" don't clip
+        # https://www.w3.org/TR/SVG/render.html#OverflowAndClipProperties
+        overflow = svg.attrib.get("overflow", "hidden")
+        if overflow == "visible":
+            return (g,)
+
+        if overflow != "hidden":
+            raise NotImplementedError(f"overflow='{overflow}' is not supported")
+
+        clip_path = etree.Element(
+            f"{{{svgns()}}}clipPath", {"id": self._new_id("nested-svg-viewport-%d")}
+        )
+        clip_path.append(to_element(SVGRect(x=x, y=y, width=width, height=height)))
+        clipped_g = etree.Element(f"{{{svgns()}}}g")
+        clipped_g.attrib["clip-path"] = f"url(#{clip_path.attrib['id']})"
+        clipped_g.append(g)
+
+        return (clip_path, clipped_g)
 
     def resolve_nested_svgs(self, inplace=False):
         """Replace nested <svg> elements with equivalent <g> with a transform.
@@ -955,33 +1048,26 @@ class SVG:
             gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(
                 el, self.view_box()
             )
-            a, b, c, d, e, f = (
-                round(v, _GRADIENT_TRANSFORM_NDIGITS)
-                for v in gradient.gradientTransform
-            )
-            affine = Affine2D(a, b, c, d, e, f)
-            #  no translate? nop!
-            if (e, f) == (0, 0):
-                continue
+            affine = gradient.gradientTransform
 
             # split translation from rest of the transform and apply to gradient coords
             translate, affine_prime = affine.decompose_translation()
-            for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
-                # if at default just ignore
-                if x_attr not in el.attrib and y_attr not in el.attrib:
-                    continue
-                x = getattr(gradient, x_attr)
-                y = getattr(gradient, y_attr)
-                x_prime, y_prime = translate.map_point((x, y))
-                el.attrib[x_attr] = ntos(round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
-                el.attrib[y_attr] = ntos(round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
+            if translate.round(_GRADIENT_TRANSFORM_NDIGITS) != Affine2D.identity():
+                for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
+                    x = getattr(gradient, x_attr)
+                    y = getattr(gradient, y_attr)
+                    x_prime, y_prime = translate.map_point((x, y))
+                    setattr(
+                        gradient, x_attr, round(x_prime, _GRADIENT_TRANSFORM_NDIGITS)
+                    )
+                    setattr(
+                        gradient, y_attr, round(y_prime, _GRADIENT_TRANSFORM_NDIGITS)
+                    )
 
-            if affine_prime != Affine2D.identity():
-                el.attrib["gradientTransform"] = (
-                    "matrix(" + " ".join(ntos(v) for v in affine_prime) + ")"
-                )
-            else:
-                del el.attrib["gradientTransform"]
+            gradient.gradientTransform = affine_prime.round(_GRADIENT_TRANSFORM_NDIGITS)
+
+            el.attrib.clear()
+            el.attrib.update(to_element(gradient).attrib)
 
     def _resolve_gradient_templates(self, inplace=False):
         # Gradients can have an 'href' attribute that specifies another gradient as
@@ -1060,40 +1146,44 @@ class SVG:
         self._update_etree()
 
         errors = []
+        bad_paths = set()
 
-        path_whitelist = {
+        path_allowlist = {
             r"^/svg\[0\]$",
             r"^/svg\[0\]/defs\[0\]$",
             r"^/svg\[0\]/defs\[0\]/(linear|radial)Gradient\[\d+\](/stop\[\d+\])?$",
-            r"^/svg\[0\]/path\[(?!0\])\d+\]$",
+            r"^/svg\[0\](/(path|g)\[\d+\])+$",
+        }
+        paths_required = {
+            "/svg[0]",
+            "/svg[0]/defs[0]",
         }
 
         # Make a list of xpaths with offsets (/svg/defs[0]/..., etc)
         ids = {}
-        frontier = [(0, self.svg_root, "")]
-        while frontier:
-            el_idx, el, parent_path = frontier.pop(0)
-            el_tag = strip_ns(el.tag)
-            el_path = f"{parent_path}/{el_tag}[{el_idx}]"
-
-            if not any((re.match(pat, el_path) for pat in path_whitelist)):
-                errors.append(f"BadElement: {el_path}")
+        for context in self.breadth_first():
+            if any(context.path.startswith(bp) for bp in bad_paths):
                 continue  # no sense reporting all the children as bad
 
-            el_id = el.attrib.get("id", None)
+            if not any((re.match(pat, context.path) for pat in path_allowlist)):
+                errors.append(f"BadElement: {context.path}")
+                bad_paths.add(context.path)
+                continue
+
+            paths_required.discard(context.path)
+
+            el_id = context.element.attrib.get("id", None)
             if el_id is not None:
                 if el_id in ids:
                     errors.append(
-                        f'BadElement: {el_path} reuses id="{el_id}", first seen at {ids[el_id]}'
+                        f'BadElement: {context.path} reuses id="{el_id}", first seen at {ids[el_id]}'
                     )
-                ids[el_id] = el_path
+                ids[el_id] = context.path
 
-            for child_idx, child in enumerate(el):
-                if child.tag is etree.Comment:
-                    continue
-                frontier.append((child_idx, child, el_path))
+        for path in paths_required:
+            errors.append(f"MissingElement: {path}")
 
-        # TODO paths & gradients should only have specific attributes
+        # TODO paths, groups, & gradients should only have specific attributes
 
         return tuple(errors)
 
@@ -1105,25 +1195,28 @@ class SVG:
 
         self._update_etree()
 
+        # Discard useless content
         self.remove_nonsvg_content(inplace=True)
         self.remove_comments(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
         self.remove_title_meta_desc(inplace=True)
+
+        # Simplify things that simplify in isolation
         self.apply_style_attributes(inplace=True)
         self.resolve_nested_svgs(inplace=True)
         self.shapes_to_paths(inplace=True)
+        self.expand_shorthand(inplace=True)
         self.resolve_use(inplace=True)
-        self.ungroup(inplace=True)
-        # stroke after ungroup to apply group strokes properly
-        self.strokes_to_paths(inplace=True)
-        self.apply_transforms(inplace=True)
-        self.apply_clip_paths(inplace=True)
+
+        # Simplify things that do not simplify in isolation
+        self.simplify(inplace=True)
+
+        # Tidy up
         self.evenodd_to_nonzero_winding(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
         self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
-
         self._resolve_gradient_templates(inplace=True)
         self._apply_gradient_translation(inplace=True)
         self._collect_gradients(inplace=True)
@@ -1190,30 +1283,37 @@ class SVG:
 
 
 def _inherit_copy(attrib, child, attr_name):
-    child.attrib[attr_name] = child.attrib.get(attr_name, attrib[attr_name])
+    if attr_name in child.attrib:
+        return
+    if attr_name in attrib:
+        child.attrib[attr_name] = attrib[attr_name]
 
 
 def _inherit_multiply(attrib, child, attr_name):
-    value = float(attrib[attr_name])
+    if attr_name not in attrib and attr_name not in child.attrib:
+        return
+    value = float(attrib.get(attr_name, 1.0))
     value *= float(child.attrib.get(attr_name, 1.0))
     child.attrib[attr_name] = ntos(value)
 
 
 def _inherit_clip_path(attrib, child, attr_name):
     clips = sorted(
-        child.attrib.get("clip-path", "").split(",") + [attrib.get("clip-path")]
+        child.attrib.get("clip-path", "").split(",") + [attrib.get("clip-path", "")]
     )
     child.attrib["clip-path"] = ",".join([c for c in clips if c])
 
 
 def _inherit_nondefault_overflow(attrib, child, attr_name):
-    value = attrib[attr_name]
+    value = attrib.get(attr_name, "visible")
     if value != "visible":
         _inherit_copy(attrib, child, attr_name)
 
 
 def _inherit_matrix_multiply(attrib, child, attr_name):
-    transform = Affine2D.fromstring(attrib[attr_name])
+    transform = Affine2D.identity()
+    if attr_name in attrib:
+        transform = Affine2D.fromstring(attrib[attr_name])
     if attr_name in child.attrib:
         transform = Affine2D.compose_ltr(
             (Affine2D.fromstring(child.attrib[attr_name]), transform)
@@ -1228,8 +1328,9 @@ def _do_not_inherit(*_):
     return
 
 
-_GROUP_ATTRIB_HANDLERS = {
+_INHERIT_ATTRIB_HANDLERS = {
     "clip-rule": _inherit_copy,
+    "display": _inherit_copy,
     "fill": _inherit_copy,
     "fill-rule": _inherit_copy,
     "style": _inherit_copy,
@@ -1252,18 +1353,26 @@ _GROUP_ATTRIB_HANDLERS = {
 }
 
 
-_INHERITABLE_GROUP_ATTRS = frozenset(
-    k for k, v in _GROUP_ATTRIB_HANDLERS.items() if v is not _do_not_inherit
+_INHERITABLE_ATTRIB = frozenset(
+    k for k, v in _INHERIT_ATTRIB_HANDLERS.items() if v is not _do_not_inherit
 )
 
 
-def _inherit_group_attrib(group, child, skip_unhandled_attrs=False):
-    attrib = copy.deepcopy(group.attrib)
+def _inherit_attrib(
+    attrib: Mapping[str, Any],
+    child: etree.Element,
+    skip_unhandled: bool = False,
+    skips=frozenset(),
+):
+    attrib = copy.deepcopy(attrib)
     for attr_name in sorted(attrib.keys()):
-        if not attr_name in _GROUP_ATTRIB_HANDLERS:
+        if attr_name in skips:
+            del attrib[attr_name]
             continue
-        _GROUP_ATTRIB_HANDLERS[attr_name](attrib, child, attr_name)
+        if not attr_name in _INHERIT_ATTRIB_HANDLERS:
+            continue
+        _INHERIT_ATTRIB_HANDLERS[attr_name](attrib, child, attr_name)
         del attrib[attr_name]
 
-    if attrib and not skip_unhandled_attrs:
-        raise ValueError(f"Unable to process group attrib {attrib}")
+    if len(attrib) and not skip_unhandled:
+        raise ValueError(f"Unable to process attrib {attrib}")
