@@ -25,12 +25,14 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    MutableMapping,
     NamedTuple,
     Optional,
     Sequence,
     Tuple,
 )
 from picosvg.svg_meta import (
+    attrib_default,
     number_or_percentage,
     ntos,
     splitns,
@@ -76,6 +78,7 @@ _XLINK_TEMP = "xlink_"
 
 
 _ATTRIB_W_CUSTOM_INHERITANCE = frozenset({"clip-path", "transform"})
+_OPACITY_ATTRIB = frozenset({"opacity"})
 
 
 # How much error, as pct of viewbox max(w,h), is allowed on lossy ops
@@ -151,6 +154,10 @@ def _field_name(attr_name):
     return attr_name.replace("-", "_")
 
 
+def _is_defs(tag):
+    return strip_ns(tag) == "defs"
+
+
 def _is_shape(tag):
     return strip_ns(tag) in _SHAPE_CLASSES
 
@@ -161,6 +168,52 @@ def _is_gradient(tag):
 
 def _is_group(tag):
     return strip_ns(tag) == "g"
+
+
+def _opacity(el):
+    return _clamp(float(el.attrib.get("opacity", 1.0)))
+
+
+def _is_removable_group(el):
+    """
+    Groups with:
+
+        0 < opacity < 1
+        >1 child
+
+    must be retained.
+
+    This over-retains groups; no difference unless children overlap
+    """
+    if not _is_group(el):
+        return False
+    # no attributes makes a group meaningless
+    if len(el.attrib) == 0:
+        return True
+    return len(el) <= 1 or _opacity(el) in {0.0, 1.0}
+
+
+def _try_remove_group(group_el):
+    """
+    Transfer children of group to their parent if possible.
+
+    Only groups with 0 < opacity < 1 *and* multiple children must be retained.
+
+    This over-retains groups; no difference unless children overlap
+    """
+    assert _is_group(group_el)
+
+    remove = _is_removable_group(group_el)
+    if remove:
+        if group_el.getparent() is not None:
+            _replace_el(group_el, list(group_el))
+    else:
+        # We're keeping the group, but we promised groups only have opacity
+        opacity = _opacity(group_el)
+        group_el.attrib.clear()
+        group_el.attrib["opacity"] = ntos(opacity)
+        _drop_default_attrib(group_el.attrib)
+    return remove
 
 
 def _element_transform(el, current_transform=Affine2D.identity()):
@@ -450,11 +503,13 @@ class SVG:
                         continue
                     group.attrib[attr_name] = use_el.attrib[attr_name]
 
-                if len(group.attrib):
-                    group.append(new_el)
-                    swaps.append((use_el, group))
-                else:
+                group.append(new_el)
+
+                if _try_remove_group(group):
+                    _inherit_attrib(group.attrib, new_el)
                     swaps.append((use_el, new_el))
+                else:
+                    swaps.append((use_el, group))
 
             for old_el, new_el in swaps:
                 old_el.getparent().replace(old_el, new_el)
@@ -483,6 +538,7 @@ class SVG:
             from_element(e).apply_transform(_element_transform(e, transform))
             for e in clip_path_el
         ]
+
         clip = SVGPath.from_commands(union(clip_paths))
 
         if "clip-path" in clip_path_el.attrib:
@@ -554,8 +610,18 @@ class SVG:
                 )
                 frontier.append(child_context)
 
-    def _transformed_gradient(self, url, transform, shape_bbox):
-        fill_el = self.resolve_url(url, "*")
+    def _add_to_defs(self, defs, new_el):
+        if "id" not in new_el.attrib:
+            return  # idless defs are useless
+        new_id = new_el.attrib["id"]
+        insert_at = 0
+        for i, el in enumerate(defs):
+            if new_id < el.attrib["id"]:
+                insert_at = i
+                break
+        defs.insert(insert_at, new_el)
+
+    def _transformed_gradient(self, defs, fill_el, transform, shape_bbox):
         assert _is_gradient(fill_el), f"Not sure how to fill from {fill_el.tag}"
 
         gradient = (
@@ -572,17 +638,20 @@ class SVG:
         # TODO normalize stop elements too
         new_fill.extend(copy.deepcopy(stop) for stop in fill_el)
 
-        fill_el.addnext(new_fill)
+        self._apply_gradient_translation(new_fill)
+
+        self._add_to_defs(defs, new_fill)
         return new_fill
 
     def _simplify(self):
         """
         Removes groups where possible, applies transforms, applies clip paths.
-
-        Groups with 0 < opacity < 1 and multiple children are retained.
         """
         # Reversed: we want leaves first
         to_process = reversed(tuple(c for c in self.breadth_first()))
+
+        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
+        self.svg_root.insert(0, defs)
 
         for context in to_process:
             if "clipPath" in context.path:
@@ -590,9 +659,12 @@ class SVG:
                 continue
 
             el = context.element
-            _del_attrs(el, "clip-path", "transform")  # handled separately
+            _del_attrs(el, *_ATTRIB_W_CUSTOM_INHERITANCE)  # handled separately
 
-            skips = _ATTRIB_W_CUSTOM_INHERITANCE | {"opacity"}  # handled separately
+            skips = _ATTRIB_W_CUSTOM_INHERITANCE | _OPACITY_ATTRIB  # handled separately
+            # context.attrib has inherited attrib
+            # if we inherit atop the existing values we'll double-combine, e.g. opacity will *= opacity
+            _del_attrs(el, *(set(context.attrib) - skips))
             _inherit_attrib(context.attrib, el, skips=skips)
 
             # Only some elements change
@@ -604,8 +676,11 @@ class SVG:
                 if context.transform != Affine2D.identity() and "url" in el.attrib.get(
                     "fill", ""
                 ):
+                    fill_el = self.resolve_url(el.attrib["fill"], "*")
+                    self._apply_gradient_template(fill_el)
                     fill_el = self._transformed_gradient(
-                        el.attrib["fill"],
+                        defs,
+                        fill_el,
                         context.transform,
                         from_element(el).bounding_box(),
                     )
@@ -638,23 +713,43 @@ class SVG:
                 if len(paths) != 1 or paths[0] != initial_path:
                     _replace_el(el, [to_element(p) for p in paths])
 
-            elif _is_group(el.tag):
-                # A group with 0 < opacity < 1 *and* multiple children must be retained
-                # This over-retains groups; no difference unless children overlap
-                opacity = _clamp(float(el.attrib.get("opacity", 1.0)))
-                keep_group = len(el) > 1 and opacity not in {0.0, 1.0}
+            elif _is_gradient(el.tag):
+                _safe_remove(el)
+                self._add_to_defs(defs, el)
+                self._apply_gradient_template(el)
+                self._apply_gradient_translation(el)
 
-                if keep_group:
-                    el.attrib.clear()
-                    el.attrib["opacity"] = ntos(opacity)
-                else:
-                    if opacity < 1.0:
-                        for child in el:
-                            _inherit_attrib({"opacity": ntos(opacity)}, child)
-                    _replace_el(el, list(el))
+            elif _is_defs(el.tag):
+                # any children were already processed
+                # now just moved to master defs
+                for child_el in el:
+                    self._add_to_defs(defs, child_el)
+                _safe_remove(el)
+
+            elif _is_group(el.tag):
+                children = list(el)
+                if _try_remove_group(el):
+                    # if we're removing a group with an interesting opacity push it down
+                    push_attrib = {
+                        attr_name: el.attrib[attr_name]
+                        for attr_name in _OPACITY_ATTRIB
+                        if attr_name in el.attrib
+                    }
+                    if push_attrib:
+                        for child in children:
+                            _inherit_attrib(push_attrib, child)
 
         # https://github.com/googlefonts/nanoemoji/issues/275
         _del_attrs(self.svg_root, *_INHERITABLE_ATTRIB)
+
+        self._remove_orphaned_gradients()
+
+        # After simplification only gradient defs should be referenced
+        # It's illegal for picosvg to leave anything else in defs
+        for unused_el in [el for el in defs if not _is_gradient(el)]:
+            defs.remove(unused_el)
+
+        self.elements = None  # force elements to reload
 
     def simplify(self, inplace=False):
         if not inplace:
@@ -1021,106 +1116,74 @@ class SVG:
     def _select_gradients(self):
         return self.xpath(" | ".join(f"//svg:{tag}" for tag in _GRADIENT_CLASSES))
 
-    def _collect_gradients(self, inplace=False):
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg._collect_gradients(inplace=False)
-            return svg
+    def _apply_gradient_translation(self, el: etree.Element):
+        assert _is_gradient(el)
+        gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(el, self.view_box())
+        affine = gradient.gradientTransform
 
-        # Collect gradients; remove other defs
-        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
-        for gradient in self._select_gradients():
-            gradient.getparent().remove(gradient)
-            defs.append(gradient)
+        # split translation from rest of the transform and apply to gradient coords
+        translate, affine_prime = affine.decompose_translation()
+        if translate.round(_GRADIENT_TRANSFORM_NDIGITS) != Affine2D.identity():
+            for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
+                x = getattr(gradient, x_attr)
+                y = getattr(gradient, y_attr)
+                x_prime, y_prime = translate.map_point((x, y))
+                setattr(gradient, x_attr, round(x_prime, _GRADIENT_TRANSFORM_NDIGITS))
+                setattr(gradient, y_attr, round(y_prime, _GRADIENT_TRANSFORM_NDIGITS))
 
-        for def_el in [e for e in self.xpath("//svg:defs")]:
-            def_el.getparent().remove(def_el)
+        gradient.gradientTransform = affine_prime.round(_GRADIENT_TRANSFORM_NDIGITS)
 
-        self.svg_root.insert(0, defs)
+        el.attrib.clear()
+        el.attrib.update(to_element(gradient).attrib)
 
-    def _apply_gradient_translation(self, inplace=False):
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg._apply_gradient_translation(inplace=True)
-            return svg
-
-        for el in self._select_gradients():
-            gradient = _GRADIENT_CLASSES[strip_ns(el.tag)].from_element(
-                el, self.view_box()
-            )
-            affine = gradient.gradientTransform
-
-            # split translation from rest of the transform and apply to gradient coords
-            translate, affine_prime = affine.decompose_translation()
-            if translate.round(_GRADIENT_TRANSFORM_NDIGITS) != Affine2D.identity():
-                for x_attr, y_attr in _GRADIENT_COORDS[strip_ns(el.tag)]:
-                    x = getattr(gradient, x_attr)
-                    y = getattr(gradient, y_attr)
-                    x_prime, y_prime = translate.map_point((x, y))
-                    setattr(
-                        gradient, x_attr, round(x_prime, _GRADIENT_TRANSFORM_NDIGITS)
-                    )
-                    setattr(
-                        gradient, y_attr, round(y_prime, _GRADIENT_TRANSFORM_NDIGITS)
-                    )
-
-            gradient.gradientTransform = affine_prime.round(_GRADIENT_TRANSFORM_NDIGITS)
-
-            el.attrib.clear()
-            el.attrib.update(to_element(gradient).attrib)
-
-    def _resolve_gradient_templates(self, inplace=False):
+    def _apply_gradient_template(self, gradient: etree.Element):
         # Gradients can have an 'href' attribute that specifies another gradient as
         # a template, inheriting its attributes and/or stops when not already defined:
         # https://www.w3.org/TR/SVG/pservers.html#PaintServerTemplates
-        if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg._resolve_gradient_templates(inplace=True)
-            return svg
+
+        assert _is_gradient(gradient)
 
         href_attr = _xlink_href_attr_name()
+        if href_attr not in gradient.attrib:
+            return  # nop
+
         el_by_id = {el.attrib["id"]: el for el in self.xpath(".//svg:*[@id]")}
 
-        def resolve_gradient_template(gradient: etree.Element):
-            ref = gradient.attrib[href_attr]
-            if not ref.startswith("#"):
-                raise ValueError(f"Only use #fragment supported, reject {ref}")
-            ref = ref[1:].strip()
+        ref = gradient.attrib[href_attr]
+        if not ref.startswith("#"):
+            raise ValueError(f"Only use #fragment supported, reject {ref}")
+        ref = ref[1:].strip()
 
-            template = el_by_id.get(ref)
-            if template is None:
-                raise ValueError(f"No element has id '{ref}'")
+        template = el_by_id.get(ref)
+        if template is None:
+            raise ValueError(f"No element has id '{ref}'")
 
-            template_tag = strip_ns(template.tag)
-            if template_tag not in _GRADIENT_CLASSES:
-                raise ValueError(
-                    f"Referenced element with id='{ref}' has unexpected tag: "
-                    f"expected linear or radialGradient, found '{template_tag}'"
-                )
+        template_tag = strip_ns(template.tag)
+        if template_tag not in _GRADIENT_CLASSES:
+            raise ValueError(
+                f"Referenced element with id='{ref}' has unexpected tag: "
+                f"expected linear or radialGradient, found '{template_tag}'"
+            )
 
-            # recurse if template references another template
-            if template.attrib.get(href_attr):
-                resolve_gradient_template(template)
+        # recurse if template references another template
+        if template.attrib.get(href_attr):
+            self._apply_gradient_template(template)
 
-            for attr_name in _GRADIENT_ATTRS[strip_ns(gradient.tag)]:
-                if attr_name in template.attrib and attr_name not in gradient.attrib:
-                    gradient.attrib[attr_name] = template.attrib[attr_name]
+        for attr_name in _GRADIENT_ATTRS[strip_ns(gradient.tag)]:
+            if attr_name in template.attrib and attr_name not in gradient.attrib:
+                gradient.attrib[attr_name] = template.attrib[attr_name]
 
-            # only copy stops if we don't have our own
-            if len(gradient) == 0:
-                for stop_el in template:
-                    new_stop_el = copy.deepcopy(stop_el)
-                    # strip stop id if present; useless and no longer unique
-                    _del_attrs(new_stop_el, "id")
-                    gradient.append(new_stop_el)
+        # only copy stops if we don't have our own
+        if len(gradient) == 0:
+            for stop_el in template:
+                new_stop_el = copy.deepcopy(stop_el)
+                # strip stop id if present; useless and no longer unique
+                _del_attrs(new_stop_el, "id")
+                gradient.append(new_stop_el)
 
-            del gradient.attrib[href_attr]
+        del gradient.attrib[href_attr]
 
-        for gradient in self._select_gradients():
-            if not gradient.attrib.get(href_attr):
-                continue
-            resolve_gradient_template(gradient)
-
+    def _remove_orphaned_gradients(self):
         # remove orphaned templates, only keep gradients directly referenced by shapes
         used_gradient_ids = set()
         for shape in self.shapes():
@@ -1217,9 +1280,6 @@ class SVG:
         self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
-        self._resolve_gradient_templates(inplace=True)
-        self._apply_gradient_translation(inplace=True)
-        self._collect_gradients(inplace=True)
 
         nano_violations = self.checkpicosvg()
         if nano_violations:
@@ -1330,6 +1390,7 @@ def _do_not_inherit(*_):
 
 _INHERIT_ATTRIB_HANDLERS = {
     "clip-rule": _inherit_copy,
+    "color": _inherit_copy,
     "display": _inherit_copy,
     "fill": _inherit_copy,
     "fill-rule": _inherit_copy,
@@ -1358,6 +1419,18 @@ _INHERITABLE_ATTRIB = frozenset(
 )
 
 
+def _drop_default_attrib(attrib: MutableMapping[str, Any]):
+    for attr_name in sorted(attrib.keys()):
+        value = attrib[attr_name]
+        default_value = attrib_default(attr_name, default=None)
+        if default_value is None:
+            continue
+        if isinstance(default_value, float):
+            value = float(value)
+        if default_value == value:
+            del attrib[attr_name]
+
+
 def _inherit_attrib(
     attrib: Mapping[str, Any],
     child: etree.Element,
@@ -1365,6 +1438,7 @@ def _inherit_attrib(
     skips=frozenset(),
 ):
     attrib = copy.deepcopy(attrib)
+    _drop_default_attrib(attrib)
     for attr_name in sorted(attrib.keys()):
         if attr_name in skips:
             del attrib[attr_name]

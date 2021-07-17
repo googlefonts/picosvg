@@ -29,7 +29,7 @@ def _test(actual, expected_result, op):
     drop_whitespace(expected_result)
     print(f"A: {pretty_print(actual.toetree())}")
     print(f"E: {pretty_print(expected_result.toetree())}")
-    assert actual.tostring() == expected_result.tostring()
+    assert pretty_print(actual.toetree()) == pretty_print(expected_result.toetree())
 
 
 @pytest.mark.parametrize(
@@ -202,6 +202,7 @@ def test_resolve_use(actual, expected_result):
         ("clip-groups.svg", "clip-groups-clipped-nano.svg"),
         ("clip-use.svg", "clip-use-clipped-nano.svg"),
         ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped-nano.svg"),
+        ("clip-clippath-attrs.svg", "clip-clippath-attrs-nano.svg"),
         ("rotated-rect.svg", "rotated-rect-nano.svg"),
         ("translate-rect.svg", "translate-rect-nano.svg"),
         ("ungroup-before.svg", "ungroup-nano.svg"),
@@ -454,7 +455,9 @@ def test_apply_style_attributes(actual, expected_result):
     ],
 )
 def test_apply_gradient_translation(gradient_string, expected_result):
-    svg = SVG.fromstring(svg_string(gradient_string))._apply_gradient_translation()
+    svg = SVG.fromstring(svg_string(gradient_string))
+    for grad_el in svg._select_gradients():
+        svg._apply_gradient_translation(grad_el)
     el = svg.xpath_one("//svg:linearGradient | //svg:radialGradient")
 
     for node in svg.svg_root.getiterator():
@@ -488,10 +491,16 @@ def test_default_for_blank(svg_content, expected_result):
     ],
 )
 def test_resolve_gradient_templates(actual, expected_result):
+    def apply_templates(svg):
+        for grad_el in svg._select_gradients():
+            svg._apply_gradient_template(grad_el)
+        svg._remove_orphaned_gradients()
+        return svg
+
     _test(
         actual,
         expected_result,
-        lambda svg: svg._resolve_gradient_templates(),
+        apply_templates,
     )
 
 

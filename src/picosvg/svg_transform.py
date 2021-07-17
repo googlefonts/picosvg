@@ -110,19 +110,6 @@ class Affine2D(NamedTuple):
 
     __imatmul__ = __matmul__
 
-    @staticmethod
-    def product(first: "Affine2D", second: "Affine2D") -> "Affine2D":
-        """Returns the product of second x first. DEPRECATED - use '@' infix operator"""
-        import warnings
-
-        warnings.warn(
-            "'product' is deprecated; use '@' infix operator",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return second @ first
-
     def matrix(self, a, b, c, d, e, f):
         return self @ Affine2D(a, b, c, d, e, f)
 

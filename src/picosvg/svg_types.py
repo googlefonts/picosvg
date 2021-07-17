@@ -16,12 +16,15 @@ import copy
 import dataclasses
 from itertools import zip_longest
 import math
+import numbers
 import re
 from picosvg.geometric_types import Point, Rect
 from picosvg.svg_meta import (
+    attrib_default,
     check_cmd,
     cmd_coords,
     number_or_percentage,
+    ntos,
     parse_css_declarations,
     path_segment,
     strip_ns,
@@ -33,7 +36,7 @@ from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
-from typing import Generator, Iterable, Mapping, MutableMapping, Tuple
+from typing import ClassVar, Generator, Iterable, Mapping, MutableMapping, Tuple
 
 
 def _round_multiple(f: float, of: float) -> float:
@@ -127,24 +130,25 @@ def _move_endpoint(curr_pos, cmd, cmd_args, new_endpoint):
 # Subset of https://www.w3.org/TR/SVG11/painting.html
 @dataclasses.dataclass
 class SVGShape:
+    tag: ClassVar[str] = "unknown"
     id: str = ""
-    clip_path: str = ""
-    clip_rule: str = "nonzero"
-    fill: str = "black"
-    fill_opacity: float = 1.0
-    fill_rule: str = "nonzero"
-    stroke: str = "none"
-    stroke_width: float = 1.0
-    stroke_linecap: str = "butt"
-    stroke_linejoin: str = "miter"
-    stroke_miterlimit: float = 4
-    stroke_dasharray: str = "none"
-    stroke_dashoffset: float = 0.0
-    stroke_opacity: float = 1.0
-    opacity: float = 1.0
-    transform: str = ""
-    style: str = ""
-    display: str = "inline"
+    clip_path: str = attrib_default("clip-path")
+    clip_rule: str = attrib_default("clip-rule")
+    fill: str = attrib_default("fill")
+    fill_opacity: float = attrib_default("fill-opacity")
+    fill_rule: str = attrib_default("fill-rule")
+    stroke: str = attrib_default("stroke")
+    stroke_width: float = attrib_default("stroke-width")
+    stroke_linecap: str = attrib_default("stroke-linecap")
+    stroke_linejoin: str = attrib_default("stroke-linejoin")
+    stroke_miterlimit: float = attrib_default("stroke-miterlimit")
+    stroke_dasharray: str = attrib_default("stroke-dasharray")
+    stroke_dashoffset: float = attrib_default("stroke-dashoffset")
+    stroke_opacity: float = attrib_default("stroke-opacity")
+    opacity: float = attrib_default("opacity")
+    transform: str = attrib_default("transform")
+    style: str = attrib_default("style")
+    display: str = attrib_default("display")
 
     def _copy_common_fields(
         self,
@@ -185,6 +189,28 @@ class SVGShape:
         self.transform = transform
         self.style = style
         self.display = display
+
+    def __str__(self) -> str:
+        parts = ["<", self.tag]
+        for field in dataclasses.fields(self):
+            attr_name = field.name.replace("_", "-")
+            value = getattr(self, field.name)
+            default_value = attrib_default(attr_name)
+            if isinstance(default_value, float):
+                value = float(value)
+            if value == default_value:
+                continue
+            parts.append(" ")
+            parts.append(attr_name)
+            parts.append("=")
+            parts.append('"')
+            if isinstance(value, numbers.Number):
+                parts.append(ntos(value))
+            else:
+                parts.append(str(value))
+            parts.append('"')
+        parts.append("/>")
+        return "".join(parts)
 
     def might_paint(self) -> bool:
         """False if we're sure this shape will not paint. True if it *might* paint."""
@@ -358,6 +384,7 @@ class SVGShape:
 # https://www.w3.org/TR/SVG11/paths.html#PathElement
 @dataclasses.dataclass
 class SVGPath(SVGShape, SVGCommandSeq):
+    tag: ClassVar[str] = "path"
     d: str = ""
 
     def __init__(self, **kwargs):
@@ -649,6 +676,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
 # https://www.w3.org/TR/SVG11/shapes.html#CircleElement
 @dataclasses.dataclass
 class SVGCircle(SVGShape):
+    tag: ClassVar[str] = "circle"
     r: float = 0
     cx: float = 0
     cy: float = 0
@@ -663,6 +691,7 @@ class SVGCircle(SVGShape):
 # https://www.w3.org/TR/SVG11/shapes.html#EllipseElement
 @dataclasses.dataclass
 class SVGEllipse(SVGShape):
+    tag: ClassVar[str] = "ellipse"
     rx: float = 0
     ry: float = 0
     cx: float = 0
@@ -685,6 +714,7 @@ class SVGEllipse(SVGShape):
 # https://www.w3.org/TR/SVG11/shapes.html#LineElement
 @dataclasses.dataclass
 class SVGLine(SVGShape):
+    tag: ClassVar[str] = "line"
     x1: float = 0
     y1: float = 0
     x2: float = 0
@@ -702,6 +732,7 @@ class SVGLine(SVGShape):
 # https://www.w3.org/TR/SVG11/shapes.html#PolygonElement
 @dataclasses.dataclass
 class SVGPolygon(SVGShape):
+    tag: ClassVar[str] = "polygon"
     points: str = ""
 
     def as_path(self) -> SVGPath:
@@ -717,6 +748,7 @@ class SVGPolygon(SVGShape):
 # https://www.w3.org/TR/SVG11/shapes.html#PolylineElement
 @dataclasses.dataclass
 class SVGPolyline(SVGShape):
+    tag: ClassVar[str] = "polyline"
     points: str = ""
 
     def as_path(self) -> SVGPath:
@@ -732,6 +764,7 @@ class SVGPolyline(SVGShape):
 # https://www.w3.org/TR/SVG11/shapes.html#RectElement
 @dataclasses.dataclass
 class SVGRect(SVGShape):
+    tag: ClassVar[str] = "rect"
     x: float = 0
     y: float = 0
     width: float = 0
@@ -773,6 +806,7 @@ _UNIT_RECT = Rect(0, 0, 1, 1)
 
 
 class _SVGGradient:
+    tag: ClassVar[str] = "some_gradient"
     id: str
     gradientTransform: Affine2D
     gradientUnits: str
@@ -828,6 +862,7 @@ class _SVGGradient:
 # Should be parsed with from_element
 @dataclasses.dataclass
 class SVGLinearGradient(_SVGGradient):
+    tag: ClassVar[str] = "linearGradient"
     id: str
     x1: float
     y1: float
@@ -857,6 +892,7 @@ class SVGLinearGradient(_SVGGradient):
 # Should be parsed with from_element
 @dataclasses.dataclass
 class SVGRadialGradient(_SVGGradient):
+    tag: ClassVar[str] = "radialGradient"
     id: str
     cx: float
     cy: float

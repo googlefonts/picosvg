@@ -265,8 +265,6 @@ class TestAffine2D:
         p0 = Point(1, 1)
         expected = affine2.map_point(affine1.map_point(p0)).round(2)
         assert (affine2 @ affine1).map_point(p0).round(2) == expected
-        # deprecated
-        assert Affine2D.product(affine1, affine2).map_point(p0).round(2) == expected
 
     def test_product_ordering(self):
         affine1 = Affine2D.identity().rotate(pi / 2)
