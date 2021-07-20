@@ -89,7 +89,6 @@ _XLINK_TEMP = "xlink_"
 
 
 _ATTRIB_W_CUSTOM_INHERITANCE = frozenset({"clip-path", "transform"})
-_OPACITY_ATTRIB = frozenset({"opacity"})
 
 
 # How much error, as pct of viewbox max(w,h), is allowed on lossy ops
@@ -201,10 +200,12 @@ def _is_removable_group(el):
     # no attributes makes a group meaningless
     if len(el.attrib) == 0:
         return True
-    return len(el) <= 1 or _opacity(el) in {0.0, 1.0}
+    num_children = sum(1 for e in el if e.tag is not etree.Comment)
+
+    return num_children <= 1 or _opacity(el) in {0.0, 1.0}
 
 
-def _try_remove_group(group_el):
+def _try_remove_group(group_el, push_attrib=False):
     """
     Transfer children of group to their parent if possible.
 
@@ -215,12 +216,18 @@ def _try_remove_group(group_el):
     assert _is_group(group_el)
 
     remove = _is_removable_group(group_el)
+    opacity = _opacity(group_el)
     if remove:
+        children = list(group_el)
         if group_el.getparent() is not None:
             _replace_el(group_el, list(group_el))
+        if push_attrib:
+            for child in children:
+                if child.tag is etree.Comment:
+                    continue
+                _inherit_attrib({"opacity": opacity}, child)
     else:
         # We're keeping the group, but we promised groups only have opacity
-        opacity = _opacity(group_el)
         group_el.attrib.clear()
         group_el.attrib["opacity"] = ntos(opacity)
         _drop_default_attrib(group_el.attrib)
@@ -582,7 +589,7 @@ class SVG:
                 return potential_id
         raise ValueError(f"No free id for {template}")
 
-    def breadth_first(self):
+    def _traverse(self, next_fn, append_fn):
         frontier = [
             SVGTraverseContext(
                 0,
@@ -594,10 +601,11 @@ class SVG:
             )
         ]
         while frontier:
-            context = frontier.pop(0)
+            context = next_fn(frontier)
             yield context
 
             child_idxs = defaultdict(int)
+            new_entries = []
             for child in context.element:
                 if child.tag is etree.Comment:
                     continue
@@ -619,7 +627,17 @@ class SVG:
                     clips,
                     _attrib_to_pass_on(child, context.attrib),
                 )
-                frontier.append(child_context)
+                new_entries.append(child_context)
+            append_fn(frontier, new_entries)
+
+    def depth_first(self):
+        # dfs will take from the back
+        # reverse so this still yields in order (first child, second child, etc)
+        # makes processing feel more intuitive
+        yield from self._traverse(lambda f: f.pop(), lambda f, e: f.extend(reversed(e)))
+
+    def breadth_first(self):
+        yield from self._traverse(lambda f: f.pop(0), lambda f, e: f.extend(e))
 
     def _add_to_defs(self, defs, new_el):
         if "id" not in new_el.attrib:
@@ -672,7 +690,7 @@ class SVG:
             el = context.element
             _del_attrs(el, *_ATTRIB_W_CUSTOM_INHERITANCE)  # handled separately
 
-            skips = _ATTRIB_W_CUSTOM_INHERITANCE | _OPACITY_ATTRIB  # handled separately
+            skips = _ATTRIB_W_CUSTOM_INHERITANCE | {"opacity"}  # handled separately
             # context.attrib has inherited attrib
             # if we inherit atop the existing values we'll double-combine, e.g. opacity will *= opacity
             _del_attrs(el, *(set(context.attrib) - skips))
@@ -711,6 +729,7 @@ class SVG:
                 for path in paths:
                     _reset_attrs(path, lambda field: field.name.startswith("stroke"))
 
+                # Apply any transform
                 if context.transform != Affine2D.identity():
                     paths = [p.apply_transform(context.transform) for p in paths]
 
@@ -738,17 +757,7 @@ class SVG:
                 _safe_remove(el)
 
             elif _is_group(el.tag):
-                children = list(el)
-                if _try_remove_group(el):
-                    # if we're removing a group with an interesting opacity push it down
-                    push_attrib = {
-                        attr_name: el.attrib[attr_name]
-                        for attr_name in _OPACITY_ATTRIB
-                        if attr_name in el.attrib
-                    }
-                    if push_attrib:
-                        for child in children:
-                            _inherit_attrib(push_attrib, child)
+                _try_remove_group(el, push_attrib=True)
 
         # https://github.com/googlefonts/nanoemoji/issues/275
         _del_attrs(self.svg_root, *_INHERITABLE_ATTRIB)
@@ -846,6 +855,11 @@ class SVG:
 
         # Update the etree
         self._update_etree()
+
+        # We may now have useless groups
+        for context in reversed(list(self.depth_first())):
+            if _is_group(context.element):
+                _try_remove_group(context.element, push_attrib=True)
 
         return self
 

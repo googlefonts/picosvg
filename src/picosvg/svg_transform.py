@@ -32,6 +32,7 @@ from picosvg.geometric_types import (
 )
 from picosvg.svg_meta import ntos
 
+DECOMPOSITION_ALMOST_EQUAL_TOLERANCE = 1e-6
 
 _SVG_ARG_FIXUPS = collections.defaultdict(
     lambda: lambda _: None,
@@ -277,6 +278,10 @@ class Affine2D(NamedTuple):
         sy = hypot(self.c, self.d)
         scale = Affine2D(sx, 0, 0, sy, 0, 0)
         remaining = Affine2D.compose_ltr((scale.inverse(), self))
+        test_compose = Affine2D.compose_ltr((scale, remaining))
+        assert self.almost_equals(
+            test_compose, DECOMPOSITION_ALMOST_EQUAL_TOLERANCE
+        ), f"Failed to extract scale from {self}, parts compose back to {test_compose}"
         return scale, remaining
 
     def decompose_translation(self) -> Tuple["Affine2D", "Affine2D"]:
@@ -328,7 +333,10 @@ class Affine2D(NamedTuple):
         # (with the translation zeroed) it'll land me in the same place?"
         translation = Affine2D.identity().translate(x_prime, y_prime)
         # sanity check that combining the two affines gives back self
-        assert self.almost_equals(Affine2D.compose_ltr((translation, affine_prime)))
+        test_compose = Affine2D.compose_ltr((translation, affine_prime))
+        assert self.almost_equals(
+            test_compose, DECOMPOSITION_ALMOST_EQUAL_TOLERANCE
+        ), f"Failed to extract translation from {self}, parts compose back to {test_compose}"
         return translation, affine_prime
 
 

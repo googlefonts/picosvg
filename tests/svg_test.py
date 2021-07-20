@@ -266,6 +266,7 @@ def test_topicosvg(actual, expected_result):
     "actual, expected_result",
     [
         ("outside-viewbox.svg", "outside-viewbox-clipped.svg"),
+        ("outside-viewbox-grouped.svg", "outside-viewbox-grouped-clipped.svg"),
     ],
 )
 def test_clip_to_viewbox(actual, expected_result):
