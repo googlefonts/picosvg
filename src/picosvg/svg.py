@@ -74,7 +74,7 @@ _GRADIENT_FIELDS = {
     for tag, klass in _GRADIENT_CLASSES.items()
 }
 # Manually add stop, we don't type it
-_GRADIENT_FIELDS["stop"] = tuple({"offset", "stop-color", "stop-opacity"})
+_GRADIENT_FIELDS["stop"] = tuple({"offset", "stop_color", "stop_opacity"})
 
 _GRADIENT_COORDS = {
     "linearGradient": (("x1", "y1"), ("x2", "y2")),
@@ -1447,10 +1447,8 @@ _INHERITABLE_ATTRIB = frozenset(
 def _attr_supported(el: etree.Element, attr_name: str) -> bool:
     tag = strip_ns(el.tag)
     field_name = _field_name(attr_name)
-    if tag in _SHAPE_FIELDS:
-        return field_name in _SHAPE_FIELDS[tag]
-    if tag in _GRADIENT_FIELDS:
-        return field_name in _GRADIENT_FIELDS[tag]
+    if tag in _VALID_FIELDS:
+        return field_name in _VALID_FIELDS[tag]
     return True  # we don't know
 
 
