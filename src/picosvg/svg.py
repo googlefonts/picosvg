@@ -65,14 +65,25 @@ _CLASS_ELEMENTS = {
 }
 _SHAPE_CLASSES.update({f"{{{svgns()}}}{k}": v for k, v in _SHAPE_CLASSES.items()})
 
-_GRADIENT_ATTRS = {
+_SHAPE_FIELDS = {
+    tag: tuple(f.name for f in dataclasses.fields(klass))
+    for tag, klass in _SHAPE_CLASSES.items()
+}
+_GRADIENT_FIELDS = {
     tag: tuple(f.name for f in dataclasses.fields(klass))
     for tag, klass in _GRADIENT_CLASSES.items()
 }
+# Manually add stop, we don't type it
+_GRADIENT_FIELDS["stop"] = tuple({"offset", "stop-color", "stop-opacity"})
+
 _GRADIENT_COORDS = {
     "linearGradient": (("x1", "y1"), ("x2", "y2")),
     "radialGradient": (("cx", "cy"), ("fx", "fy")),
 }
+
+_VALID_FIELDS = {}
+_VALID_FIELDS.update(_SHAPE_FIELDS)
+_VALID_FIELDS.update(_GRADIENT_FIELDS)
 
 _XLINK_TEMP = "xlink_"
 
@@ -146,11 +157,11 @@ def _del_attrs(el, *attr_names):
             del el.attrib[name]
 
 
-def _attr_name(field_name):
+def _attr_name(field_name: str) -> str:
     return field_name.replace("_", "-")
 
 
-def _field_name(attr_name):
+def _field_name(attr_name: str) -> str:
     return attr_name.replace("-", "_")
 
 
@@ -170,7 +181,7 @@ def _is_group(tag):
     return strip_ns(tag) == "g"
 
 
-def _opacity(el):
+def _opacity(el: etree.Element) -> float:
     return _clamp(float(el.attrib.get("opacity", 1.0)))
 
 
@@ -1169,7 +1180,7 @@ class SVG:
         if template.attrib.get(href_attr):
             self._apply_gradient_template(template)
 
-        for attr_name in _GRADIENT_ATTRS[strip_ns(gradient.tag)]:
+        for attr_name in _GRADIENT_FIELDS[strip_ns(gradient.tag)]:
             if attr_name in template.attrib and attr_name not in gradient.attrib:
                 gradient.attrib[attr_name] = template.attrib[attr_name]
 
@@ -1419,6 +1430,16 @@ _INHERITABLE_ATTRIB = frozenset(
 )
 
 
+def _attr_supported(el: etree.Element, attr_name: str) -> bool:
+    tag = strip_ns(el.tag)
+    field_name = _field_name(attr_name)
+    if tag in _SHAPE_FIELDS:
+        return field_name in _SHAPE_FIELDS[tag]
+    if tag in _GRADIENT_FIELDS:
+        return field_name in _GRADIENT_FIELDS[tag]
+    return True  # we don't know
+
+
 def _drop_default_attrib(attrib: MutableMapping[str, Any]):
     for attr_name in sorted(attrib.keys()):
         value = attrib[attr_name]
@@ -1440,7 +1461,7 @@ def _inherit_attrib(
     attrib = copy.deepcopy(attrib)
     _drop_default_attrib(attrib)
     for attr_name in sorted(attrib.keys()):
-        if attr_name in skips:
+        if attr_name in skips or not _attr_supported(child, attr_name):
             del attrib[attr_name]
             continue
         if not attr_name in _INHERIT_ATTRIB_HANDLERS:

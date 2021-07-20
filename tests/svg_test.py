@@ -252,6 +252,10 @@ def test_resolve_use(actual, expected_result):
             "transform-radial-objectbbox-before.svg",
             "transform-radial-objectbbox-nano.svg",
         ),
+        (
+            "illegal-inheritance-before.svg",
+            "illegal-inheritance-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
