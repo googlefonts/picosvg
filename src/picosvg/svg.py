@@ -1172,16 +1172,12 @@ class SVG:
         if href_attr not in gradient.attrib:
             return  # nop
 
-        el_by_id = {el.attrib["id"]: el for el in self.xpath(".//svg:*[@id]")}
-
         ref = gradient.attrib[href_attr]
         if not ref.startswith("#"):
             raise ValueError(f"Only use #fragment supported, reject {ref}")
         ref = ref[1:].strip()
 
-        template = el_by_id.get(ref)
-        if template is None:
-            raise ValueError(f"No element has id '{ref}'")
+        template = self.xpath_one(f'.//svg:*[@id="{ref}"]')
 
         template_tag = strip_ns(template.tag)
         if template_tag not in _GRADIENT_CLASSES:
