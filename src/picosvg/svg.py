@@ -205,7 +205,7 @@ def _is_removable_group(el):
     return num_children <= 1 or _opacity(el) in {0.0, 1.0}
 
 
-def _try_remove_group(group_el, push_attrib=False):
+def _try_remove_group(group_el, push_opacity=True):
     """
     Transfer children of group to their parent if possible.
 
@@ -221,7 +221,7 @@ def _try_remove_group(group_el, push_attrib=False):
         children = list(group_el)
         if group_el.getparent() is not None:
             _replace_el(group_el, list(group_el))
-        if push_attrib:
+        if push_opacity:
             for child in children:
                 if child.tag is etree.Comment:
                     continue
@@ -523,7 +523,7 @@ class SVG:
 
                 group.append(new_el)
 
-                if _try_remove_group(group):
+                if _try_remove_group(group, push_opacity=False):
                     _inherit_attrib(group.attrib, new_el)
                     swaps.append((use_el, new_el))
                 else:
@@ -691,8 +691,8 @@ class SVG:
             _del_attrs(el, *_ATTRIB_W_CUSTOM_INHERITANCE)  # handled separately
 
             skips = _ATTRIB_W_CUSTOM_INHERITANCE | {"opacity"}  # handled separately
-            # context.attrib has inherited attrib
-            # if we inherit atop the existing values we'll double-combine, e.g. opacity will *= opacity
+
+            # context.attrib has already computed final values so it's fine to overwrite any current values
             _del_attrs(el, *(set(context.attrib) - skips))
             _inherit_attrib(context.attrib, el, skips=skips)
 
@@ -757,7 +757,7 @@ class SVG:
                 _safe_remove(el)
 
             elif _is_group(el.tag):
-                _try_remove_group(el, push_attrib=True)
+                _try_remove_group(el)
 
         # https://github.com/googlefonts/nanoemoji/issues/275
         _del_attrs(self.svg_root, *_INHERITABLE_ATTRIB)
@@ -859,7 +859,7 @@ class SVG:
         # We may now have useless groups
         for context in reversed(list(self.depth_first())):
             if _is_group(context.element):
-                _try_remove_group(context.element, push_attrib=True)
+                _try_remove_group(context.element)
 
         return self
 
