@@ -1,0 +1,13 @@
+<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g opacity="0.25">
+       <!-- entirely out of bounds -->
+       <circle cx="5" cy="13" r="3" fill="red" />
+  </g>
+  <g opacity="0.5">
+       <!-- partially out of bounds -->
+       <circle cx="9" cy="5" r="2" fill="darkgreen" />
+       <!-- entirely out of bounds -->
+       <circle cx="5" cy="13" r="3" fill="red" />
+  </g>
+</svg>

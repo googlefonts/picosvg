@@ -1,0 +1,7 @@
+<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- entirely out of bounds -->
+  <!-- partially out of bounds -->
+  <path fill="darkgreen" opacity="0.5" d="M10,3.2676 L10,6.7324 C9.7058,6.9026 9.3643,7 9,7 C7.8954,7 7,6.1046 7,5 C7,3.8954 7.8954,3 9,3 C9.3643,3 9.7058,3.0974 10,3.2676 Z"/>
+  <!-- entirely out of bounds -->
+</svg>

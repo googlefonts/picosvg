@@ -1,0 +1,14 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <!-- group should be removed, but only rect should inherit fill -->
+  <g fill="blue">
+    <rect x="1" y="1" width="5" height="4"/>
+    <radialGradient id="gradient" cx="5" cy="7" r="3" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AEEA00" offset="0"/>
+      <stop stop-color="#8BC34A" offset="1"/>
+    </radialGradient>
+  </g>
+  <!-- keep the gradient alive -->
+  <rect x="1" y="6" width="5" height="4" fill="url(#gradient)" />
+</svg>
