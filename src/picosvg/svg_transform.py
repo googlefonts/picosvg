@@ -141,13 +141,17 @@ class Affine2D(NamedTuple):
             .translate(-cx, -cy)
         )
 
-    # https://www.w3.org/TR/SVG11/coords.html#SkewXDefined
+    # Note that andl here is in radians
     def skewx(self, a):
         return self.matrix(1, 0, tan(a), 1, 0, 0)
 
-    # https://www.w3.org/TR/SVG11/coords.html#SkewYDefined
+    # Note that angle here is in radians
     def skewy(self, a):
         return self.matrix(1, tan(a), 0, 1, 0, 0)
+
+    # Note that angle here is in radians
+    def skew(self, xAngle, yAngle):
+        return self.matrix(1, tan(yAngle), tan(xAngle), 1, 0, 0)
 
     def determinant(self) -> float:
         return self.a * self.d - self.b * self.c
