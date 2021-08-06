@@ -32,7 +32,7 @@ from picosvg.geometric_types import (
 )
 from picosvg.svg_meta import ntos
 
-DECOMPOSITION_ALMOST_EQUAL_TOLERANCE = 1e-6
+DECOMPOSITION_ALMOST_EQUAL_TOLERANCE = 1e-4
 
 _SVG_ARG_FIXUPS = collections.defaultdict(
     lambda: lambda _: None,
