@@ -353,6 +353,21 @@ class TestAffine2D:
                 Affine2D(1, 0, 0, 1, 50, -100),
                 Affine2D(0, -1.0, 1.0, 0, 0, 0),
             ),
+            # https://github.com/googlefonts/picosvg/issues/239
+            (
+                Affine2D(
+                    a=-4.382842e-08,
+                    b=1.0027,
+                    c=-4.2262,
+                    d=-1.847346e-07,
+                    e=1133.4812,
+                    f=889.4797,
+                ),
+                Affine2D(a=1, b=0, c=0, d=1, e=887.0845192597527, f=-268.2034070511364),
+                Affine2D(
+                    a=-4.382842e-08, b=1.0027, c=-4.2262, d=-1.847346e-07, e=0, f=0
+                ),
+            ),
         ],
     )
     def test_decompose_translation(
