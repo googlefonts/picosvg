@@ -44,6 +44,13 @@ import pytest
             Affine2D.identity().translate(1, -1),
             0.01,
         ),
+        # different rects
+        (
+            SVGRect(x=20, y=20, width=100, height=20),
+            SVGRect(x=40, y=30, width=60, height=20),
+            Affine2D(a=0.6, b=0.0, c=0.0, d=1.0, e=28.0, f=10.0),
+            0.01,
+        ),
         # circles that may happen to match the ones Noto clock emoji
         (
             SVGCircle(cx=15.89, cy=64.13, r=4),
@@ -117,9 +124,9 @@ def test_svg_reuse(s1, s2, expected_affine, tolerance):
     if expected_affine:
         assert (
             affine
-        ), f"No affine found between {s1.d} and {s2.d}. Expected {expected_affine}"
+        ), f"No affine found between {s1.as_path().d} and {s2.as_path().d}. Expected {expected_affine}"
         # Round because we've seen issues with different test environments when overly fine
         affine = affine.round(4)
     assert (
         affine == expected_affine
-    ), f"Unexpected affine found between {s1.d} and {s2.d}."
+    ), f"Unexpected affine found between {s1.as_path().d} and {s2.as_path().d}."
