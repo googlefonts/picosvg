@@ -116,14 +116,21 @@ class TestAffine2D:
         assert Affine2D.identity().scale(1, 0).is_degenerate()
         assert Affine2D.identity().scale(0, 0).is_degenerate()
 
-    def test_inverse(self):
-        t = Affine2D.identity().translate(2, 3).scale(4, 5)
+    @pytest.mark.parametrize(
+        "transform",
+        [
+            Affine2D.identity().translate(2, 3).scale(4, 5),
+            Affine2D(0, -2.875, 2.875, 0, 2.39, 250.81),
+        ],
+    )
+    def test_inverse(self, transform):
         p0 = Point(12, 34)
-        p1 = t.map_point(p0)
-        it = t.inverse()
+        p1 = transform.map_point(p0)
+        it = transform.inverse()
         p2 = it.map_point(p1)
         assert p2 == p0
 
+    def test_inverse_degenerate(self):
         assert Affine2D.degenerate().inverse() == Affine2D.degenerate()
         t = Affine2D(1, 1, 1, 1, 0, 0).inverse()
         assert t.is_degenerate()
