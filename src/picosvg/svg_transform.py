@@ -171,8 +171,7 @@ class Affine2D(NamedTuple):
         a, b, c, d, e, f = self
         det = self.determinant()
         a, b, c, d = d / det, -b / det, -c / det, a / det
-        e = -a * e - c * f
-        f = -b * e - d * f
+        e, f = -a * e - c * f, -b * e - d * f
         return self.__class__(a, b, c, d, e, f)
 
     def map_point(self, pt: Tuple[float, float]) -> Point:
