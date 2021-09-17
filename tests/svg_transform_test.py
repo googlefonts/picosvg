@@ -117,13 +117,35 @@ class TestAffine2D:
         assert Affine2D.identity().scale(0, 0).is_degenerate()
 
     @pytest.mark.parametrize(
+        "transform, inverse",
+        [
+            (
+                Affine2D.identity().translate(2, 3).scale(4, 5),
+                Affine2D(a=0.25, b=0.0, c=0.0, d=0.2, e=-0.5, f=-0.6),
+            ),
+            (
+                Affine2D(0, -2.875, 2.875, 0, 2.39, 250.81),
+                Affine2D(0.0, 0.348, -0.348, 0.0, 87.238, -0.831),
+            ),
+        ],
+    )
+    def test_inverse(self, transform, inverse):
+        assert transform.inverse().almost_equals(inverse, 1e-3)
+        assert (transform @ transform.inverse()).almost_equals(
+            Affine2D.identity()
+        )
+        assert (transform.inverse() @ transform).almost_equals(
+            Affine2D.identity()
+        )
+
+    @pytest.mark.parametrize(
         "transform",
         [
             Affine2D.identity().translate(2, 3).scale(4, 5),
             Affine2D(0, -2.875, 2.875, 0, 2.39, 250.81),
         ],
     )
-    def test_inverse(self, transform):
+    def test_inverse_roundtrip(self, transform):
         p0 = Point(12, 34)
         p1 = transform.map_point(p0)
         it = transform.inverse()
