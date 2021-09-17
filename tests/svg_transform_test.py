@@ -131,12 +131,8 @@ class TestAffine2D:
     )
     def test_inverse(self, transform, inverse):
         assert transform.inverse().almost_equals(inverse, 1e-3)
-        assert (transform @ transform.inverse()).almost_equals(
-            Affine2D.identity()
-        )
-        assert (transform.inverse() @ transform).almost_equals(
-            Affine2D.identity()
-        )
+        assert (transform @ transform.inverse()).almost_equals(Affine2D.identity())
+        assert (transform.inverse() @ transform).almost_equals(Affine2D.identity())
 
     @pytest.mark.parametrize(
         "transform",
