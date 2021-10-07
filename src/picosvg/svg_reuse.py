@@ -20,7 +20,7 @@ from itertools import islice
 from math import atan2
 from picosvg.geometric_types import Vector, almost_equal
 from picosvg.svg_types import SVGShape, SVGPath
-from typing import Generator, Iterable, Optional, Tuple
+from typing import Callable, Generator, Iterable, Optional, Tuple
 from picosvg import svg_meta
 from picosvg.svg_transform import Affine2D
 
@@ -72,12 +72,28 @@ def _affine_vec2vec(initial: Vector, target: Vector) -> Affine2D:
     return affine
 
 
-def _first_y(vectors: Iterable[Vector], tolerance: float) -> Optional[Vector]:
+def _first_significant(
+    vectors: Iterable[Vector], val_fn: Callable[[Vector], float], tolerance: float
+) -> Tuple[int, Optional[Vector]]:
     tolerance = _SIGNIFICANCE_FACTOR * tolerance
     for idx, vec in enumerate(vectors):
-        if idx > 0 and abs(vec.y) > tolerance:
-            return vec
-    return None
+        if idx == 0:  # skip initial move
+            continue
+        if abs(val_fn(vec)) > tolerance:
+            return (idx, vec)
+    return (-1, None)
+
+
+def _first_significant_for_both(
+    s1: SVGPath, s2: SVGPath, val_fn: Callable[[Vector], float], tolerance: float
+) -> Tuple[int, Optional[Vector], Optional[Vector]]:
+    tolerance = _SIGNIFICANCE_FACTOR * tolerance
+    for idx, (vec1, vec2) in enumerate(zip(_vectors(s1), _vectors(s2))):
+        if idx == 0:  # skip initial move
+            continue
+        if abs(val_fn(vec1)) > tolerance and abs(val_fn(vec2)) > tolerance:
+            return (idx, vec1, vec2)
+    return (-1, None, None)
 
 
 # Makes a shape safe for a walk with _affine_callback
@@ -116,7 +132,7 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     return ((cmd, args),)
 
 
-def normalize(shape: SVGShape, tolerance: float) -> SVGShape:
+def normalize(shape: SVGShape, tolerance: float) -> SVGPath:
     """Build a version of shape that will compare == to other shapes even if offset,
     scaled, rotated, etc.
 
@@ -128,19 +144,23 @@ def normalize(shape: SVGShape, tolerance: float) -> SVGShape:
     x, y = _first_move(path)
     path.move(-x, -y, inplace=True)
 
-    # Normlize vector 1 to [1 0]; eliminates rotation and uniform scaling
-    vec1 = _nth_vector(path, 1)  # ignore M 0,0
-    affine1 = _affine_vec2vec(vec1, Vector(1, 0))
-    path.walk(lambda *args: _affine_callback(affine1, *args))
+    # Normlize first activity to [1 0]; eliminates rotation and uniform scaling
+    _, vec_first = _first_significant(_vectors(path), lambda v: v.norm(), tolerance)
+    if vec_first and not almost_equal(vec_first.x, 1.0):
+        assert (
+            vec_first.norm() > tolerance
+        ), f"vec_first too close to 0-magnitude: {vec_first}"
+        affinex = _affine_vec2vec(vec_first, Vector(1, 0))
+        path.walk(lambda *args: _affine_callback(affinex, *args))
 
-    # Scale first y movement to 1.0
-    vecy = _first_y(_vectors(path), tolerance)
+    # Normlize first y activity to 1.0; eliminates mirroring and non-uniform scaling
+    _, vecy = _first_significant(_vectors(path), lambda v: v.y, tolerance)
     if vecy and not almost_equal(vecy.y, 1.0):
+        assert vecy.norm() > tolerance, f"vecy too close to 0-magnitude: {vecy}"
         affine2 = Affine2D.identity().scale(1, 1 / vecy.y)
         path.walk(lambda *args: _affine_callback(affine2, *args))
 
-    # TODO: what if shapes are the same but different start point
-    # TODO: what if shapes are the same but different drawing cmds
+    # TODO: what if shapes are the same but different, or different ordering, drawing cmds
     # This DOES happen in Noto; extent unclear
 
     path.round_multiple(tolerance, inplace=True)
@@ -154,7 +174,8 @@ def _apply_affine(affine: Affine2D, s: SVGPath) -> SVGPath:
 
 
 def _try_affine(affine: Affine2D, s1: SVGPath, s2: SVGPath, tolerance: float):
-    return _apply_affine(affine, s1).almost_equals(s2, tolerance)
+    s1_prime = _apply_affine(affine, s1)
+    return s1_prime.almost_equals(s2, tolerance)
 
 
 def _round(affine, s1, s2, tolerance):
@@ -170,7 +191,10 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     """Returns the Affine2D to change s1 into s2 or None if no solution was found.
 
     Intended use is to call this only when the normalized versions of the shapes
-    are the same, in which case finding a solution is typical
+    are the same, in which case finding a solution is typical.
+
+
+    See reuse_example.html in root of picosvg for a visual explanation.
 
     """
     s1 = dataclasses.replace(s1, id="")
@@ -187,48 +211,51 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
 
     affine = Affine2D.identity().translate(s2x - s1x, s2y - s1y)
     if _try_affine(affine, s1, s2, tolerance):
-        return affine
+        return _round(affine, s1, s2, tolerance)
 
-    # Normalize first edge.
+    # Align the first edge with a significant x part.
     # Fixes rotation, x-scale, and uniform scaling.
-    s1_vec1 = _nth_vector(s1, 1)
-    s2_vec1 = _nth_vector(s2, 1)
+    s2_vec1x_idx, s2_vec1x = _first_significant(_vectors(s2), lambda v: v.x, tolerance)
+    assert s2_vec1x_idx != -1
+    s1_vec1 = _nth_vector(s1, s2_vec1x_idx)
 
     s1_to_origin = Affine2D.identity().translate(-s1x, -s1y)
     s2_to_origin = Affine2D.identity().translate(-s2x, -s2y)
-    s1_vec1_to_s2_vec1 = _affine_vec2vec(s1_vec1, s2_vec1)
+    s1_vec1_to_s2_vec1x = _affine_vec2vec(s1_vec1, s2_vec1x)
 
     # Move to s2 start
     origin_to_s2 = Affine2D.identity().translate(s2x, s2y)
 
-    affine = Affine2D.compose_ltr((s1_to_origin, s1_vec1_to_s2_vec1, origin_to_s2))
+    affine = Affine2D.compose_ltr((s1_to_origin, s1_vec1_to_s2_vec1x, origin_to_s2))
     if _try_affine(affine, s1, s2, tolerance):
         return _round(affine, s1, s2, tolerance)
 
     # Could be non-uniform scaling and/or mirroring
-    # Scale first y movement (after matching up vec1) to match
+    # Make the aligned edge the x axis then align the first edge with a significant y part.
 
     # Rotate first edge to lie on x axis
-    s2_vec1_angle = _angle(s2_vec1)
+    s2_vec1_angle = _angle(s2_vec1x)
     rotate_s2vec1_onto_x = Affine2D.identity().rotate(-s2_vec1_angle)
     rotate_s2vec1_off_x = Affine2D.identity().rotate(s2_vec1_angle)
 
     affine = Affine2D.compose_ltr(
-        (s1_to_origin, s1_vec1_to_s2_vec1, rotate_s2vec1_onto_x)
+        (s1_to_origin, s1_vec1_to_s2_vec1x, rotate_s2vec1_onto_x)
     )
     s1_prime = _apply_affine(affine, s1)
 
     affine = Affine2D.compose_ltr((s2_to_origin, rotate_s2vec1_onto_x))
     s2_prime = _apply_affine(affine, s2)
 
-    s1_vecy = _first_y(_vectors(s1_prime), tolerance)
-    s2_vecy = _first_y(_vectors(s2_prime), tolerance)
-
-    if s1_vecy and s2_vecy:
+    # The first vector we aligned now lies on the x axis
+    # Find and align the first vector that heads off into y for both
+    idx, s1_vecy, s2_vecy = _first_significant_for_both(
+        s1_prime, s2_prime, lambda v: v.y, tolerance
+    )
+    if idx != -1:
         affine = Affine2D.compose_ltr(
             (
                 s1_to_origin,
-                s1_vec1_to_s2_vec1,
+                s1_vec1_to_s2_vec1x,
                 # lie vec1 along x axis
                 rotate_s2vec1_onto_x,
                 # scale first y-vectors to match; x-parts should already match

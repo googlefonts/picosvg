@@ -19,6 +19,25 @@ import pytest
 
 
 @pytest.mark.parametrize(
+    "shape, tolerance, expected_normalization",
+    [
+        # Real example from Noto Emoji, eyes that were normalizing everything to have 0,0 coords
+        # Caused by initial M and L having same coords, creating a 0-magnitude vec
+        (
+            SVGPath(
+                d="M44.67,45.94 L44.67,45.94 C40.48,45.94 36.67,49.48 36.67,55.36 C36.67,61.24 40.48,64.77 44.67,64.77 L44.67,64.77 C48.86,64.77 52.67,61.23 52.67,55.36 C52.67,49.49 48.86,45.94 44.67,45.94 Z"
+            ),
+            0.1,
+            "M0,0 l0,0 c0.2,-0.3 0.6,-0.3 1,0 c0.4,0.3 0.4,0.7 0.2,1 l0,0 c-0.2,0.3 -0.6,0.3 -1,0 c-0.4,-0.3 -0.4,-0.7 -0.2,-1 z",
+        ),
+    ],
+)
+def test_svg_normalization(shape, tolerance, expected_normalization):
+    normalized = normalize(shape, tolerance)
+    assert normalized.round_floats(4).d == expected_normalization
+
+
+@pytest.mark.parametrize(
     "s1, s2, expected_affine, tolerance",
     [
         # a rect and a circle can never be the same!
@@ -110,6 +129,17 @@ import pytest
             ),
             Affine2D(a=0.249, b=-0.859, c=0.859, d=0.249, e=32.255, f=97.667),
             0.2,
+        ),
+        # Real example from Noto Emoji, eyes that were normalizing everything to have 0,0 coords
+        (
+            SVGPath(
+                d="M44.67,45.94L44.67,45.94 c-4.19,0-8,3.54-8,9.42 s3.81,9.41,8,9.41l0,0 c4.19,0,8-3.54,8-9.41 S48.86,45.94,44.67,45.94z"
+            ),
+            SVGPath(
+                d="M83,45.94   L83,45.94    c-4.19,0-8,3.54-8,9.42 s3.81,9.41,8,9.41l0,0 c4.19,0,8-3.54,8-9.41 S87.21,45.94,83,45.94z"
+            ),
+            Affine2D.identity().translate(38.33, 0.0),
+            0.1,
         ),
     ],
 )
