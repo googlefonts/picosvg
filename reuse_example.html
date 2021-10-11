@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { margin: 0; }
+svg { border: 1px dashed gray; width: 34%;  }
+
+path { opacity: 33%; }
+
+path:nth-of-type(1) { fill: blue; }
+path:nth-of-type(2) { fill: red; }
+</style>
+</head>
+
+<body>
+<p>
+	Notes on reuse process.
+</p>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-75 -75 250 250" >
+   <path d="M68,64 l-50,-32 l0,30 z"/>
+   <path d="M68,64 l50,-32 l0,30 z"/>
+
+  <text x="-65" y="-55">same start point</text>
+</svg>
+
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-75 -75 250 250" >
+   <path d="M68,64 l50.00000000000001,-31.999999999999986 l-27.24177071509648,-12.56526674233826 z"/>
+   <path d="M68,64 l50,-32 l0,30 z"/>
+  <text x="-65" y="-55">shared edge</text>
+</svg>
+
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-75 -75 250 250" >
+   <path d="M0,0 l59.36328831862332,0 l-16.17161089270101,-25.268142019845346 z"/>
+   <path d="M0,0 l59.36328831862332,0 l-16.17161089270102,25.26814201984534 z"/>
+  <text x="-65" y="-55">shared edge => x axis</text>
+</svg>
+
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-75 -75 250 250" >
+   <path d="M68,64 l49.99999999999998,-32.000000000000014 l0,29.999999999999986 z"/>
+   <path d="M68,64 l50,-32 l0,30 z"/>
+  <text x="-65" y="-55">align y; apply to original</text>
+</svg>
+</body>
+
+</html>
