@@ -216,7 +216,11 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     # Align the first edge with a significant x part.
     # Fixes rotation, x-scale, and uniform scaling.
     s2_vec1x_idx, s2_vec1x = _first_significant(_vectors(s2), lambda v: v.x, tolerance)
-    assert s2_vec1x_idx != -1
+    if s2_vec1x_idx == -1:
+        # bail out if we find no first edge with significant x part
+        # https://github.com/googlefonts/picosvg/issues/246
+        return None
+
     s1_vec1 = _nth_vector(s1, s2_vec1x_idx)
 
     s1_to_origin = Affine2D.identity().translate(-s1x, -s1y)
