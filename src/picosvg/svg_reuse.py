@@ -146,7 +146,7 @@ def normalize(shape: SVGShape, tolerance: float) -> SVGPath:
 
     # Normlize first activity to [1 0]; eliminates rotation and uniform scaling
     _, vec_first = _first_significant(_vectors(path), lambda v: v.norm(), tolerance)
-    if vec_first and not almost_equal(vec_first.x, 1.0):
+    if vec_first and not vec_first.almost_equals(Vector(1, 0)):
         assert (
             vec_first.norm() > tolerance
         ), f"vec_first too close to 0-magnitude: {vec_first}"
