@@ -118,6 +118,13 @@ class Vector(NamedTuple):
             return Vector()
         return self.dot(other) / norm * other.unit()
 
+    def almost_equals(
+        self, other: "Vector", tolerance=DEFAULT_ALMOST_EQUAL_TOLERANCE
+    ) -> bool:
+        return almost_equal(self.x, other.x, tolerance) and almost_equal(
+            self.y, other.y, tolerance
+        )
+
 
 class Rect(NamedTuple):
     x: float = 0
