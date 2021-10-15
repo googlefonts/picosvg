@@ -30,6 +30,8 @@ import pytest
             0.1,
             "M0,0 l0,0 c0.2,-0.3 0.6,-0.3 1,0 c0.4,0.3 0.4,0.7 0.2,1 l0,0 c-0.2,0.3 -0.6,0.3 -1,0 c-0.4,-0.3 -0.4,-0.7 -0.2,-1 z",
         ),
+        # https://github.com/googlefonts/picosvg/issues/249
+        (SVGPath(d="M-1,-1 L 0,1 L 1, -1 z"), 0.1, "M0,0 l1,0 l-0.6,1 z"),
     ],
 )
 def test_svg_normalization(shape, tolerance, expected_normalization):
