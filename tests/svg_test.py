@@ -203,6 +203,7 @@ def test_resolve_use(actual, expected_result):
         ("clip-use.svg", "clip-use-clipped-nano.svg"),
         ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped-nano.svg"),
         ("clip-clippath-attrs.svg", "clip-clippath-attrs-nano.svg"),
+        ("clip-clippath-none.svg", "clip-clippath-none-nano.svg"),
         ("rotated-rect.svg", "rotated-rect-nano.svg"),
         ("translate-rect.svg", "translate-rect-nano.svg"),
         ("ungroup-before.svg", "ungroup-nano.svg"),

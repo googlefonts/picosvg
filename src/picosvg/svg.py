@@ -611,7 +611,7 @@ class SVG:
                     continue
                 transform = _element_transform(child, context.transform)
                 clips = context.clips
-                if "clip-path" in child.attrib:
+                if "clip-path" in child.attrib and child.attrib["clip-path"] != "none":
                     clips += (
                         self._resolve_clip_path(child.attrib["clip-path"], transform),
                     )
