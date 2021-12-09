@@ -194,7 +194,7 @@ class _LinkedDefault(float):
         return getattr(data_obj, self.attr_name)
 
 
-_ATTRIB_DEFAULTS = {
+ATTRIB_DEFAULTS = {
     "clip-path": "",
     "clip-rule": "nonzero",
     "fill": "black",
@@ -218,8 +218,8 @@ _ATTRIB_DEFAULTS = {
 
 
 def attrib_default(name: str, default: Any = ()) -> Any:
-    if name in _ATTRIB_DEFAULTS:
-        return _ATTRIB_DEFAULTS[name]
+    if name in ATTRIB_DEFAULTS:
+        return ATTRIB_DEFAULTS[name]
     if default == ():
         raise ValueError(f"No entry for '{name}' and no default given")
     return default

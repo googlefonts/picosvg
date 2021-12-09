@@ -15,7 +15,7 @@
 from collections import defaultdict, deque
 import copy
 import dataclasses
-from functools import reduce
+from functools import lru_cache, reduce
 import itertools
 from lxml import etree  # pytype: disable=import-error
 import re
@@ -32,6 +32,7 @@ from typing import (
     Tuple,
 )
 from picosvg.svg_meta import (
+    ATTRIB_DEFAULTS,
     attrib_default,
     number_or_percentage,
     ntos,
@@ -88,7 +89,7 @@ _VALID_FIELDS.update(_GRADIENT_FIELDS)
 _XLINK_TEMP = "xlink_"
 
 
-_ATTRIB_W_CUSTOM_INHERITANCE = frozenset({"clip-path", "transform"})
+_ATTRIB_W_CUSTOM_INHERITANCE = frozenset({"clip-path", "opacity", "transform"})
 
 
 # How much error, as pct of viewbox max(w,h), is allowed on lossy ops
@@ -245,36 +246,41 @@ def _element_transform(el, current_transform=Affine2D.identity()):
     return current_transform
 
 
-def from_element(el):
+def from_element(el, **inherited_attrib):
     if not _is_shape(el.tag):
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _SHAPE_CLASSES[el.tag]
-    parse_fn = getattr(data_type, "from_element", None)
+    attrs = {**inherited_attrib, **el.attrib}
     args = {
-        f.name: f.type(el.attrib[_attr_name(f.name)])
+        f.name: f.type(attrs[_attr_name(f.name)])
         for f in dataclasses.fields(data_type)
-        if el.attrib.get(_attr_name(f.name), "").strip()
+        if attrs.get(_attr_name(f.name), "").strip()
     }
     return data_type(**args)
 
 
-def to_element(data_obj):
+def to_element(data_obj, **inherited_attrib):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
     for field in dataclasses.fields(data_obj):
+        attr_name = _attr_name(field.name)
         field_value = getattr(data_obj, field.name)
-        # omit attributes whose value == the respective default
+        # omit attributes whose value == the respective default,
+        # unless it's != from the attribute value inherited from context
         if isinstance(field.default, _LinkedDefault):
             default_value = field.default(data_obj)
         else:
             default_value = field.default
-        if field_value == default_value:
-            continue
         attrib_value = field_value
         if isinstance(attrib_value, numbers.Number):
             attrib_value = ntos(attrib_value)
         elif isinstance(attrib_value, Affine2D):
             attrib_value = attrib_value.tostring()
-        el.attrib[_attr_name(field.name)] = attrib_value
+        if attr_name in inherited_attrib:
+            if attrib_value == inherited_attrib[attr_name]:
+                continue
+        elif field_value == default_value:
+            continue
+        el.attrib[attr_name] = attrib_value
     return el
 
 
@@ -301,7 +307,7 @@ def _xpath_for_url(url, el_tag):
     return f'//svg:{el_tag}[@id="{_id_of_target(url)}"]'
 
 
-def _attrib_to_pass_on(el, current_attrib, skips=_ATTRIB_W_CUSTOM_INHERITANCE):
+def _attrib_to_pass_on(current_attrib, el, skips=_ATTRIB_W_CUSTOM_INHERITANCE):
     attr_catcher = etree.Element("dummy")
     _inherit_attrib(el.attrib, attr_catcher, skips=skips, skip_unhandled=True)
     _inherit_attrib(current_attrib, attr_catcher, skips=skips)
@@ -328,7 +334,7 @@ class SVGTraverseContext(NamedTuple):
         return self.path.count("/") - 1
 
     def shape(self) -> SVGShape:
-        return from_element(self.element)
+        return from_element(self.element, **self.attrib)
 
     def is_shape(self):
         return _is_shape(self.element)
@@ -350,11 +356,11 @@ class SVG:
         if self.elements:
             return self.elements
         elements = []
-        view_box = self.view_box()
-        for el in self.svg_root.iter("*"):
+        for context in self.depth_first(resolve_clip_paths=False):
+            el = context.element
             if el.tag not in _SHAPE_CLASSES:
                 continue
-            elements.append((el, (from_element(el),)))
+            elements.append((el, (context.shape(),)))
         self.elements = elements
         return self.elements
 
@@ -589,7 +595,7 @@ class SVG:
                 return potential_id
         raise ValueError(f"No free id for {template}")
 
-    def _traverse(self, next_fn, append_fn):
+    def _traverse(self, next_fn, append_fn, resolve_clip_paths=True):
         frontier = [
             SVGTraverseContext(
                 0,
@@ -597,7 +603,7 @@ class SVG:
                 "/svg[0]",
                 Affine2D.identity(),
                 (),
-                _attrib_to_pass_on(self.svg_root, {}),
+                _attrib_to_pass_on(_INHERITABLE_ATTRIB_DEFAULTS, self.svg_root),
             )
         ]
         while frontier:
@@ -611,7 +617,11 @@ class SVG:
                     continue
                 transform = _element_transform(child, context.transform)
                 clips = context.clips
-                if "clip-path" in child.attrib and child.attrib["clip-path"] != "none":
+                if (
+                    resolve_clip_paths
+                    and child.attrib.get("clip-path")  # neither None nor ""
+                    and child.attrib["clip-path"] != "none"
+                ):
                     clips += (
                         self._resolve_clip_path(child.attrib["clip-path"], transform),
                     )
@@ -625,19 +635,27 @@ class SVG:
                     path,
                     transform,
                     clips,
-                    _attrib_to_pass_on(child, context.attrib),
+                    _attrib_to_pass_on(context.attrib, child),
                 )
                 new_entries.append(child_context)
             append_fn(frontier, new_entries)
 
-    def depth_first(self):
+    def depth_first(self, resolve_clip_paths=True):
         # dfs will take from the back
         # reverse so this still yields in order (first child, second child, etc)
         # makes processing feel more intuitive
-        yield from self._traverse(lambda f: f.pop(), lambda f, e: f.extend(reversed(e)))
+        yield from self._traverse(
+            lambda f: f.pop(),
+            lambda f, e: f.extend(reversed(e)),
+            resolve_clip_paths=resolve_clip_paths,
+        )
 
-    def breadth_first(self):
-        yield from self._traverse(lambda f: f.pop(0), lambda f, e: f.extend(e))
+    def breadth_first(self, resolve_clip_paths=True):
+        yield from self._traverse(
+            lambda f: f.pop(0),
+            lambda f, e: f.extend(e),
+            resolve_clip_paths=resolve_clip_paths,
+        )
 
     def _add_to_defs(self, defs, new_el):
         if "id" not in new_el.attrib:
@@ -688,13 +706,8 @@ class SVG:
                 continue
 
             el = context.element
-            _del_attrs(el, *_ATTRIB_W_CUSTOM_INHERITANCE)  # handled separately
-
-            skips = _ATTRIB_W_CUSTOM_INHERITANCE | {"opacity"}  # handled separately
-
-            # context.attrib has already computed final values so it's fine to overwrite any current values
-            _del_attrs(el, *(set(context.attrib) - skips))
-            _inherit_attrib(context.attrib, el, skips=skips)
+            _del_attrs(el, "clip-path", "transform")  # handled separately
+            _inherit_attrib(context.attrib, el)
 
             # Only some elements change
             if _is_shape(el.tag):
@@ -1320,11 +1333,25 @@ class SVG:
                 raise ValueError("Lost parent!")
             parent.remove(old_el)
 
+    @lru_cache(maxsize=None)
+    def _inherited_attrib(self, el: etree.Element) -> Mapping[str, str]:
+        parents = []
+        while el.getparent() is not None:
+            el = el.getparent()
+            parents.append(el)
+        return reduce(
+            _attrib_to_pass_on, reversed(parents), _INHERITABLE_ATTRIB_DEFAULTS
+        )
+
     def _update_etree(self):
         if not self.elements:
             return
+        self._inherited_attrib.cache_clear()
         self._swap_elements(
-            (old_el, [to_element(s) for s in shapes])
+            (
+                old_el,
+                [to_element(s, **self._inherited_attrib(old_el)) for s in shapes],
+            )
             for old_el, shapes in self.elements
         )
         self.elements = None
@@ -1439,6 +1466,16 @@ _INHERITABLE_ATTRIB = frozenset(
     k for k, v in _INHERIT_ATTRIB_HANDLERS.items() if v is not _do_not_inherit
 )
 
+_INHERITABLE_ATTRIB_DEFAULTS = {
+    k: (
+        ntos(ATTRIB_DEFAULTS[k])
+        if isinstance(ATTRIB_DEFAULTS[k], numbers.Number)
+        else str(ATTRIB_DEFAULTS[k])
+    )
+    for k, v in _INHERIT_ATTRIB_HANDLERS.items()
+    if k in ATTRIB_DEFAULTS and v is _inherit_copy
+}
+
 
 def _attr_supported(el: etree.Element, attr_name: str) -> bool:
     tag = strip_ns(el.tag)
@@ -1467,7 +1504,6 @@ def _inherit_attrib(
     skips=frozenset(),
 ):
     attrib = copy.deepcopy(attrib)
-    _drop_default_attrib(attrib)
     for attr_name in sorted(attrib.keys()):
         if attr_name in skips or not _attr_supported(child, attr_name):
             del attrib[attr_name]
