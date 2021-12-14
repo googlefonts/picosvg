@@ -265,6 +265,10 @@ def test_resolve_use(actual, expected_result):
             "explicit-default-stroke-no-inherit-before.svg",
             "explicit-default-stroke-no-inherit-nano.svg",
         ),
+        (
+            "inherit-default-fill-before.svg",
+            "inherit-default-fill-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -585,6 +589,7 @@ def test_evenodd_to_nonzero_winding(actual, expected_result):
     (
         "explicit-default-fill-no-inherit-before.svg",
         "explicit-default-stroke-no-inherit-before.svg",
+        "inherit-default-fill-before.svg",
     ),
 )
 def test_update_tree_lossless(input_svg):
