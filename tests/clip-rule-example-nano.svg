@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" viewBox="0 0 100 90" version="1.1">
+  <defs/>
+  <path fill="blue" d="M31.852,56.323 L50,69.286 L21,90 L31.852,56.323 L2,35 L38.722,35 L50,0 L50,35 L38.722,35 Z"/>
+  <path fill="red" d="M50,0 L61.278,35 L98,35 L68.148,56.323 L79,90 L50,69.286 Z"/>
+</svg>
