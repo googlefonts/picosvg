@@ -258,12 +258,12 @@ def test_resolve_use(actual, expected_result):
             "illegal-inheritance-nano.svg",
         ),
         (
-            "inherit-default-fill-before.svg",
-            "inherit-default-fill-nano.svg",
+            "explicit-default-fill-no-inherit-before.svg",
+            "explicit-default-fill-no-inherit-nano.svg",
         ),
         (
-            "inherit-default-stroke-before.svg",
-            "inherit-default-stroke-nano.svg",
+            "explicit-default-stroke-no-inherit-before.svg",
+            "explicit-default-stroke-no-inherit-nano.svg",
         ),
     ],
 )
@@ -583,8 +583,8 @@ def test_evenodd_to_nonzero_winding(actual, expected_result):
 @pytest.mark.parametrize(
     "input_svg",
     (
-        "inherit-default-fill-before.svg",
-        "inherit-default-stroke-before.svg",
+        "explicit-default-fill-no-inherit-before.svg",
+        "explicit-default-stroke-no-inherit-before.svg",
     ),
 )
 def test_update_tree_lossless(input_svg):
