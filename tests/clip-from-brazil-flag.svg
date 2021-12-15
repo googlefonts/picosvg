@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.0" viewBox="-2100 -1470 4200 2940">
+ <defs>
+  <g id="G">
+   <clipPath id="gcut">
+    <path d="m-31.5 0v-70h63v70zm31.5-47v12h31.5v-12z"/>
+   </clipPath>
+   <use xlink:href="#O" clip-path="url(#gcut)"/>
+   <rect y="-35" x="5" height="10" width="26.5"/>
+   <rect y="-35" x="21.5" height="35" width="10"/>
+  </g>
+  <path id="O" fill-rule="evenodd" d="m0 0a31.5 35 0 0 0 0 -70 31.5 35 0 0 0 0 70m0-13a18.5 22 0 0 0 0 -44 18.5 22 0 0 0 0 44"/>
+ </defs>
+ <g transform="translate(-420,1470)" fill="#009b3a">
+  <use y="-1697.5" xlink:href="#G" transform="rotate(23.5)"/>
+ </g>
+</svg>
