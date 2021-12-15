@@ -36,7 +36,16 @@ from picosvg import svg_pathops
 from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
-from typing import ClassVar, Generator, Iterable, Mapping, MutableMapping, Tuple
+from typing import (
+    ClassVar,
+    Generator,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 
 def _round_multiple(f: float, of: float) -> float:
@@ -939,7 +948,15 @@ def union(shapes: Iterable[SVGShape]) -> Generator[SVGCommand, None, None]:
     )
 
 
-def intersection(shapes: Iterable[SVGShape]) -> Generator[SVGCommand, None, None]:
-    return svg_pathops.intersection(
-        [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
-    )
+def intersection(
+    shapes: Iterable[SVGShape], fill_rules: Optional[Sequence[str]] = None
+) -> Generator[SVGCommand, None, None]:
+    if fill_rules is None:
+        # by default we assume the shapes to be intersected are all defined within
+        # a clipPath element and as such we use their clip-rule as the fill type
+        # when initialising a pathops.Path. If that's not the case (e.g. when
+        # applying a clip path to the target shape) you should specify the correct
+        # fill rules explicitly: i.e. fill-rule for target shapes and clip-rule
+        # for children of clipPath.
+        fill_rules = [s.clip_rule for s in shapes]
+    return svg_pathops.intersection([s.as_cmd_seq() for s in shapes], fill_rules)

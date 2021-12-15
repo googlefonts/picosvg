@@ -579,14 +579,6 @@ class SVG:
         self.xpath_one(xpath).append(el)
         return el
 
-    def _combine_clip_paths(self, clip_paths: Sequence[SVGPath]) -> SVGPath:
-        # multiple clip paths leave behind their intersection
-        if not clip_paths:
-            raise ValueError("Cannot combine no clip_paths")
-        if len(clip_paths) == 1:
-            return clip_paths[0]
-        return SVGPath.from_commands(intersection(clip_paths))
-
     def _new_id(self, template):
         for i in range(1 << 16):
             potential_id = template % i
@@ -747,11 +739,23 @@ class SVG:
                     paths = [p.apply_transform(context.transform) for p in paths]
 
                 if context.clips:
-                    clip = SVGPath.from_commands(intersection(context.clips))
-                    paths = [
-                        p.update_path(intersection((p, clip)), inplace=True)
-                        for p in paths
-                    ]
+                    for p in paths:
+                        # When constructing pathops.Path objects for performing the
+                        # intersection operation, we need to use the fill-rule attribute
+                        # for the shape to be clipped, and clip-rule for the clipping
+                        # path itself (clip-rule only applies within clipPath element).
+                        p.update_path(
+                            intersection(
+                                (p, *context.clips),
+                                fill_rules=(
+                                    p.fill_rule,
+                                    *(c.clip_rule for c in context.clips),
+                                ),
+                            ),
+                            inplace=True,
+                        )
+                        # skia-pathops operations always return nonzero winding paths
+                        p.fill_rule = "nonzero"
 
                 if len(paths) != 1 or paths[0] != initial_path:
                     _replace_el(el, [to_element(p) for p in paths])
@@ -860,7 +864,14 @@ class SVG:
                 .absolute(inplace=True)
             )
             shape = shape.as_path().absolute(inplace=True)
-            shape.update_path(intersection((shape, clip_path)), inplace=True)
+            shape.update_path(
+                intersection(
+                    (shape, clip_path),
+                    fill_rules=(shape.fill_rule, clip_path.clip_rule),
+                ),
+                inplace=True,
+            )
+            shape.fill_rule = "nonzero"
             updates.append((idx, el, shape))
 
         for idx, el, shape in updates:

@@ -201,6 +201,8 @@ def test_resolve_use(actual, expected_result):
         ("clip-multirect.svg", "clip-multirect-clipped-nano.svg"),
         ("clip-groups.svg", "clip-groups-clipped-nano.svg"),
         ("clip-use.svg", "clip-use-clipped-nano.svg"),
+        ("clip-rule-example.svg", "clip-rule-example-nano.svg"),
+        ("clip-from-brazil-flag.svg", "clip-from-brazil-flag-nano.svg"),
         ("clip-rule-evenodd.svg", "clip-rule-evenodd-clipped-nano.svg"),
         ("clip-clippath-attrs.svg", "clip-clippath-attrs-nano.svg"),
         ("clip-clippath-none.svg", "clip-clippath-none-nano.svg"),
