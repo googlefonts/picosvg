@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import re
+from types import MappingProxyType
 from lxml import etree  # pytype: disable=import-error
 from typing import (
     Any,
@@ -194,32 +195,35 @@ class _LinkedDefault(float):
         return getattr(data_obj, self.attr_name)
 
 
-_ATTRIB_DEFAULTS = {
-    "clip-path": "",
-    "clip-rule": "nonzero",
-    "fill": "black",
-    "fill-opacity": 1.0,
-    "fill-rule": "nonzero",
-    "stroke": "none",
-    "stroke-width": 1.0,
-    "stroke-linecap": "butt",
-    "stroke-linejoin": "miter",
-    "stroke-miterlimit": 4,
-    "stroke-dasharray": "none",
-    "stroke-dashoffset": 0.0,
-    "stroke-opacity": 1.0,
-    "opacity": 1.0,
-    "transform": "",
-    "style": "",
-    "display": "inline",
-    "d": "",
-    "id": "",
-}
+# makes dict read-only
+ATTRIB_DEFAULTS = MappingProxyType(
+    {
+        "clip-path": "",
+        "clip-rule": "nonzero",
+        "fill": "black",
+        "fill-opacity": 1.0,
+        "fill-rule": "nonzero",
+        "stroke": "none",
+        "stroke-width": 1.0,
+        "stroke-linecap": "butt",
+        "stroke-linejoin": "miter",
+        "stroke-miterlimit": 4,
+        "stroke-dasharray": "none",
+        "stroke-dashoffset": 0.0,
+        "stroke-opacity": 1.0,
+        "opacity": 1.0,
+        "transform": "",
+        "style": "",
+        "display": "inline",
+        "d": "",
+        "id": "",
+    }
+)
 
 
 def attrib_default(name: str, default: Any = ()) -> Any:
-    if name in _ATTRIB_DEFAULTS:
-        return _ATTRIB_DEFAULTS[name]
+    if name in ATTRIB_DEFAULTS:
+        return ATTRIB_DEFAULTS[name]
     if default == ():
         raise ValueError(f"No entry for '{name}' and no default given")
     return default

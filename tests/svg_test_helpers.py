@@ -17,12 +17,12 @@ import os
 from picosvg.svg import SVG
 
 
-def _locate_test_file(filename):
+def locate_test_file(filename):
     return os.path.join(os.path.dirname(__file__), filename)
 
 
 def load_test_svg(filename):
-    return SVG.parse(_locate_test_file(filename))
+    return SVG.parse(locate_test_file(filename))
 
 
 def svg_string(*els):

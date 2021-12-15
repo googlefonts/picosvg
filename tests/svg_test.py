@@ -259,6 +259,18 @@ def test_resolve_use(actual, expected_result):
             "illegal-inheritance-before.svg",
             "illegal-inheritance-nano.svg",
         ),
+        (
+            "explicit-default-fill-no-inherit-before.svg",
+            "explicit-default-fill-no-inherit-nano.svg",
+        ),
+        (
+            "explicit-default-stroke-no-inherit-before.svg",
+            "explicit-default-stroke-no-inherit-nano.svg",
+        ),
+        (
+            "inherit-default-fill-before.svg",
+            "inherit-default-fill-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -572,3 +584,28 @@ def test_evenodd_to_nonzero_winding(actual, expected_result):
         expected_result,
         lambda svg: svg.evenodd_to_nonzero_winding().round_floats(3, inplace=True),
     )
+
+
+@pytest.mark.parametrize(
+    "input_svg",
+    (
+        "explicit-default-fill-no-inherit-before.svg",
+        "explicit-default-stroke-no-inherit-before.svg",
+        "inherit-default-fill-before.svg",
+    ),
+)
+def test_update_tree_lossless(input_svg):
+    with open(locate_test_file(input_svg)) as f:
+        svg_data = f.read()
+    svg = SVG.fromstring(svg_data)
+    assert not svg.elements  # initially empty list
+
+    # _elements() parses shapes using from_element, populating self.elements
+    _ = svg._elements()
+    assert svg.elements
+
+    # _update_etree calls to_element on each shape and resets self.elements
+    svg._update_etree()
+    assert not svg.elements
+
+    assert svg.tostring(pretty_print=True) == svg_data
