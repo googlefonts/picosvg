@@ -1429,6 +1429,15 @@ def _inherit_nondefault_overflow(attrib, child, attr_name):
         _inherit_copy(attrib, child, attr_name)
 
 
+# https://github.com/googlefonts/picosvg/issues/260
+def _inherit_nondefault_display(attrib, child, attr_name):
+    value = attrib.get(attr_name, "")
+    if value == "none":
+        child.attrib[attr_name] = value
+    else:
+        _inherit_copy(attrib, child, attr_name)
+
+
 def _inherit_matrix_multiply(attrib, child, attr_name):
     transform = Affine2D.identity()
     if attr_name in attrib:
@@ -1450,7 +1459,7 @@ def _do_not_inherit(*_):
 _INHERIT_ATTRIB_HANDLERS = {
     "clip-rule": _inherit_copy,
     "color": _inherit_copy,
-    "display": _inherit_copy,
+    "display": _inherit_nondefault_display,
     "fill": _inherit_copy,
     "fill-rule": _inherit_copy,
     "style": _inherit_copy,

@@ -271,6 +271,11 @@ def test_resolve_use(actual, expected_result):
             "inherit-default-fill-before.svg",
             "inherit-default-fill-nano.svg",
         ),
+        # propagation of display:none
+        (
+            "display_none-before.svg",
+            "display_none-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
