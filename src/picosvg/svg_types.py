@@ -505,6 +505,32 @@ class SVGPath(SVGShape, SVGCommandSeq):
             self._add_cmd(cmd, *args)
         return self
 
+    def subpaths(self) -> Tuple[str, ...]:
+        subpaths = [SVGPath()]
+
+        def subpaths_callback(subpath_start, curr_pos, cmd, args, *_unused):
+            if cmd.upper() == "M":
+                subpaths.append(SVGPath())
+            subpaths[-1]._add_cmd(cmd, *args)
+            if cmd.upper() == "Z":
+                subpaths.append(SVGPath())
+            return ((cmd, args),)  # unmodified
+
+        self.walk(subpaths_callback)
+
+        return tuple(s.d for s in subpaths if s.d)
+
+    def remove_empty_subpaths(self, inplace=False) -> "SVGPath":
+        target = self
+        if not inplace:
+            target = copy.deepcopy(self)
+
+        target.d = "".join(
+            subpath for subpath in self.subpaths() if SVGPath(d=subpath).might_paint()
+        )
+
+        return target
+
     def move(self, dx, dy, inplace=False):
         """Returns a new path that is this one shifted."""
 

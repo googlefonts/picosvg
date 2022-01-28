@@ -276,6 +276,11 @@ def test_resolve_use(actual, expected_result):
             "display_none-before.svg",
             "display_none-nano.svg",
         ),
+        # https://github.com/googlefonts/picosvg/issues/252
+        (
+            "strip_empty_subpath-before.svg",
+            "strip_empty_subpath-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
