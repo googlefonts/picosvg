@@ -465,3 +465,20 @@ def test_normalize_opacity(shape, expected):
 def test_gradient_from_element(el, view_box, expected):
     klass = type(expected)
     assert klass.from_element(el, view_box) == expected
+
+
+@pytest.mark.parametrize(
+    "path, expected_result",
+    [
+        ("", ""),
+        ("z", ""),
+        ("M1,2", ""),
+        ("M1,2 z", ""),
+        ("m1,1 2,2 1,3 z M465,550 Z M1,2", "M1,1 l2,2 l1,3 z"),
+    ],
+)
+def test_remove_empty_subpaths(path: str, expected_result: str):
+    actual = SVGPath(d=path).remove_empty_subpaths(inplace=True).d
+    print(f"A: {actual}")
+    print(f"E: {expected_result}")
+    assert actual == expected_result

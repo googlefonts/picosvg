@@ -910,6 +910,23 @@ class SVG:
             shape.round_floats(ndigits, inplace=True)
         return self
 
+    def remove_empty_subpaths(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_empty_subpaths(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        for idx, (el, (shape,)) in enumerate(self._elements()):
+            if isinstance(shape, SVGPath):
+                shape.remove_empty_subpaths(inplace=True)
+                self._set_element(idx, el, (shape,))
+
+        self._update_etree()
+
+        return self
+
     def remove_unpainted_shapes(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -1321,6 +1338,7 @@ class SVG:
 
         # Tidy up
         self.evenodd_to_nonzero_winding(inplace=True)
+        self.remove_empty_subpaths(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
         self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
@@ -1523,7 +1541,9 @@ def _inherit_attrib(
     skip_unhandled: bool = False,
     skips=frozenset(),
 ):
-    attrib = copy.deepcopy(attrib)
+    attrib: MutableMapping[str, Any] = copy.deepcopy(
+        attrib
+    )  # pytype: disable=annotation-type-mismatch
     for attr_name in sorted(attrib.keys()):
         if attr_name in skips or not _attr_supported(child, attr_name):
             del attrib[attr_name]
