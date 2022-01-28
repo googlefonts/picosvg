@@ -916,14 +916,9 @@ class SVG:
             svg.remove_empty_subpaths(inplace=True)
             return svg
 
-        self._update_etree()
-
-        for idx, (el, (shape,)) in enumerate(self._elements()):
+        for shape in self.shapes():
             if isinstance(shape, SVGPath):
                 shape.remove_empty_subpaths(inplace=True)
-                self._set_element(idx, el, (shape,))
-
-        self._update_etree()
 
         return self
 
