@@ -94,6 +94,12 @@ def _relative_to_absolute(curr_pos, cmd, args):
     )
 
 
+def _relative_to_absolute_moveto(curr_pos, cmd, args):
+    if cmd in ("M", "m"):
+        return _relative_to_absolute(curr_pos, cmd, args)
+    return (cmd, args)
+
+
 def _absolute_to_relative(curr_pos, cmd, args):
     return _rewrite_coords(
         lambda cmd: cmd.lower(), lambda curr_scaler: -curr_scaler, curr_pos, cmd, args
@@ -516,7 +522,9 @@ class SVGPath(SVGShape, SVGCommandSeq):
                 subpaths.append(SVGPath())
             return ((cmd, args),)  # unmodified
 
-        self.walk(subpaths_callback)
+        # make all moveto absolute so each subpath is independent from the
+        # precending ones
+        self.absolute_moveto().walk(subpaths_callback)
 
         return tuple(s.d for s in subpaths if s.d)
 
@@ -577,6 +585,10 @@ class SVGPath(SVGShape, SVGCommandSeq):
     def absolute(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only absolute commands."""
         return self._rewrite_path(_relative_to_absolute, inplace)
+
+    def absolute_moveto(self, inplace=False) -> "SVGPath":
+        """Returns equivalent path with absolute moveto commands."""
+        return self._rewrite_path(_relative_to_absolute_moveto, inplace)
 
     def relative(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only relative commands."""
