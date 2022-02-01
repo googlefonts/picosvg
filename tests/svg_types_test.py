@@ -76,6 +76,24 @@ def test_path_absolute(path: str, expected_result: str):
 
 
 @pytest.mark.parametrize(
+    "path, expected_result",
+    [
+        (
+            "m0,0 l1,1 l0,-1 m1,2 l1,1 l0,-1 z M3,3 l1,1 l0,-1 Z",
+            "M0,0 l1,1 l0,-1 M2,2 l1,1 l0,-1 z M3,3 l1,1 l0,-1 Z",
+        ),
+    ],
+)
+def test_path_absolute_moveto(path: str, expected_result: str):
+    actual = (
+        SVGPath(d=path).absolute_moveto(inplace=True).round_floats(3, inplace=True).d
+    )
+    print(f"A: {actual}")
+    print(f"E: {expected_result}")
+    assert actual == expected_result
+
+
+@pytest.mark.parametrize(
     "path, move, expected_result",
     [
         # path with implicit relative lines
@@ -475,10 +493,24 @@ def test_gradient_from_element(el, view_box, expected):
         ("M1,2", ""),
         ("M1,2 z", ""),
         ("m1,1 2,2 1,3 z M465,550 Z M1,2", "M1,1 l2,2 l1,3 z"),
+        ("m1,1 2,2 1,3 z M465,550 Z M1,2", "M1,1 l2,2 l1,3 z"),
+        # the following path (from noto-emoji "foot" emoji_u1f9b6.svg) contains a
+        # subpath starting with relative 'm' that follows an empty subpath. Check
+        # the latter is removed and the subsequent 'M' is correctly absolutized.
+        # https://github.com/googlefonts/picosvg/issues/252#issuecomment-1026839746
+        (
+            "M0,0 c0.59,-0.63 1.39,-0.97 2.25,-0.97 m103.99,90.92 m-103.99,-93.92 c-3.52,0 -6.3,2.97 -6.07,6.48",
+            "M0,0 c0.59,-0.63 1.39,-0.97 2.25,-0.97 M2.25,-3.97 c-3.52,0 -6.3,2.97 -6.07,6.48",
+        ),
     ],
 )
 def test_remove_empty_subpaths(path: str, expected_result: str):
-    actual = SVGPath(d=path).remove_empty_subpaths(inplace=True).d
+    actual = (
+        SVGPath(d=path)
+        .remove_empty_subpaths(inplace=True)
+        .round_floats(3, inplace=True)
+        .d
+    )
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
