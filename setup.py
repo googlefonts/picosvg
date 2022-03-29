@@ -35,7 +35,7 @@ setup_args = dict(
         "dev": [
             "pytest",
             "pytest-clarity",
-            "black==22.1.0",
+            "black==22.3.0",
             "pytype==2020.11.23; python_version < '3.9'",
         ],
     },
