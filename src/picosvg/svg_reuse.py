@@ -108,6 +108,10 @@ def _affine_friendly(shape: SVGShape) -> SVGPath:
     )
 
 
+ARC_RADIUS_COORD_OFFSET = (
+    -5
+)  # offset from corresponding coord, e.g. x coord is 5, matching radius is 0
+
 # Transform all coords in an affine-friendly path
 def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
@@ -129,6 +133,17 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
             new_y = 0
         args[x_coord_idx] = new_x
         args[y_coord_idx] = new_y
+
+        # Arc radii are, excitingly, NOT coords. However, the curvature is entirely different
+        # and nothing normalizes if they are not adjusted so try scaling rx/y proportionally to
+        # the change in magnitude of the respective basis vectors.
+        if cmd.upper() == "A":
+            x_basis = Vector(affine.a, affine.b)
+            y_basis = Vector(affine.c, affine.d)
+            rx = args[x_coord_idx + ARC_RADIUS_COORD_OFFSET]
+            ry = args[y_coord_idx + ARC_RADIUS_COORD_OFFSET]
+            args[x_coord_idx + ARC_RADIUS_COORD_OFFSET] = rx * x_basis.norm()
+            args[y_coord_idx + ARC_RADIUS_COORD_OFFSET] = ry * y_basis.norm()
     return ((cmd, args),)
 
 
