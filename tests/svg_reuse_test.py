@@ -143,6 +143,13 @@ def test_svg_normalization(shape, tolerance, expected_normalization):
             Affine2D.identity().translate(38.33, 0.0),
             0.1,
         ),
+        # https://github.com/googlefonts/picosvg/issues/266 circles become arcs and don't normalize well
+        (
+            SVGCircle(r=2),
+            SVGCircle(r=4),
+            Affine2D.identity().scale(2.0),
+            0.1,
+        ),
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine, tolerance):
