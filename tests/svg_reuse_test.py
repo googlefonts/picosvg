@@ -150,6 +150,13 @@ def test_svg_normalization(shape, tolerance, expected_normalization):
             Affine2D.identity().scale(2.0),
             0.1,
         ),
+        # Rectangles that should become one
+        (
+            SVGPath(d="M4,4 L8,4 L8,8 L4,8 L4,4 Z"),
+            SVGPath(d="M2,2 L8,2 L8,4 L2,4 L2,2 Z"),
+            Affine2D(1.5, 0, 0, 0.5, -4, 0),
+            0.01,
+        ),
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine, tolerance):
