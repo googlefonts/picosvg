@@ -1333,11 +1333,13 @@ class SVG:
 
         # Tidy up
         self.evenodd_to_nonzero_winding(inplace=True)
-        self.remove_empty_subpaths(inplace=True)
-        self.remove_unpainted_shapes(inplace=True)
         self.normalize_opacity(inplace=True)
         self.absolute(inplace=True)
         self.round_floats(ndigits, inplace=True)
+
+        # https://github.com/googlefonts/picosvg/issues/269 remove empty subpaths *after* rounding
+        self.remove_empty_subpaths(inplace=True)
+        self.remove_unpainted_shapes(inplace=True)
 
         nano_violations = self.checkpicosvg()
         if nano_violations:

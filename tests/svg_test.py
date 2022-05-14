@@ -19,7 +19,9 @@ import os
 import pytest
 from picosvg.svg import SVG, SVGPath
 from picosvg.svg_meta import strip_ns, parse_css_declarations
+import re
 from svg_test_helpers import *
+from typing import Tuple
 
 
 def _test(actual, expected_result, op):
@@ -619,3 +621,26 @@ def test_update_tree_lossless(input_svg):
     assert not svg.elements
 
     assert svg.tostring(pretty_print=True) == svg_data
+
+
+def _only(maybe_many):
+    if len(maybe_many) != 1:
+        raise ValueError(f"Must have exactly 1 item in {maybe_many}")
+    return next(iter(maybe_many))
+
+
+def _subpaths(path: str) -> Tuple[str, ...]:
+    return tuple(m.group() for m in re.finditer(r"[mM][^Mm]*", path))
+
+
+# https://github.com/googlefonts/picosvg/issues/269
+# Make sure we drop subpaths that have 0 area after rounding.
+def test_shapes_for_stroked_path():
+    svg = SVG.parse(locate_test_file("emoji_u1f6d2.svg")).topicosvg()
+    path_before = _only(svg.shapes()).as_path().d
+    svg = svg.topicosvg()
+    path_after = _only(svg.shapes()).as_path().d
+
+    assert len(_subpaths(path_before)) == len(
+        _subpaths(path_after)
+    ), f"Lost subpaths\n{path_before}\n{path_after}"
