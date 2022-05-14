@@ -533,7 +533,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
         if not inplace:
             target = copy.deepcopy(self)
 
-        target.d = "".join(
+        target.d = " ".join(
             subpath for subpath in self.subpaths() if SVGPath(d=subpath).might_paint()
         )
 
