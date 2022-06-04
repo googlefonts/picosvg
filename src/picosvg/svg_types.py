@@ -592,7 +592,11 @@ class SVGPath(SVGShape, SVGCommandSeq):
 
     def relative(self, inplace=False) -> "SVGPath":
         """Returns equivalent path with only relative commands."""
-        return self._rewrite_path(_absolute_to_relative, inplace)
+        result = self._rewrite_path(_absolute_to_relative, inplace)
+        # First move is always absolute
+        if result.d[0] == "m":
+            result.d = "M" + result.d[1:]
+        return result
 
     def explicit_lines(self, inplace=False):
         """Replace all vertical/horizontal lines with line to (x,y)."""
