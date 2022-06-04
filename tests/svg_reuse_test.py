@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from picosvg.geometric_types import Vector
 from picosvg.svg_types import SVGCircle, SVGPath, SVGRect
 from picosvg.svg_transform import Affine2D
-from picosvg.svg_reuse import normalize, affine_between
+from picosvg.svg_reuse import _affine_friendly, _vectors, normalize, affine_between
 import pytest
 
 
@@ -37,6 +38,70 @@ import pytest
 def test_svg_normalization(shape, tolerance, expected_normalization):
     normalized = normalize(shape, tolerance)
     assert normalized.round_floats(4).d == expected_normalization
+
+
+@pytest.mark.parametrize(
+    "path, expected_vectors",
+    [
+        # vectors for a box
+        (
+            "M10,10 h10 v10 h-10 z",
+            (
+                Vector(10.0, 10.0),
+                Vector(10.0, 0.0),
+                Vector(0.0, 10.0),
+                Vector(-10.0, 0.0),
+                Vector(0.0, 0.0),
+            ),
+        ),
+        # observed problem: an arc whose start and end share a dimension is
+        # taken to have 0 magnitude in that direction even if it bulges out
+        # e.g. an arc from (1, 0) to (2, 0) is taken to have 0 magnitude on y
+        # this may result in affine_between failures.
+        # This is particularly problemmatic due to circles and ellipses in svg
+        # converting to two arcs, one for the top and one for the bottom.
+        # https://github.com/googlefonts/picosvg/issues/271
+        (
+            # arc from 0,0 to 2,0. Apex and farthest point at 1,0.5
+            # vectors formed by start => farthest, farthest => end
+            "M0,0 a 1 0.5 0 1 1 2,0",
+            (
+                Vector(0.0, 0.0),
+                Vector(2.0, 0.0),
+                Vector(0.0, 0.5),
+            ),
+        ),
+        # https://github.com/googlefonts/picosvg/issues/271
+        # As above, but on move on y, none on x
+        (
+            # arc from 0,0 to 0,2. Apex and farthest point at 0,0.5
+            # vectors formed by start => farthest, farthest => end
+            "M0,0 a 0.5 1 0 1 1 0,2",
+            (
+                Vector(0.0, 0.0),
+                Vector(0.5, 0.0),
+                Vector(0.0, 2.0),
+            ),
+        ),
+        # https://github.com/googlefonts/picosvg/issues/271
+        # Arc from Noto Emoji that was resulting in sqrt of a very small negative
+        (
+            "M0,0 a1.75 1.73 0 1 1 -3.5,0 a1.75 1.73 0 1 1 3.5,0 z",
+            (
+                Vector(0.0, 0.0),
+                Vector(-3.5, 0.0),
+                Vector(0.0, 1.73),
+                Vector(3.5, 0.0),
+                Vector(0.0, 1.73),
+                Vector(0.0, 0.0),
+            ),
+        ),
+    ],
+)
+def test_vectors_for_path(path, expected_vectors):
+    assert (
+        tuple(_vectors(_affine_friendly(SVGPath(d=path)))) == expected_vectors
+    ), f"Wrong vectors for {path}"
 
 
 @pytest.mark.parametrize(
@@ -157,14 +222,50 @@ def test_svg_normalization(shape, tolerance, expected_normalization):
             Affine2D(1.5, 0, 0, 0.5, -4, 0),
             0.01,
         ),
+        # https://github.com/googlefonts/picosvg/issues/271 arcs whose start/end match in a dimension fail
+        # my arc is marginally taller than your arc
+        (
+            SVGPath(d="M0,0 a 1 0.5 0 1 1 2 0"),
+            SVGPath(d="M0,0 a 1 1 0 1 1 2 0"),
+            Affine2D.identity().scale(1, 2),
+            0.01,
+        ),
+        # https://github.com/googlefonts/picosvg/issues/271 arcs whose start/end match in a dimension fail
+        # Example that previously normalized the same but didn't find an affine between.
+        (
+            SVGPath(
+                d="M104.64,10.08 A40.64 6.08 0 1 1 23.36,10.08 A40.64 6.08 0 1 1 104.64,10.08 Z"
+            ),
+            SVGPath(
+                d="M99.63,23.34 A36.19 4.81 0 1 1 27.25,23.34 A36.19 4.81 0 1 1 99.63,23.34 Z"
+            ),
+            Affine2D(0.8905, 0.0, 0.0, 0.7911, 6.4479, 15.3655),
+            0.01,
+        ),
+        # https://github.com/googlefonts/picosvg/issues/271 arcs whose start/end match in a dimension fail, ex2
+        # Example that didn't even normalize the same previously.
+        (
+            SVGPath(
+                d="M119.47,90.07 A55.47 10.49 0 1 1 8.53,90.07 A55.47 10.49 0 1 1 119.47,90.07 Z"
+            ),
+            SVGPath(
+                d="M94.09,71.71 A12.2 3.92 0 1 1 69.69,71.71 A12.2 3.92 0 1 1 94.09,71.71 Z"
+            ),
+            Affine2D(0.2199, 0.0, 0.0, 0.3737, 67.8139, 38.0518),
+            0.01,
+        ),
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine, tolerance):
     # if we can get an affine we should normalize to same shape
     if expected_affine:
-        assert normalize(s1, tolerance) == normalize(s2, tolerance)
+        assert (
+            normalize(s1, tolerance).d == normalize(s2, tolerance).d
+        ), "should have normalized the same"
     else:
-        assert normalize(s1, tolerance) != normalize(s2, tolerance)
+        assert (
+            normalize(s1, tolerance).d != normalize(s2, tolerance).d
+        ), "should NOT have normalized the same"
 
     affine = affine_between(s1, s2, tolerance)
     if expected_affine:

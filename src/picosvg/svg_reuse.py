@@ -17,7 +17,7 @@
 import copy
 import dataclasses
 from itertools import islice
-from math import atan2
+from math import atan2, sqrt
 from picosvg.geometric_types import Vector, almost_equal
 from picosvg.svg_types import SVGShape, SVGPath
 from typing import Callable, Generator, Iterable, Optional, Tuple
@@ -36,13 +36,102 @@ def _first_move(path: SVGPath) -> Tuple[float, float]:
     return args
 
 
-def _vectors(path: SVGPath) -> Generator[Vector, None, None]:
+def _farthest(rx, ry, large_arc, line_length) -> float:
+    """
+    We have an ellipse centered on 0,0 with specified rx/ry.
+    There is a horizontal line that intersects it twice and the
+    line segment between intersections has a known length.
+
+    Consider the ellipse as two arcs, one above and one below our
+    line segment. Return y-offset of the farthest point on one of these
+    arcs. If large_arc is 0, choose the smaller, otherwise the larger.
+
+    If the ellipse is too small to accomodate a line segment of the
+    specified length then scale it until it can.
+
+    Note: we skip ellipse rotation for now and solve by placing
+    the ellipse on the origin and solving the ellipse equation for y when
+    x is at +/- 0.5 * the length of our line segment.
+    """
+    assert line_length > 0, f"line_length {line_length} must be > 0"
+    x = line_length / 2
+
+    y = 0
+
+    if almost_equal(2 * rx, line_length):
+        # simple case common in real input: the ellipse is exactly wide enough
+        # no scaling, farthest point for both arcs is simply ry
+        pass
+
+    elif 2 * rx >= line_length:
+        # The ellipse is big enough that a line through could have
+        # the desired length
+        y = pow(ry, 2) - pow(ry, 2) * pow(x, 2) / pow(rx, 2)
+        y = sqrt(y)
+
+    else:
+        # The ellipse is too small and will be scaled
+        # scale: big enough when 2rx == line length at y=0
+        # max distance from line is at scaled ry
+        # same for large vs small arc
+        scale = line_length / (2 * rx)
+        rx *= scale
+        ry *= scale
+
+    large_arc_farthest = y + ry
+    small_arc_farthest = ry - y
+
+    if large_arc == 0:
+        return small_arc_farthest
+    else:
+        return large_arc_farthest
+
+
+def _vectors(path: SVGPath) -> Iterable[Vector]:
     for cmd, args in path:
         x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
-        if cmd.lower() == "z":
+
+        assert cmd == "M" or cmd == cmd.lower(), "path should be relative"
+        if cmd == "M":
+            x, y = args[x_coord_idxs[-1]], args[y_coord_idxs[-1]]
+
+        if cmd == "z":
             yield Vector(0.0, 0.0)
-        else:
-            yield Vector(args[x_coord_idxs[-1]], args[y_coord_idxs[-1]])
+            continue
+
+        if cmd == "a":
+            # arcs can confuse search for "significant" x/y movement
+            # because, if x or y is unchanged it won't trigger
+            # the significant movement test for that axis even if it
+            # curves way off it. When svg circles and ellipses convert
+            # we typically get two arcs with no y movement.
+            #
+            # Address this by treating the arc as two vectors:
+            #   1) to the endpoint
+            #   2) to the farthest point on the arc - to the end point
+            # Sum of these takes you to the endpoint, but you keep interesting
+            # movement along the way in play.
+
+            rx, ry, x_rotation, large_arc, sweep, end_x, end_y = args
+
+            # Dumbed down implementation aimed at what we see in real inputs:
+            # handle only non-rotated ellipses where endpoint didn't move on one axis.
+            # TODO: convert *all* arcs to two-vector form
+            if x_rotation == 0 and 0 in (end_x, end_y):
+                if almost_equal(end_y, 0):
+                    y_max = _farthest(rx, ry, large_arc, abs(end_x))
+                    yield Vector(end_x, 0.0)
+                    yield Vector(0.0, y_max)
+                    continue
+                elif almost_equal(end_x, 0):
+                    # since we have no rotation we can do farthest with coords flipped
+                    x_max = _farthest(ry, rx, large_arc, abs(end_y))
+                    yield Vector(x_max, 0.0)
+                    yield Vector(0.0, end_y)
+                    continue
+
+        # default: vector to endpoint
+        yield Vector(args[x_coord_idxs[-1]], args[y_coord_idxs[-1]])
 
 
 def _nth_vector(path: SVGPath, n: int) -> Vector:
@@ -102,9 +191,9 @@ def _affine_friendly(shape: SVGShape) -> SVGPath:
     if shape is path:
         path = copy.deepcopy(path)
     return (
-        path.relative(inplace=True)
-        .explicit_lines(inplace=True)
+        path.explicit_lines(inplace=True)
         .expand_shorthand(inplace=True)
+        .relative(inplace=True)
     )
 
 
@@ -119,6 +208,7 @@ def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     assert len(x_coord_idxs) == len(y_coord_idxs), f"{cmd}, {args}"
 
     args = list(args)  # we'd like to mutate 'em
+
     for x_coord_idx, y_coord_idx in zip(x_coord_idxs, y_coord_idxs):
         if cmd == cmd.upper():
             # for an absolute cmd allow translation: map_point
@@ -152,14 +242,13 @@ def normalize(shape: SVGShape, tolerance: float) -> SVGPath:
     scaled, rotated, etc.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
-
     path = _affine_friendly(dataclasses.replace(shape, id=""))
 
     # Make path relative, with first coord at 0,0
     x, y = _first_move(path)
     path.move(-x, -y, inplace=True)
 
-    # Normlize first activity to [1 0]; eliminates rotation and uniform scaling
+    # Normalize first activity to [1 0]; eliminates rotation and uniform scaling
     _, vec_first = _first_significant(_vectors(path), lambda v: v.norm(), tolerance)
     if vec_first and not vec_first.almost_equals(Vector(1, 0)):
         assert (
@@ -168,7 +257,7 @@ def normalize(shape: SVGShape, tolerance: float) -> SVGPath:
         affinex = _affine_vec2vec(vec_first, Vector(1, 0))
         path.walk(lambda *args: _affine_callback(affinex, *args))
 
-    # Normlize first y activity to 1.0; eliminates mirroring and non-uniform scaling
+    # Normalize first y activity to 1.0; eliminates mirroring and non-uniform scaling
     _, vecy = _first_significant(_vectors(path), lambda v: v.y, tolerance)
     if vecy and not almost_equal(vecy.y, 1.0):
         assert vecy.norm() > tolerance, f"vecy too close to 0-magnitude: {vecy}"
@@ -188,7 +277,9 @@ def _apply_affine(affine: Affine2D, s: SVGPath) -> SVGPath:
     return s_prime
 
 
-def _try_affine(affine: Affine2D, s1: SVGPath, s2: SVGPath, tolerance: float):
+def _try_affine(
+    affine: Affine2D, s1: SVGPath, s2: SVGPath, tolerance: float, comment: str
+):
     s1_prime = _apply_affine(affine, s1)
     return s1_prime.almost_equals(s2, tolerance)
 
@@ -197,7 +288,7 @@ def _round(affine, s1, s2, tolerance):
     # TODO bsearch?
     for i in _ROUND_RANGE:
         rounded = affine.round(i)
-        if _try_affine(rounded, s1, s2, tolerance):
+        if _try_affine(rounded, s1, s2, tolerance, f"round {i}"):
             return rounded
     return affine  # give up
 
@@ -225,7 +316,7 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     s2x, s2y = _first_move(s2)
 
     affine = Affine2D.identity().translate(s2x - s1x, s2y - s1y)
-    if _try_affine(affine, s1, s2, tolerance):
+    if _try_affine(affine, s1, s2, tolerance, "same start point"):
         return _round(affine, s1, s2, tolerance)
 
     # Align the first edge with a significant x part.
@@ -246,7 +337,7 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     origin_to_s2 = Affine2D.identity().translate(s2x, s2y)
 
     affine = Affine2D.compose_ltr((s1_to_origin, s1_vec1_to_s2_vec1x, origin_to_s2))
-    if _try_affine(affine, s1, s2, tolerance):
+    if _try_affine(affine, s1, s2, tolerance, "align vec1x"):
         return _round(affine, s1, s2, tolerance)
 
     # Could be non-uniform scaling and/or mirroring
@@ -285,7 +376,7 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
                 origin_to_s2,
             )
         )
-        if _try_affine(affine, s1, s2, tolerance):
+        if _try_affine(affine, s1, s2, tolerance, "align vecy"):
             return _round(affine, s1, s2, tolerance)
 
     # If we still aren't the same give up
