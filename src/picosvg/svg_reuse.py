@@ -53,7 +53,7 @@ def _farthest(rx, ry, large_arc, line_length) -> float:
     the ellipse on the origin and solving the ellipse equation for y when
     x is at +/- 0.5 * the length of our line segment.
     """
-    assert line_length > 0, f"line_length {line_length} must be > 0"
+    assert line_length >= 0, f"line_length {line_length} must be >= 0"
     x = line_length / 2
 
     y = 0
