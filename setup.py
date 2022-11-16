@@ -18,11 +18,11 @@ from setuptools import setup, find_packages
 setup_args = dict(
     name="picosvg",
     use_scm_version={"write_to": "src/picosvg/_version.py"},
-    package_dir={'': 'src'},
-    packages=find_packages(where='src'),
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     entry_points={
-        'console_scripts': [
-            'picosvg=picosvg.picosvg:main',
+        "console_scripts": [
+            "picosvg=picosvg.picosvg:main",
         ],
     },
     setup_requires=["setuptools_scm"],
@@ -41,11 +41,9 @@ setup_args = dict(
     },
     # this is so we can use the built-in dataclasses module
     python_requires=">=3.7",
-
     # this is for type checker to use our inline type hints:
     # https://www.python.org/dev/peps/pep-0561/#id18
     package_data={"picosvg": ["py.typed"]},
-
     # metadata to display on PyPI
     author="Rod S",
     author_email="rsheeter@google.com",

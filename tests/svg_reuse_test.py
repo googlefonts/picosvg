@@ -96,6 +96,19 @@ def test_svg_normalization(shape, tolerance, expected_normalization):
                 Vector(0.0, 0.0),
             ),
         ),
+        # https://github.com/googlefonts/picosvg/issues/278
+        # Path from OpenMoji 13.0 1F5FE
+        (
+            "M11.011,11 L61,11 A0 0 0 0 1 61,11 L61,60.767 Z",
+            (
+                Vector(11.011, 11.0),
+                Vector(49.989000000000004, 0.0),
+                Vector(0.0, 0.0),
+                Vector(0.0, 0.0),
+                Vector(0.0, 49.767),
+                Vector(0.0, 0.0),
+            ),
+        ),
     ],
 )
 def test_vectors_for_path(path, expected_vectors):
