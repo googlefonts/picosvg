@@ -644,3 +644,20 @@ def test_shapes_for_stroked_path():
     assert len(_subpaths(path_before)) == len(
         _subpaths(path_after)
     ), f"Lost subpaths\n{path_before}\n{path_after}"
+
+
+@pytest.mark.parametrize("inplace", (True, False))
+def test_topicosvg_ndigits(inplace):
+    svg = SVG.fromstring(
+        '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">'
+        "<defs/>"
+        '<path d="M60.4999,30 L100.06,30 L100.06,70 L60.4999,70 Z"/>'
+        "</svg>"
+    )
+    pico = svg.topicosvg(ndigits=1, inplace=inplace)
+    assert pico.tostring() == dedent(
+        '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">'
+        "<defs/>"
+        '<path d="M60.5,30 L100.1,30 L100.1,70 L60.5,70 Z"/>'
+        "</svg>"
+    )

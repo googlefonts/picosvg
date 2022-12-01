@@ -1310,7 +1310,7 @@ class SVG:
     def topicosvg(self, *, ndigits=3, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
-            svg.topicosvg(inplace=True)
+            svg.topicosvg(ndigits=ndigits, inplace=True)
             return svg
 
         self._update_etree()
