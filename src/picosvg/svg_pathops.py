@@ -51,7 +51,7 @@ def _simple_skia_to_svg(svg_cmd, points) -> SVGCommandGen:
 
 
 def _qcurveto_to_svg(points) -> SVGCommandGen:
-    for (control_pt, end_pt) in pathops.decompose_quadratic_segment(points):
+    for control_pt, end_pt in pathops.decompose_quadratic_segment(points):
         yield ("Q", control_pt + end_pt)
 
 

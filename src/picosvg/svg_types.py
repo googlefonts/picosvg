@@ -493,7 +493,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
             prev = (None, None, None)
             if new_cmds:
                 prev = new_cmds[-1]
-            for (new_cmd, new_cmd_args) in callback(
+            for new_cmd, new_cmd_args in callback(
                 subpath_start_pos, curr_pos, cmd, args, *prev
             ):
                 if new_cmd.lower() != "z":

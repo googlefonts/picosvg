@@ -344,7 +344,6 @@ class SVGTraverseContext(NamedTuple):
 
 
 class SVG:
-
     svg_root: etree.Element
     elements: List[Tuple[etree.Element, Tuple[SVGShape, ...]]]
 
@@ -931,7 +930,7 @@ class SVG:
         self._update_etree()
 
         remove = []
-        for (el, (shape,)) in self._elements():
+        for el, (shape,) in self._elements():
             if not shape.might_paint():
                 remove.append(el)
 

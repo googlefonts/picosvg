@@ -201,6 +201,7 @@ ARC_RADIUS_COORD_OFFSET = (
     -5
 )  # offset from corresponding coord, e.g. x coord is 5, matching radius is 0
 
+
 # Transform all coords in an affine-friendly path
 def _affine_callback(affine, subpath_start, curr_pos, cmd, args, *_unused):
     x_coord_idxs, y_coord_idxs = svg_meta.cmd_coords(cmd)
