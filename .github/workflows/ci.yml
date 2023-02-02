@@ -52,7 +52,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     # ... and both the lint and test jobs completed successfully
     needs:
-      - lint
+      - black
+      - pytype
       - test
     runs-on: ubuntu-latest
     steps:
