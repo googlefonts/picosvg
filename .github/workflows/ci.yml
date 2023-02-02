@@ -8,7 +8,17 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+    - name: Install tools
+      run: pip install black
+    - name: Check code format
+      run: black --check --diff src tests
+  pytype:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -18,9 +28,7 @@ jobs:
         # pytype currently doesn't work with python >= 3.9
         python-version: 3.8
     - name: Install tools
-      run: pip install pytype black
-    - name: Check code format
-      run: black --check --diff src tests
+      run: pip install pytype
     - name: Check typing
       run: pytype
   test:
