@@ -129,6 +129,12 @@ def intersection(
     return _do_pathop(pathops.PathOp.INTERSECTION, svg_cmd_seqs, fill_rules)
 
 
+def difference(
+    svg_cmd_seqs: Sequence[SVGCommandSeq], fill_rules: Sequence[str]
+) -> SVGCommandGen:
+    return _do_pathop(pathops.PathOp.DIFFERENCE, svg_cmd_seqs, fill_rules)
+
+
 def remove_overlaps(svg_cmds: SVGCommandSeq, fill_rule: str) -> SVGCommandGen:
     """Create a simplified path filled using the "nonzero" winding rule.
 

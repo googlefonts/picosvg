@@ -1002,3 +1002,9 @@ def intersection(
         # for children of clipPath.
         fill_rules = [s.clip_rule for s in shapes]
     return svg_pathops.intersection([s.as_cmd_seq() for s in shapes], fill_rules)
+
+
+def difference(shapes: Iterable[SVGShape]) -> Generator[SVGCommand, None, None]:
+    return svg_pathops.difference(
+        [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+    )

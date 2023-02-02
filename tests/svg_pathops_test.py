@@ -140,3 +140,27 @@ def test_pathops_intersection(shapes, expected_result):
 )
 def test_path_area(shape, expected_result):
     assert svg_pathops.path_area(shape.as_cmd_seq(), shape.fill_rule) == expected_result
+
+
+@pytest.mark.parametrize(
+    "shapes, expected_result",
+    [
+        # rect's
+        (
+            (
+                SVGRect(x=4, y=4, width=6, height=6),
+                SVGRect(x=6, y=6, width=6, height=6),
+            ),
+            "M4,4 L10,4 L10,6 L6,6 L6,10 L4,10 Z",
+        )
+    ],
+)
+def test_pathops_difference(shapes, expected_result):
+    assert (
+        SVGPath.from_commands(
+            svg_pathops.difference(
+                [s.as_cmd_seq() for s in shapes], [s.clip_rule for s in shapes]
+            )
+        ).d
+        == expected_result
+    )
