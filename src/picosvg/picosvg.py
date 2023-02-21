@@ -31,6 +31,11 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_bool("clip_to_viewbox", False, "Whether to clip content outside viewbox")
 flags.DEFINE_string("output_file", "-", "Output SVG file ('-' means stdout)")
+flags.DEFINE_bool(
+    "allow_text",
+    False,
+    "Whether to allow text elements. Note that they will not be converted to paths, just pass through to the output.",
+)
 
 
 def _run(argv):
@@ -40,9 +45,9 @@ def _run(argv):
         input_file = None
 
     if input_file:
-        svg = SVG.parse(input_file).topicosvg()
+        svg = SVG.parse(input_file).topicosvg(allow_text=FLAGS.allow_text)
     else:
-        svg = SVG.fromstring(sys.stdin.read()).topicosvg()
+        svg = SVG.fromstring(sys.stdin.read()).topicosvg(allow_text=FLAGS.allow_text)
 
     if FLAGS.clip_to_viewbox:
         svg.clip_to_viewbox(inplace=True)

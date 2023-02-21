@@ -355,6 +355,9 @@ class SVG:
         self.svg_root = svg_root
         self.elements = []
 
+    def _clone(self) -> "SVG":
+        return SVG(svg_root=copy.deepcopy(self.svg_root))
+
     def _elements(self) -> List[Tuple[etree.Element, Tuple[SVGShape, ...]]]:
         if self.elements:
             return self.elements
@@ -403,7 +406,7 @@ class SVG:
     def absolute(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.absolute(inplace=True)
             return svg
 
@@ -415,7 +418,7 @@ class SVG:
     def shapes_to_paths(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.shapes_to_paths(inplace=True)
             return svg
 
@@ -426,7 +429,7 @@ class SVG:
 
     def expand_shorthand(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.expand_shorthand(inplace=True)
             return svg
 
@@ -444,7 +447,7 @@ class SVG:
     def apply_style_attributes(self, inplace=False):
         """Converts inlined CSS "style" attributes to equivalent SVG attributes."""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.apply_style_attributes(inplace=True)
             return svg
 
@@ -546,7 +549,7 @@ class SVG:
 
         https://www.w3.org/TR/SVG11/struct.html#UseElement"""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.resolve_use(inplace=True)
             return svg
 
@@ -793,7 +796,7 @@ class SVG:
 
     def simplify(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.simplify(inplace=True)
             return svg
 
@@ -838,7 +841,7 @@ class SVG:
 
     def clip_to_viewbox(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.clip_to_viewbox(inplace=True)
             return svg
 
@@ -892,7 +895,7 @@ class SVG:
 
     def evenodd_to_nonzero_winding(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.evenodd_to_nonzero_winding(inplace=True)
             return svg
 
@@ -905,7 +908,7 @@ class SVG:
 
     def round_floats(self, ndigits: int, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.round_floats(ndigits, inplace=True)
             return svg
 
@@ -915,7 +918,7 @@ class SVG:
 
     def remove_empty_subpaths(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_empty_subpaths(inplace=True)
             return svg
 
@@ -927,7 +930,7 @@ class SVG:
 
     def remove_unpainted_shapes(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_unpainted_shapes(inplace=True)
             return svg
 
@@ -947,7 +950,7 @@ class SVG:
 
     def remove_nonsvg_content(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_nonsvg_content(inplace=True)
             return svg
 
@@ -1001,7 +1004,7 @@ class SVG:
 
     def remove_comments(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_comments(inplace=True)
             return svg
 
@@ -1016,7 +1019,7 @@ class SVG:
         # No id makes a symbol useless
         # https://github.com/googlefonts/picosvg/issues/46
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_anonymous_symbols(inplace=True)
             return svg
 
@@ -1029,7 +1032,7 @@ class SVG:
 
     def remove_title_meta_desc(self, inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_title_meta_desc(inplace=True)
             return svg
 
@@ -1043,7 +1046,7 @@ class SVG:
 
     def set_attributes(self, name_values, xpath="/svg:svg", inplace=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.set_attributes(name_values, xpath=xpath, inplace=True)
             return svg
 
@@ -1058,7 +1061,7 @@ class SVG:
     def remove_attributes(self, names, xpath="/svg:svg", inplace=False):
         """Drop things like viewBox, width, height that set size of overall svg"""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.remove_attributes(names, xpath=xpath, inplace=True)
             return svg
 
@@ -1072,7 +1075,7 @@ class SVG:
     def normalize_opacity(self, inplace=False):
         """Merge '{fill,stroke}_opacity' with generic 'opacity' when possible."""
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.normalize_opacity(inplace=True)
             return svg
 
@@ -1167,7 +1170,7 @@ class SVG:
         - https://www.sarasoueidan.com/blog/nesting-svgs/
         """
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
+            svg = self._clone()
             svg.resolve_nested_svgs(inplace=True)
             return svg
 
@@ -1273,7 +1276,7 @@ class SVG:
             if grad.attrib.get("id") not in used_gradient_ids:
                 _safe_remove(grad)
 
-    def checkpicosvg(self):
+    def checkpicosvg(self, allow_text=False):
         """Check for nano violations, return xpaths to bad elements.
 
         If result sequence empty then this is a valid picosvg.
@@ -1290,6 +1293,8 @@ class SVG:
             r"^/svg\[0\]/defs\[0\]/(linear|radial)Gradient\[\d+\](/stop\[\d+\])?$",
             r"^/svg\[0\](/(path|g)\[\d+\])+$",
         }
+        if allow_text:
+            path_allowlist.add(r"^/svg\[0\](/text\[\d+\])+$")
         paths_required = {
             "/svg[0]",
             "/svg[0]/defs[0]",
@@ -1323,10 +1328,10 @@ class SVG:
 
         return tuple(errors)
 
-    def topicosvg(self, *, ndigits=3, inplace=False):
+    def topicosvg(self, *, ndigits=3, inplace=False, allow_text=False):
         if not inplace:
-            svg = SVG(copy.deepcopy(self.svg_root))
-            svg.topicosvg(ndigits=ndigits, inplace=True)
+            svg = self._clone()
+            svg.topicosvg(ndigits=ndigits, inplace=True, allow_text=allow_text)
             return svg
 
         self._update_etree()
@@ -1358,7 +1363,7 @@ class SVG:
         self.remove_empty_subpaths(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
 
-        nano_violations = self.checkpicosvg()
+        nano_violations = self.checkpicosvg(allow_text=allow_text)
         if nano_violations:
             raise ValueError(
                 "Unable to convert to picosvg: " + ",".join(nano_violations)
