@@ -185,6 +185,10 @@ def _opacity(el: etree.Element) -> float:
     return _clamp(float(el.attrib.get("opacity", 1.0)))
 
 
+def _is_redundant(tag):
+    return tag is etree.Comment or tag is etree.ProcessingInstruction
+
+
 def _is_removable_group(el):
     """
     Groups with:
@@ -201,7 +205,7 @@ def _is_removable_group(el):
     # no attributes makes a group meaningless
     if len(el.attrib) == 0:
         return True
-    num_children = sum(1 for e in el if e.tag is not etree.Comment)
+    num_children = sum(1 for e in el if not _is_redundant(e.tag))
 
     return num_children <= 1 or _opacity(el) in {0.0, 1.0}
 
@@ -224,7 +228,7 @@ def _try_remove_group(group_el, push_opacity=True):
             _replace_el(group_el, list(group_el))
         if push_opacity:
             for child in children:
-                if child.tag is etree.Comment:
+                if _is_redundant(child.tag):
                     continue
                 _inherit_attrib({"opacity": opacity}, child)
     else:
@@ -604,7 +608,7 @@ class SVG:
             child_idxs = defaultdict(int)
             new_entries = []
             for child in context.element:
-                if child.tag is etree.Comment:
+                if _is_redundant(child.tag):
                     continue
                 transform = _element_transform(child, context.transform)
                 clips = context.clips
@@ -982,6 +986,19 @@ class SVG:
 
         return self
 
+    def remove_processing_instructions(self, inplace=False):
+        if not inplace:
+            svg = SVG(copy.deepcopy(self.svg_root))
+            svg.remove_processing_instructions(inplace=True)
+            return svg
+
+        self._update_etree()
+
+        for el in self.xpath("//processing-instruction()"):
+            el.getparent().remove(el)
+
+        return self
+
     def remove_comments(self, inplace=False):
         if not inplace:
             svg = SVG(copy.deepcopy(self.svg_root))
@@ -1073,7 +1090,7 @@ class SVG:
         frontier = deque(root)
         while frontier:
             el = frontier.popleft()
-            if el.tag is etree.Comment:
+            if _is_redundant(el.tag):
                 continue
             if strip_ns(el.tag) == "svg":
                 yield el
@@ -1317,6 +1334,7 @@ class SVG:
         # Discard useless content
         self.remove_nonsvg_content(inplace=True)
         self.remove_comments(inplace=True)
+        self.remove_processing_instructions(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
         self.remove_title_meta_desc(inplace=True)
 
