@@ -672,3 +672,13 @@ def test_remove_processing_instructions():
     assert "xpacket" in xpacket_svg.tostring()
     pico_svg = xpacket_svg.remove_processing_instructions()
     assert "xpacket" not in pico_svg.tostring()
+
+
+def test_allow_text():
+    text_svg = load_test_svg("text-before.svg")
+    with pytest.raises(
+        ValueError,
+        match=r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
+    ):
+        text_svg.topicosvg()
+    assert "text" in text_svg.topicosvg(allow_text=True).tostring()
