@@ -283,6 +283,10 @@ def test_resolve_use(actual, expected_result):
             "strip_empty_subpath-before.svg",
             "strip_empty_subpath-nano.svg",
         ),
+        (
+            "xpacket-before.svg",
+            "xpacket-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
@@ -663,8 +667,8 @@ def test_topicosvg_ndigits(inplace):
     )
 
 
-def test_xpacket():
-    xpacket_svg = load_test_svg("xpacket.svg")
+def test_remove_processing_instructions():
+    xpacket_svg = load_test_svg("xpacket-before.svg")
     assert "xpacket" in xpacket_svg.tostring()
-    pico_svg = xpacket_svg.topicosvg()
+    pico_svg = xpacket_svg.remove_processing_instructions()
     assert "xpacket" not in pico_svg.tostring()
