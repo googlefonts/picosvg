@@ -7,3 +7,4 @@ dist/
 .eggs/
 src/picosvg/_version.py
 .tox/
+.*.swp

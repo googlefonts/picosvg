@@ -661,3 +661,10 @@ def test_topicosvg_ndigits(inplace):
         '<path d="M60.5,30 L100.1,30 L100.1,70 L60.5,70 Z"/>'
         "</svg>"
     )
+
+
+def test_xpacket():
+    xpacket_svg = load_test_svg("xpacket.svg")
+    assert "xpacket" in xpacket_svg.tostring()
+    pico_svg = xpacket_svg.topicosvg()
+    assert "xpacket" not in pico_svg.tostring()
