@@ -403,6 +403,15 @@ class SVG:
         """
         return tuple(shape for (_, shapes) in self._elements() for shape in shapes)
 
+    def bounding_box(self) -> Optional[Rect]:
+        """Returns the bounding box of this SVG."""
+        shapes = self.shapes()
+        if not shapes:
+            return None
+        return reduce(
+            lambda a, b: a.union(b), (shape.bounding_box() for shape in shapes)
+        )
+
     def absolute(self, inplace=False):
         """Converts all basic shapes to their equivalent path."""
         if not inplace:

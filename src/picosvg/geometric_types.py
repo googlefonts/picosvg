@@ -151,6 +151,19 @@ class Rect(NamedTuple):
             return Rect(x1, y1, x2 - x1, y2 - y1)
         return None
 
+    @property
+    def x_max(self) -> float:
+        return self.x + self.w
+
+    @property
+    def y_max(self) -> float:
+        return self.y + self.h
+
+    def union(self, other: "Rect") -> "Rect":
+        x, y = min(self.x, other.x), min(self.y, other.y)
+        x_max, y_max = max(self.x_max, other.x_max), max(self.y_max, other.y_max)
+        return Rect(x=x, y=y, w=x_max - x, h=y_max - y)
+
     def normalized_diagonal(self):
         # used for computing percentages of lengths relative to the SVG viewport:
         # https://www.w3.org/TR/SVG2/coords.html#Units

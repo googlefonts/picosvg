@@ -15,6 +15,7 @@
 import dataclasses
 from textwrap import dedent
 from lxml import etree
+import math
 import os
 import pytest
 from picosvg.svg import SVG, SVGPath
@@ -682,3 +683,12 @@ def test_allow_text():
     ):
         text_svg.topicosvg()
     assert "text" in text_svg.topicosvg(allow_text=True).tostring()
+
+
+def test_bounding_box():
+    bounding_svg = load_test_svg("bounding.svg")
+    bounds = bounding_svg.bounding_box()
+    assert math.isclose(bounds.x, 14.22469, abs_tol=1e-5)
+    assert math.isclose(bounds.y, 48.57185, abs_tol=1e-5)
+    assert math.isclose(bounds.w, 95.64109, abs_tol=1e-5)
+    assert math.isclose(bounds.h, 62.20909, abs_tol=1e-5)
