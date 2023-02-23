@@ -514,3 +514,15 @@ def test_remove_empty_subpaths(path: str, expected_result: str):
     print(f"A: {actual}")
     print(f"E: {expected_result}")
     assert actual == expected_result
+
+
+def test_rect():
+    r = Rect(10, 20, 40, 50)
+    assert r.x_max == 50
+    assert r.y_max == 70
+    r2 = Rect(5, 20, 40, 55)
+    union = r.union(r2)
+    assert union.x == 5
+    assert union.y == 20
+    assert union.w == 45
+    assert union.h == 55
