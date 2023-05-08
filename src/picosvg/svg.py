@@ -1,6 +1,6 @@
 # Copyright 2020 Google LLC
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");/text[0]
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -1303,7 +1303,7 @@ class SVG:
             r"^/svg\[0\](/(path|g)\[\d+\])+$",
         }
         if allow_text:
-            path_allowlist.add(r"^/svg\[0\](/text\[\d+\])+$")
+            path_allowlist.add(r"^/svg\[0\](/(text|tspan|textPath)\[\d+\])+$")
         paths_required = {
             "/svg[0]",
             "/svg[0]/defs[0]",
