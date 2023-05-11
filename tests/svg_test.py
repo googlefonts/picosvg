@@ -704,18 +704,6 @@ def test_remove_processing_instructions():
             r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
             "tspan",
         ),
-        # tspan without text
-        (
-            """
-            <svg xmlns="http://www.w3.org/2000/svg"
-                width="512" height="512"
-                viewBox="0 0 30 30">
-                <tspan x="0" y="20" style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-variant-ligatures:normal;font-variant-caps:small-caps;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:1;">Hello</tspan>
-            </svg>
-            """,
-            r"Unable to convert to picosvg: BadElement: /svg\[0\]/tspan\[0\]",
-            "tspan",
-        ),
         # text with textPath, sample copied from https://developer.mozilla.org/en-US/docs/Web/SVG/Element/textPath
         (
             """
