@@ -1304,7 +1304,7 @@ class SVG:
         }
         if allow_text:
             path_allowlist.add(
-                r"^/svg\[0\](/(text|textPath)\[\d+\])+(/(text|tspan|textPath)\[\d+\])+$"
+                r"^/svg\[0\](/(text|textPath)\[\d+\])+(/(text|tspan|textPath)\[\d+\])*$"
             )
         paths_required = {
             "/svg[0]",
