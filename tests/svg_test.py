@@ -675,14 +675,66 @@ def test_remove_processing_instructions():
     assert "xpacket" not in pico_svg.tostring()
 
 
-def test_allow_text():
-    text_svg = load_test_svg("text-before.svg")
+@pytest.mark.parametrize(
+    "svg_string, match_re, expected_passthrough",
+    [
+        # text element
+        (
+            """
+            <svg xmlns="http://www.w3.org/2000/svg"
+                width="512" height="512"
+                viewBox="0 0 30 30">
+            <text x="20" y="35">Hello</text>
+            </svg>
+            """,
+            r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
+            "text",
+        ),
+        # text with tspan
+        (
+            """
+            <svg xmlns="http://www.w3.org/2000/svg"
+                width="512" height="512"
+                viewBox="0 0 30 30">
+            <text x="20" y="35">
+                <tspan x="0" y="20" style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-variant-ligatures:normal;font-variant-caps:small-caps;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:1;">Hello</tspan>
+            </text>
+            </svg>
+            """,
+            r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
+            "tspan",
+        ),
+        # text with textPath, sample copied from https://developer.mozilla.org/en-US/docs/Web/SVG/Element/textPath
+        (
+            """
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- to hide the path, it is usually wrapped in a <defs> element -->
+                <!-- <defs> -->
+                <path
+                    id="MyPath"
+                    fill="none"
+                    stroke="red"
+                    d="M10,90 Q90,90 90,45 Q90,10 50,10 Q10,10 10,40 Q10,70 45,70 Q70,70 75,50" />
+                <!-- </defs> -->
+
+                <text>
+                    <textPath href="#MyPath">A very long text on path.</textPath>
+                </text>
+                </svg>
+            """,
+            r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
+            "textPath",
+        ),
+    ],
+)
+def test_allow_text(svg_string, match_re, expected_passthrough):
+    text_svg = SVG.fromstring(svg_string)
     with pytest.raises(
         ValueError,
-        match=r"Unable to convert to picosvg: BadElement: /svg\[0\]/text\[0\]",
+        match=match_re,
     ):
         text_svg.topicosvg()
-    assert "text" in text_svg.topicosvg(allow_text=True).tostring()
+    assert expected_passthrough in text_svg.topicosvg(allow_text=True).tostring()
 
 
 def test_bounding_box():
