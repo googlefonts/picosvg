@@ -166,7 +166,9 @@ def parse_css_declarations(
         if declaration.count(":") == 1:
             property_name, value = declaration.split(":")
             property_name = property_name.strip()
-            if property_names is None or property_name in property_names:
+            if (
+                property_names is None or property_name in property_names
+            ) and not property_name.startswith("-"):
                 output[property_name] = value.strip()
             else:
                 unparsed.append(declaration.strip())
