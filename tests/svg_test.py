@@ -415,6 +415,12 @@ def test_tolerance(svg_string, expected_result):
             {"enable-background": "new 0 0 128 128"},
             "foo:abc; bar:123;",
         ),
+        (
+            "stroke:#FF0000;stroke-width:0.5;fill:none;-inkscape-font-specification:'Roboto';",
+            None,
+            {"stroke": "#FF0000", "stroke-width": "0.5", "fill": "none"},
+            "-inkscape-font-specification:'Roboto';",
+        ),
     ],
 )
 def test_parse_css_declarations(
