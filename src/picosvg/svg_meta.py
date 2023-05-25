@@ -143,6 +143,7 @@ def parse_css_declarations(
     property_names: Optional[Container[str]] = None,
 ) -> str:
     """Parse CSS declaration list into {property: value} dict.
+    Vendor styles are ignored even if in property_names as lxml does not support attribute names starting with dash.
 
     Args:
         style: CSS declaration list without the enclosing braces,
@@ -160,13 +161,16 @@ def parse_css_declarations(
     References:
     https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
     https://www.w3.org/TR/2013/REC-css-style-attr-20131107/#syntax
+    https://www.w3.org/TR/CSS2/syndata.html#vendor-keywords
     """
     unparsed = []
     for declaration in style.split(";"):
         if declaration.count(":") == 1:
             property_name, value = declaration.split(":")
             property_name = property_name.strip()
-            if property_names is None or property_name in property_names:
+            if (
+                property_names is None or property_name in property_names
+            ) and not property_name.startswith("-"):
                 output[property_name] = value.strip()
             else:
                 unparsed.append(declaration.strip())
