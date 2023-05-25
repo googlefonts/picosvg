@@ -142,7 +142,8 @@ def parse_css_declarations(
     output: MutableMapping[str, Any],
     property_names: Optional[Container[str]] = None,
 ) -> str:
-    """Parse CSS declaration list into {property: value} dict. Vendor styles (starting with a dash) are ignored even when provided in property_names as the XML etree module does not support attribute names starting with dash.
+    """Parse CSS declaration list into {property: value} dict.
+    Vendor styles are ignored even if in property_names as lxml does not support attribute names starting with dash.
 
     Args:
         style: CSS declaration list without the enclosing braces,
