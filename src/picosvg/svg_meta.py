@@ -142,13 +142,15 @@ def parse_css_declarations(
     output: MutableMapping[str, Any],
     property_names: Optional[Container[str]] = None,
 ) -> str:
-    """Parse CSS declaration list into {property: value} dict.
-    Vendor styles are ignored even if in property_names as lxml does not support attribute names starting with dash.
+    """Parse CSS declaration list into {property: value} XML element attributes.
 
     Args:
         style: CSS declaration list without the enclosing braces,
             as found in an SVG element's "style" attribute.
-        output: a dictionary where to store the parsed properties.
+        output: a dictionary or lxml.etree._Attrib where to store the parsed properties.
+            Note that lxml validates the attribute names and if a given CSS property name
+            is not a valid XML name (e.g. vendor specific keywords starting with a hyphen,
+            e.g. "-inkscape-font-specification"), it will be silently ignored.
         property_names: optional set of property names to limit the declarations
             to be parsed; if not provided, all will be parsed.
 
@@ -161,19 +163,21 @@ def parse_css_declarations(
     References:
     https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
     https://www.w3.org/TR/2013/REC-css-style-attr-20131107/#syntax
-    https://www.w3.org/TR/CSS2/syndata.html#vendor-keywords
     """
     unparsed = []
     for declaration in style.split(";"):
+        declaration = declaration.strip()
         if declaration.count(":") == 1:
             property_name, value = declaration.split(":")
-            property_name = property_name.strip()
-            if (
-                property_names is None or property_name in property_names
-            ) and not property_name.startswith("-"):
-                output[property_name] = value.strip()
+            property_name, value = property_name.strip(), value.strip()
+            if property_names is None or property_name in property_names:
+                try:
+                    output[property_name] = value
+                except ValueError:
+                    # lxml raises if attrib name is invalid (e.g. starts with '-')
+                    unparsed.append(declaration)
             else:
-                unparsed.append(declaration.strip())
+                unparsed.append(declaration)
         elif declaration.strip():
             raise ValueError(f"Invalid CSS declaration syntax: {declaration}")
     return "; ".join(unparsed) + ";" if unparsed else ""

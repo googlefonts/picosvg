@@ -427,7 +427,8 @@ def test_tolerance(svg_string, expected_result):
 def test_parse_css_declarations(
     style, property_names, expected_output, expected_unparsed
 ):
-    output = {}
+    element = etree.Element("test")
+    output = element.attrib
     unparsed = parse_css_declarations(style, output, property_names)
     assert output == expected_output
     assert unparsed == expected_unparsed
