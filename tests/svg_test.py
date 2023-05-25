@@ -416,6 +416,7 @@ def test_tolerance(svg_string, expected_result):
             "foo:abc; bar:123;",
         ),
         (
+            # does not support vendor style attributes due to lxml module, see #293
             "stroke:#FF0000;stroke-width:0.5;fill:none;-inkscape-font-specification:'Roboto';",
             None,
             {"stroke": "#FF0000", "stroke-width": "0.5", "fill": "none"},
