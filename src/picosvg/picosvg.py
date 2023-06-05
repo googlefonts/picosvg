@@ -29,6 +29,11 @@ import sys
 FLAGS = flags.FLAGS
 
 
+flags.DEFINE_bool(
+    "drop_unsupported",
+    False,
+    "Whether to blindly discard all elements we don't understand. Likely unwise.",
+)
 flags.DEFINE_bool("clip_to_viewbox", False, "Whether to clip content outside viewbox")
 flags.DEFINE_string("output_file", "-", "Output SVG file ('-' means stdout)")
 flags.DEFINE_bool(
@@ -45,9 +50,14 @@ def _run(argv):
         input_file = None
 
     if input_file:
-        svg = SVG.parse(input_file).topicosvg(allow_text=FLAGS.allow_text)
+        svg = SVG.parse(input_file)
     else:
-        svg = SVG.fromstring(sys.stdin.read()).topicosvg(allow_text=FLAGS.allow_text)
+        svg = SVG.fromstring(sys.stdin.read())
+
+    # Do the needful
+    svg = svg.topicosvg(
+        allow_text=FLAGS.allow_text, drop_unsupported=FLAGS.drop_unsupported
+    )
 
     if FLAGS.clip_to_viewbox:
         svg.clip_to_viewbox(inplace=True)
