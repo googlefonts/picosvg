@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- I am a comment -->
+<svg id='svg' xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <style type="text/css">
+    I should be dropped!
+  </style>
+  <!-- I am also a comment -->
+  <image xlink:href="I should also be dropped" />
+  <rect x="1" y="1" width="5" height="4" fill="blue" opacity="0.5"/>
+</svg>

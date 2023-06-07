@@ -288,10 +288,34 @@ def test_resolve_use(actual, expected_result):
             "xpacket-before.svg",
             "xpacket-nano.svg",
         ),
+        # https://github.com/googlefonts/picosvg/issues/297
+        # Demonstrate comments outside root drop just fine
+        (
+            "comments-before.svg",
+            "comments-nano.svg",
+        ),
     ],
 )
 def test_topicosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.topicosvg())
+
+
+@pytest.mark.parametrize(
+    "actual, expected_result",
+    [
+        # https://github.com/googlefonts/picosvg/issues/297
+        (
+            "comments-image-style-before.svg",
+            "comments-image-style-nano.svg",
+        ),
+    ],
+)
+def test_topicosvg_drop_unsupported(actual, expected_result):
+    # This should fail unless we drop unsupported
+    with pytest.raises(ValueError) as e:
+        _test(actual, expected_result, lambda svg: svg.topicosvg())
+    assert "BadElement" in str(e.value)
+    _test(actual, expected_result, lambda svg: svg.topicosvg(drop_unsupported=True))
 
 
 @pytest.mark.parametrize(

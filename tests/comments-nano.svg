@@ -1,0 +1,6 @@
+<svg id='svg' xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512"
+     viewBox="0 0 24 24">
+  <defs/>
+  <path fill="blue" opacity="0.5" d="M1,1 L6,1 L6,5 L1,5 L1,1 Z"/>
+</svg>

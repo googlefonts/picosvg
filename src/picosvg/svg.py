@@ -1285,7 +1285,7 @@ class SVG:
             if grad.attrib.get("id") not in used_gradient_ids:
                 _safe_remove(grad)
 
-    def checkpicosvg(self, allow_text=False):
+    def checkpicosvg(self, allow_text=False, drop_unsupported=False):
         """Check for nano violations, return xpaths to bad elements.
 
         If result sequence empty then this is a valid picosvg.
@@ -1318,8 +1318,11 @@ class SVG:
                 continue  # no sense reporting all the children as bad
 
             if not any((re.match(pat, context.path) for pat in path_allowlist)):
-                errors.append(f"BadElement: {context.path}")
-                bad_paths.add(context.path)
+                if drop_unsupported:
+                    _safe_remove(context.element)
+                else:
+                    errors.append(f"BadElement: {context.path}")
+                    bad_paths.add(context.path)
                 continue
 
             paths_required.discard(context.path)
@@ -1339,10 +1342,17 @@ class SVG:
 
         return tuple(errors)
 
-    def topicosvg(self, *, ndigits=3, inplace=False, allow_text=False):
+    def topicosvg(
+        self, *, ndigits=3, inplace=False, allow_text=False, drop_unsupported=False
+    ):
         if not inplace:
             svg = self._clone()
-            svg.topicosvg(ndigits=ndigits, inplace=True, allow_text=allow_text)
+            svg.topicosvg(
+                ndigits=ndigits,
+                inplace=True,
+                allow_text=allow_text,
+                drop_unsupported=drop_unsupported,
+            )
             return svg
 
         self._update_etree()
@@ -1374,11 +1384,11 @@ class SVG:
         self.remove_empty_subpaths(inplace=True)
         self.remove_unpainted_shapes(inplace=True)
 
-        nano_violations = self.checkpicosvg(allow_text=allow_text)
-        if nano_violations:
-            raise ValueError(
-                "Unable to convert to picosvg: " + ",".join(nano_violations)
-            )
+        violations = self.checkpicosvg(
+            allow_text=allow_text, drop_unsupported=drop_unsupported
+        )
+        if violations:
+            raise ValueError("Unable to convert to picosvg: " + ",".join(violations))
 
         return self
 
