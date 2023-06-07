@@ -25,7 +25,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        # if it works on 3.8 and 3.10, it ought to work on 3.9 as well, right?
+        python-version: ["3.8", "3.10", "3.11"]
         platform: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v2

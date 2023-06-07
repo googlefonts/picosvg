@@ -40,7 +40,7 @@ setup_args = dict(
         ],
     },
     # this is so we can use the built-in dataclasses module
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     # this is for type checker to use our inline type hints:
     # https://www.python.org/dev/peps/pep-0561/#id18
     package_data={"picosvg": ["py.typed"]},
