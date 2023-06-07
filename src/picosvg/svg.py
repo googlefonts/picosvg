@@ -1011,19 +1011,6 @@ class SVG:
 
         return self
 
-    def remove_comments(self, inplace=False):
-        if not inplace:
-            svg = self._clone()
-            svg.remove_comments(inplace=True)
-            return svg
-
-        self._update_etree()
-
-        for el in self.xpath("//comment()"):
-            el.getparent().remove(el)
-
-        return self
-
     def remove_anonymous_symbols(self, inplace=False):
         # No id makes a symbol useless
         # https://github.com/googlefonts/picosvg/issues/46
@@ -1359,7 +1346,6 @@ class SVG:
 
         # Discard useless content
         self.remove_nonsvg_content(inplace=True)
-        self.remove_comments(inplace=True)
         self.remove_processing_instructions(inplace=True)
         self.remove_anonymous_symbols(inplace=True)
         self.remove_title_meta_desc(inplace=True)
@@ -1444,7 +1430,7 @@ class SVG:
             string = string.replace("xlink:href", _XLINK_TEMP)
 
         # encode because fromstring dislikes xml encoding decl if input is str
-        parser = etree.XMLParser(remove_blank_text=True)
+        parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
         tree = etree.fromstring(string.encode("utf-8"), parser)
         tree = _fix_xlink_ns(tree)
         return cls(tree)

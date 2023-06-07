@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import dataclasses
+from copy import deepcopy
 from textwrap import dedent
 from lxml import etree
 import math
@@ -300,6 +301,7 @@ def test_topicosvg(actual, expected_result):
     _test(actual, expected_result, lambda svg: svg.topicosvg())
 
 
+@pytest.mark.parametrize("inplace", [True, False])
 @pytest.mark.parametrize(
     "actual, expected_result",
     [
@@ -310,12 +312,18 @@ def test_topicosvg(actual, expected_result):
         ),
     ],
 )
-def test_topicosvg_drop_unsupported(actual, expected_result):
+def test_topicosvg_drop_unsupported(actual, inplace, expected_result):
+    actual_copy = deepcopy(actual)
     # This should fail unless we drop unsupported
     with pytest.raises(ValueError) as e:
-        _test(actual, expected_result, lambda svg: svg.topicosvg())
+        _test(actual_copy, expected_result, lambda svg: svg.topicosvg(inplace=inplace))
     assert "BadElement" in str(e.value)
-    _test(actual, expected_result, lambda svg: svg.topicosvg(drop_unsupported=True))
+    actual_copy = deepcopy(actual)
+    _test(
+        actual_copy,
+        expected_result,
+        lambda svg: svg.topicosvg(inplace=inplace, drop_unsupported=True),
+    )
 
 
 @pytest.mark.parametrize(
