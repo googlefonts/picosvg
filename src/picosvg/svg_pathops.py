@@ -45,34 +45,18 @@ _SVG_TO_SKIA_LINE_JOIN = {
 }
 
 
-def _simple_skia_to_svg(svg_cmd, points) -> SVGCommandGen:
+def _skia_pts_to_svg(svg_cmd, points) -> SVGCommandGen:
     # pathops.Path gives us sequences of points, flatten 'em
     yield (svg_cmd, tuple(c for pt in points for c in pt))
 
 
-def _qcurveto_to_svg(points) -> SVGCommandGen:
-    for control_pt, end_pt in pathops.decompose_quadratic_segment(points):
-        yield ("Q", control_pt + end_pt)
-
-
-def _end_path(points) -> SVGCommandGen:
-    if points:
-        raise ValueError("endPath should have no points")
-    return  # pytype: disable=bad-return-type
-    yield
-
-
 _SKIA_CMD_TO_SVG_CMD = {
-    # simple conversions
-    "moveTo": functools.partial(_simple_skia_to_svg, "M"),
-    "lineTo": functools.partial(_simple_skia_to_svg, "L"),
-    "quadTo": functools.partial(_simple_skia_to_svg, "Q"),
-    "curveTo": functools.partial(_simple_skia_to_svg, "C"),
-    "closePath": functools.partial(_simple_skia_to_svg, "Z"),
-    # more interesting conversions
-    "qCurveTo": _qcurveto_to_svg,
-    # nop
-    "endPath": _end_path,
+    pathops.PathVerb.MOVE: functools.partial(_skia_pts_to_svg, "M"),
+    pathops.PathVerb.LINE: functools.partial(_skia_pts_to_svg, "L"),
+    pathops.PathVerb.QUAD: functools.partial(_skia_pts_to_svg, "Q"),
+    pathops.PathVerb.CUBIC: functools.partial(_skia_pts_to_svg, "C"),
+    pathops.PathVerb.CLOSE: functools.partial(_skia_pts_to_svg, "Z"),
+    # pathops.PathVerb.CONIC... convertConicsToQuads should have taken care of these
 }
 
 _SVG_FILL_RULE_TO_SKIA_FILL_TYPE = {
@@ -95,10 +79,10 @@ def skia_path(svg_cmds: SVGCommandSeq, fill_rule: str) -> pathops.Path:
 
 
 def svg_commands(skia_path: pathops.Path) -> SVGCommandGen:
-    for cmd, points in skia_path.segments:
-        if cmd not in _SKIA_CMD_TO_SVG_CMD:
-            raise ValueError(f'No mapping to svg for "{cmd} {points}"')
-        for svg_cmd, svg_args in _SKIA_CMD_TO_SVG_CMD[cmd](points):
+    for verb, points in skia_path:
+        if verb not in _SKIA_CMD_TO_SVG_CMD:
+            raise ValueError(f'No mapping to svg for "{verb} {points}"')
+        for svg_cmd, svg_args in _SKIA_CMD_TO_SVG_CMD[verb](points):
             yield (svg_cmd, svg_args)
 
 
