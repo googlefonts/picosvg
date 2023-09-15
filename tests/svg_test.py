@@ -374,13 +374,38 @@ def test_checkpicosvg(svg_file, expected_violations):
     [
         ('<svg version="1.1" xmlns="http://www.w3.org/2000/svg"/>', None),
         (
+            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="" height=""/>',
+            None,
+        ),
+        (
             '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="7 7 12 12"/>',
             (7, 7, 12, 12),
+        ),
+        (
+            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="6" height="7"/>',
+            (0, 0, 6, 7),
+        ),
+        (
+            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="6px" height="7px"/>',
+            (0, 0, 6, 7),
         ),
     ],
 )
 def test_viewbox(svg_string, expected_result):
     assert SVG.fromstring(svg_string).view_box() == expected_result
+
+
+@pytest.mark.parametrize(
+    "svg_string",
+    [
+        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="-6" height="-7"/>',
+        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="0" height="10"/>',
+        '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="6pt" height="7pt"/>',
+    ],
+)
+def test_viewbox_valueerror(svg_string):
+    with pytest.raises(ValueError):
+        SVG.fromstring(svg_string).view_box()
 
 
 @pytest.mark.parametrize(

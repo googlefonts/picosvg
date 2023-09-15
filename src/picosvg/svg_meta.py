@@ -190,6 +190,35 @@ def parse_view_box(s: str) -> Rect:
     return Rect(*box)
 
 
+def parse_width_height(width: str, height: str) -> Rect:
+    """Parse SVG width and height
+
+    Args:
+        width: Positive non-zero length with optional px unit
+        height: Positive non-zero length with optional px unit
+
+    Returns:
+        A rectangle of size width by height
+
+    References:
+        https://www.w3.org/TR/SVG11/types.html#DataTypeLength
+    """
+    box = [width, height]
+
+    if not all(box):
+        raise ValueError(f"Missing SVG width/height values: {box}")
+
+    try:
+        box = [float(re.sub("px$", "", length)) for length in box]
+    except ValueError:
+        raise ValueError(f"Unhandled or malformed SVG width/height units: {box}")
+
+    if not all(length > 0 for length in box):
+        raise ValueError(f"Positive non-zero SVG width/height values required: {box}")
+
+    return Rect(0, 0, *box)
+
+
 # sentinel object to check if special linked fields such as fx/fy are explicitly set;
 # using a float type instead of None to make the typechecker happy, and also so that one
 # doesn't need to unwrap Optional type whenever accessing those fields
