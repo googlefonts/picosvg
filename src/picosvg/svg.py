@@ -1430,7 +1430,13 @@ class SVG:
             string = string.replace("xlink:href", _XLINK_TEMP)
 
         # encode because fromstring dislikes xml encoding decl if input is str
-        parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
+        parser = etree.XMLParser(
+            remove_comments=True,
+            remove_blank_text=True,
+            # external entities may load local files (e.g. /etc/passwd), so disable
+            # safe entities like &gt; are still allowed
+            resolve_entities=False,
+        )
         tree = etree.fromstring(string.encode("utf-8"), parser)
         tree = _fix_xlink_ns(tree)
         return cls(tree)
