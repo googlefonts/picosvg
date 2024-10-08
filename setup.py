@@ -27,20 +27,20 @@ setup_args = dict(
     },
     setup_requires=["setuptools_scm"],
     install_requires=[
-        "absl-py>=0.9.0",
-        "lxml>=4.0",
-        "skia-pathops>=0.6.0",
+        "absl-py>=2.1.0",
+        "lxml>=5.3.0",
+        "skia-pathops>=0.8.0",
     ],
     extras_require={
         "dev": [
             "pytest",
             "pytest-clarity",
-            "black==23.3.0",
-            "pytype==2020.11.23; python_version < '3.9'",
+            "black==24.8.0",
+            "pytype==2024.9.13",
         ],
     },
     # this is so we can use the built-in dataclasses module
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     # this is for type checker to use our inline type hints:
     # https://www.python.org/dev/peps/pep-0561/#id18
     package_data={"picosvg": ["py.typed"]},
