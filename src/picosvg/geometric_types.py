@@ -44,13 +44,13 @@ class Point(NamedTuple):
             return self._sub_pt(other)
         elif isinstance(other, Vector):
             return self._sub_vec(other)
-        return NotImplemented
+        return NotImplemented  # pytype: disable=bad-return-type
 
     def __add__(self, other: "Vector") -> "Point":
         """Return Point translated by other Vector"""
         if isinstance(other, Vector):
             return self.__class__(self.x + other.x, self.y + other.y)
-        return NotImplemented
+        return NotImplemented  # pytype: disable=bad-return-type
 
     def round(self, digits: int) -> "Point":
         return Point(round(self.x, digits), round(self.y, digits))

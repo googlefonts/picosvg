@@ -83,7 +83,7 @@ def _round(pt, digits):
             ),
             "M0.117,0.055 Q0.117,0.029 0.107,0.029 Q0.097,0.029 0.097,0.055 "
             "Q0.097,0.081 0.107,0.081 Q0.117,0.081 0.117,0.055 Z",
-        )
+        ),
         # TODO: round-trip SVGPath with fill_rule="evenodd"
     ],
 )
