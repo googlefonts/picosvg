@@ -48,7 +48,7 @@ import pytest
                 ("s", (-34.4, 5.8, -35.5, 11.1)),
                 ("z", ()),
             ),
-        )
+        ),
         # TODO(anthrotype) add more tests
     ],
 )
