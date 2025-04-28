@@ -42,6 +42,7 @@ from picosvg.svg_meta import (
     xlinkns,
     parse_css_declarations,
     parse_view_box,
+    parse_width_height,
     _LinkedDefault,
 )
 from picosvg.svg_types import *
@@ -375,13 +376,14 @@ class SVG:
 
     def view_box(self) -> Optional[Rect]:
         if "viewBox" not in self.svg_root.attrib:
-            # if there is no explicit viewbox try to use width/height
-            w = self.svg_root.attrib.get("width", None)
-            h = self.svg_root.attrib.get("height", None)
-            if w and h:
-                return Rect(0, 0, float(w), float(h))
-            else:
+            box = [
+                self.svg_root.attrib.get("width"),
+                self.svg_root.attrib.get("height"),
+            ]
+            if not all(box):
                 return None
+
+            return parse_width_height(*box)
 
         return parse_view_box(self.svg_root.attrib["viewBox"])
 
