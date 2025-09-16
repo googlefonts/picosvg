@@ -302,7 +302,9 @@ def from_element(el, **inherited_attrib):
     return data_type(**args)
 
 def to_element(data_obj, **inherited_attrib):
-    el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
+    # Use proper namespace mapping to avoid ns0: prefixes
+    good_nsmap = {None: svgns(), "xlink": xlinkns()}
+    el = etree.Element(_CLASS_ELEMENTS[type(data_obj)], nsmap=good_nsmap)
     for field in dataclasses.fields(data_obj):
         attr_name = _attr_name(field.name)
         field_value = getattr(data_obj, field.name)
@@ -784,7 +786,9 @@ class SVG:
         # Reversed: we want leaves first
         to_process = reversed(tuple(c for c in self.breadth_first()))
 
-        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=self.svg_root.nsmap)
+        # Use proper namespace mapping for defs element to avoid ns0: prefixes
+        good_nsmap = {None: svgns(), "xlink": xlinkns()}
+        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=good_nsmap)
         self.svg_root.insert(0, defs)
 
         for context in to_process:
@@ -1046,7 +1050,10 @@ class SVG:
         self._update_etree()
 
         good_ns = {svgns(), xlinkns()}
-        if self.svg_root.nsmap[None] == svgns():
+        # Some SVGs may have no default namespace key in nsmap; avoid KeyError
+        default_ns = self.svg_root.nsmap.get(None)
+        # Accept un-namespaced elements either when default ns is SVG or missing
+        if default_ns == svgns() or default_ns is None:
             good_ns.add(None)
 
         el_to_rm = []
