@@ -35,6 +35,7 @@ from picosvg.svg_meta import (
     ATTRIB_DEFAULTS,
     attrib_default,
     number_or_percentage,
+    parse_css_length,
     ntos,
     splitns,
     strip_ns,
@@ -250,18 +251,55 @@ def _element_transform(el, current_transform=Affine2D.identity()):
     return current_transform
 
 
+# def from_element(el, **inherited_attrib):
+#     if not _is_shape(el.tag):
+#         raise ValueError(f"Bad tag <{el.tag}>")
+#     data_type = _SHAPE_CLASSES[el.tag]
+#     attrs = {**inherited_attrib, **el.attrib}
+#     args = {
+#         f.name: f.type(attrs[_attr_name(f.name)])
+#         for f in dataclasses.fields(data_type)
+#         if attrs.get(_attr_name(f.name), "").strip()
+#     }
+#     return data_type(**args)
+
+# Modified from_element to handle CSS length values (with units like px, pt, %, etc.)
 def from_element(el, **inherited_attrib):
     if not _is_shape(el.tag):
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _SHAPE_CLASSES[el.tag]
     attrs = {**inherited_attrib, **el.attrib}
-    args = {
-        f.name: f.type(attrs[_attr_name(f.name)])
-        for f in dataclasses.fields(data_type)
-        if attrs.get(_attr_name(f.name), "").strip()
+    
+    # Attributes that may contain CSS length values (with units like px, pt, %, etc.)
+    length_attrs = {
+        'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry',
+        'x1', 'y1', 'x2', 'y2', 'stroke_width', 'stroke_dashoffset'
     }
+    
+    args = {}
+    for f in dataclasses.fields(data_type):
+        attr_name = _attr_name(f.name)
+        if attr_name not in attrs or not attrs[attr_name].strip():
+            continue
+        
+        attr_value = attrs[attr_name]
+        if f.type == float and f.name in length_attrs and isinstance(attr_value, str):
+            # For CSS length values (including percentages and units), use parse_css_length
+            try:
+                if attr_value.endswith('%'):
+                    # For percentage values, use number_or_percentage with appropriate scaling
+                    args[f.name] = number_or_percentage(attr_value, scale=100)
+                else:
+                    # For other CSS units (px, pt, em, etc.), use parse_css_length
+                    args[f.name] = parse_css_length(attr_value)
+            except (ValueError, TypeError):
+                # If parsing fails, try the original type conversion as fallback
+                args[f.name] = f.type(attr_value)
+        else:
+            # Use the original type conversion
+            args[f.name] = f.type(attr_value)
+    
     return data_type(**args)
-
 
 def to_element(data_obj, **inherited_attrib):
     el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
@@ -373,17 +411,38 @@ class SVG:
     def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
         self.elements[idx] = (el, shapes)
 
+    # def view_box(self) -> Optional[Rect]:
+    #     if "viewBox" not in self.svg_root.attrib:
+    #         # if there is no explicit viewbox try to use width/height
+    #         w = self.svg_root.attrib.get("width", None)
+    #         h = self.svg_root.attrib.get("height", None)
+    #         if w and h:
+    #             return Rect(0, 0, float(w), float(h))
+    #         else:
+    #             return None
+
+    #     return parse_view_box(self.svg_root.attrib["viewBox"])
+    
+    # Modified view_box to handle CSS length values (with units like px, pt, %, etc.)
     def view_box(self) -> Optional[Rect]:
         if "viewBox" not in self.svg_root.attrib:
             # if there is no explicit viewbox try to use width/height
             w = self.svg_root.attrib.get("width", None)
             h = self.svg_root.attrib.get("height", None)
             if w and h:
-                return Rect(0, 0, float(w), float(h))
+                try:
+                    # Use parse_css_length to handle CSS units like px, pt, %, etc.
+                    width = parse_css_length(w)
+                    height = parse_css_length(h)
+                    return Rect(0, 0, width, height)
+                except (ValueError, TypeError):
+                    # Fallback to original behavior if parsing fails
+                    try:
+                        return Rect(0, 0, float(w), float(h))
+                    except (ValueError, TypeError):
+                        return None
             else:
                 return None
-
-        return parse_view_box(self.svg_root.attrib["viewBox"])
 
     def _default_tolerance(self):
         vbox = self.view_box()

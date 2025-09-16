@@ -24,6 +24,7 @@ from picosvg.svg_meta import (
     check_cmd,
     cmd_coords,
     number_or_percentage,
+    parse_css_length,
     ntos,
     parse_css_declarations,
     path_segment,
@@ -314,6 +315,31 @@ class SVGShape:
             self.stroke_dashoffset,
         )
 
+    # def apply_style_attribute(self, inplace=False) -> "SVGShape":
+    #     """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
+
+    #     Unsupported attributes for which no corresponding field exists in SVGShape
+    #     dataclass are kept as text in the "style" attribute.
+    #     """
+    #     target = self
+    #     if not inplace:
+    #         target = copy.deepcopy(self)
+    #     if target.style:
+    #         attr_types = {
+    #             f.name.replace("_", "-"): f.type for f in dataclasses.fields(self)
+    #         }
+    #         raw_attrs = {}
+    #         unparsed_style = parse_css_declarations(
+    #             target.style, raw_attrs, property_names=attr_types.keys()
+    #         )
+    #         for attr_name, attr_value in raw_attrs.items():
+    #             field_name = attr_name.replace("-", "_")
+    #             field_value = attr_types[attr_name](attr_value)
+    #             setattr(target, field_name, field_value)
+    #         target.style = unparsed_style
+    #     return target
+    
+    # Modified apply_style_attribute to handle CSS length values (with units like px, pt, %, etc.)
     def apply_style_attribute(self, inplace=False) -> "SVGShape":
         """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
 
@@ -331,9 +357,33 @@ class SVGShape:
             unparsed_style = parse_css_declarations(
                 target.style, raw_attrs, property_names=attr_types.keys()
             )
+            
+            # CSS length attributes that may contain units
+            length_attrs = {
+                'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry',
+                'x1', 'y1', 'x2', 'y2', 'stroke-width', 'stroke-dashoffset'
+            }
+            
             for attr_name, attr_value in raw_attrs.items():
                 field_name = attr_name.replace("-", "_")
-                field_value = attr_types[attr_name](attr_value)
+                field_type = attr_types[attr_name]
+                
+                if field_type == float and attr_name in length_attrs and isinstance(attr_value, str):
+                    # Handle CSS length values with units
+                    try:
+                        if attr_value.endswith('%'):
+                            # For percentage values, use number_or_percentage
+                            field_value = number_or_percentage(attr_value, scale=100)
+                        else:
+                            # For other CSS units, use parse_css_length
+                            field_value = parse_css_length(attr_value)
+                    except (ValueError, TypeError):
+                        # Fallback to original type conversion
+                        field_value = field_type(attr_value)
+                else:
+                    # Use original type conversion for non-length attributes
+                    field_value = field_type(attr_value)
+                
                 setattr(target, field_name, field_value)
             target.style = unparsed_style
         return target
