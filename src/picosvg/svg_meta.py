@@ -116,6 +116,67 @@ def ntos(n: float) -> str:
 def number_or_percentage(s: str, scale=1) -> float:
     return float(s[:-1]) / 100 * scale if s.endswith("%") else float(s)
 
+def parse_css_length(s: str) -> float:
+    """Parse CSS length values with units and convert to float.
+    
+    Supports common CSS units like px, pt, pc, mm, cm, in, em, rem, %.
+    For units that require context (like em, rem), defaults are used.
+    
+    Args:
+        s: String value like '100px', '12pt', '1.5em', '50%'
+    
+    Returns:
+        float: Numeric value converted to pixels (or appropriate base unit)
+    """
+    if not isinstance(s, str):
+        return float(s)
+    
+    s = s.strip()
+    if not s:
+        return 0.0
+    
+    # Handle percentage values
+    if s.endswith('%'):
+        return float(s[:-1])  # Return percentage as-is, let caller handle scaling
+    
+    # Common CSS unit conversions to pixels
+    # Reference: https://www.w3.org/TR/css-values-3/#absolute-lengths
+    unit_conversions = {
+        'px': 1.0,      # pixels (base unit)
+        'pt': 1.333333, # points: 1pt = 1/72 inch = 1.333333px
+        'pc': 16.0,     # picas: 1pc = 12pt = 16px
+        'mm': 3.779528, # millimeters: 1mm = 3.779528px
+        'cm': 37.79528, # centimeters: 1cm = 37.79528px
+        'in': 96.0,     # inches: 1in = 96px
+        'em': 16.0,     # em units: default to 16px (typical browser default)
+        'rem': 16.0,    # rem units: default to 16px (typical browser default)
+        'ex': 8.0,      # ex units: roughly half of em
+    }
+    
+    # Try to extract number and unit
+    import re
+    match = re.match(r'^([+-]?(?:\d+\.?\d*|\.\d+))([a-zA-Z%]*)$', s)
+    if match:
+        number_part, unit_part = match.groups()
+        number = float(number_part)
+        
+        if not unit_part:
+            # No unit specified, assume pixels
+            return number
+        
+        unit = unit_part.lower()
+        if unit in unit_conversions:
+            return number * unit_conversions[unit]
+        else:
+            # Unknown unit, return the number as-is
+            return number
+    
+    # If no match, try to parse as plain number
+    try:
+        return float(s)
+    except ValueError:
+        # If all else fails, return 0
+        return 0.0
 
 def path_segment(cmd, *args):
     # put commas between coords, spaces otherwise, author readability pref
