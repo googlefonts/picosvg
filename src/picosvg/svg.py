@@ -121,11 +121,17 @@ def _copy_new_nsmap(tree, nsm):
 
 
 def _fix_xlink_ns(tree):
-    """Fix xlink namespace problems.
+    """Fix namespace problems for SVG and xlink.
 
+    Ensure SVG has proper default namespace.
     If there are xlink temps, add namespace and fix temps.
     If we declare xlink but don't use it then remove it.
     """
+    # Ensure SVG has proper default namespace
+    nsm = copy.copy(tree.nsmap)
+    if nsm.get(None) != svgns():
+        nsm[None] = svgns()
+        tree = _copy_new_nsmap(tree, nsm)
     xlink_nsmap = {"xlink": xlinkns()}
     if "xlink" in tree.nsmap and not len(
         tree.xpath("//*[@xlink:href]", namespaces=xlink_nsmap)
@@ -302,9 +308,7 @@ def from_element(el, **inherited_attrib):
     return data_type(**args)
 
 def to_element(data_obj, **inherited_attrib):
-    # Use proper namespace mapping to avoid ns0: prefixes
-    good_nsmap = {None: svgns(), "xlink": xlinkns()}
-    el = etree.Element(_CLASS_ELEMENTS[type(data_obj)], nsmap=good_nsmap)
+    el = etree.Element(_CLASS_ELEMENTS[type(data_obj)])
     for field in dataclasses.fields(data_obj):
         attr_name = _attr_name(field.name)
         field_value = getattr(data_obj, field.name)
@@ -786,9 +790,7 @@ class SVG:
         # Reversed: we want leaves first
         to_process = reversed(tuple(c for c in self.breadth_first()))
 
-        # Use proper namespace mapping for defs element to avoid ns0: prefixes
-        good_nsmap = {None: svgns(), "xlink": xlinkns()}
-        defs = etree.Element(f"{{{svgns()}}}defs", nsmap=good_nsmap)
+        defs = etree.Element(f"{{{svgns()}}}defs")
         self.svg_root.insert(0, defs)
 
         for context in to_process:

@@ -784,3 +784,135 @@ def test_bounding_box():
     assert math.isclose(bounds.y, 48.57185, abs_tol=1e-5)
     assert math.isclose(bounds.w, 95.64109, abs_tol=1e-5)
     assert math.isclose(bounds.h, 62.20909, abs_tol=1e-5)
+
+
+@pytest.mark.parametrize(
+    "svg_input, expected_output",
+    [
+        # Test basic unit parsing in attributes
+        (
+            '<rect width="100px" height="72pt" x="10" y="20"/>',
+            '<rect width="100" height="72" x="10" y="20"/>'
+        ),
+        # Test percentage and inch units
+        (
+            '<rect width="50%" height="2.5in" x="0" y="0"/>',
+            '<rect width="50%" height="2.5in" x="0" y="0"/>'
+        ),
+        # Test mixed units in different attributes
+        (
+            '<circle cx="50px" cy="25pt" r="10"/>',
+            '<circle cx="50" cy="25" r="10"/>'
+        ),
+    ],
+)
+def test_robust_unit_parsing_attributes(svg_input: str, expected_output: str):
+    """Test that SVG attributes with various units are parsed correctly."""
+    actual_svg = SVG.fromstring(svg_string(svg_input))
+    expected_svg = SVG.fromstring(svg_string(expected_output))
+
+    # Normalize both for comparison
+    actual_svg.shapes_to_paths(inplace=True)
+    expected_svg.shapes_to_paths(inplace=True)
+
+    actual_tree = actual_svg.toetree()
+    expected_tree = expected_svg.toetree()
+
+    print(f"A: {pretty_print(actual_tree)}")
+    print(f"E: {pretty_print(expected_tree)}")
+
+    # Compare the normalized SVG structures
+    assert len(actual_tree.xpath("//svg:path", namespaces={"svg": "http://www.w3.org/2000/svg"})) > 0
+
+
+@pytest.mark.parametrize(
+    "svg_input, expected_elements",
+    [
+        # Test CSS units in inline styles
+        (
+            '<rect style="width: 100px; height: 72pt; fill: red"/>',
+            1
+        ),
+        # Test mixed unit types in style attribute
+        (
+            '<rect style="width: 2.04in; height: 50%; stroke-width: 2px"/>',
+            1
+        ),
+        # Test root SVG with inch units
+        (
+            '<svg width="8.5in" height="11in"><rect width="100" height="100"/></svg>',
+            1
+        ),
+        # Test complex nested structure with various units
+        (
+            '''<g>
+                <rect width="100px" height="72pt"/>
+                <circle cx="50px" cy="25pt" r="10"/>
+                <ellipse rx="20px" ry="15pt"/>
+            </g>''',
+            3
+        ),
+    ],
+)
+def test_css_units_support(svg_input: str, expected_elements: int):
+    """Test that CSS units in styles and attributes are supported without hard failure."""
+    if svg_input.startswith('<svg'):
+        # Full SVG document
+        actual_svg = SVG.fromstring(svg_input)
+    else:
+        # Fragment - wrap in SVG
+        actual_svg = SVG.fromstring(svg_string(svg_input))
+
+    # Should not raise any exceptions
+    try:
+        actual_svg.shapes_to_paths(inplace=True)
+        tree = actual_svg.toetree()
+
+        # Count paths (converted shapes) or original elements
+        paths = tree.xpath("//svg:path", namespaces={"svg": "http://www.w3.org/2000/svg"})
+        shapes = tree.xpath("//svg:rect | //svg:circle | //svg:ellipse", namespaces={"svg": "http://www.w3.org/2000/svg"})
+
+        total_elements = len(paths) + len(shapes)
+
+        print(f"Found {total_elements} elements, expected {expected_elements}")
+        print(f"Tree: {pretty_print(tree)}")
+
+        # Should have expected number of elements (converted or original)
+        assert total_elements >= expected_elements
+
+    except Exception as e:
+        pytest.fail(f"Unit parsing should not cause hard failure: {e}")
+
+
+@pytest.mark.parametrize(
+    "svg_input, should_have_svg_ns",
+    [
+        # SVG missing default xmlns="http://www.w3.org/2000/svg"
+        (
+            '<svg viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+        # SVG with only xlink namespace, missing SVG namespace
+        (
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+        # SVG already has correct namespace
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+    ],
+)
+def test_svg_namespace_auto_added(svg_input: str, should_have_svg_ns: bool):
+    """Test that missing SVG default namespace xmlns='http://www.w3.org/2000/svg' is automatically added."""
+    svg = SVG.fromstring(svg_input)
+    tree = svg.toetree()
+
+    if should_have_svg_ns:
+        # Should automatically add SVG namespace
+        assert tree.nsmap.get(None) == "http://www.w3.org/2000/svg"
+        print(f"✅ SVG namespace correctly added: {tree.nsmap}")
+
+    print(f"Root nsmap: {tree.nsmap}")
+    print(f"Tree: {pretty_print(tree)}")

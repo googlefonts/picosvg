@@ -315,30 +315,6 @@ class SVGShape:
             self.stroke_dashoffset,
         )
 
-    # def apply_style_attribute(self, inplace=False) -> "SVGShape":
-    #     """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
-
-    #     Unsupported attributes for which no corresponding field exists in SVGShape
-    #     dataclass are kept as text in the "style" attribute.
-    #     """
-    #     target = self
-    #     if not inplace:
-    #         target = copy.deepcopy(self)
-    #     if target.style:
-    #         attr_types = {
-    #             f.name.replace("_", "-"): f.type for f in dataclasses.fields(self)
-    #         }
-    #         raw_attrs = {}
-    #         unparsed_style = parse_css_declarations(
-    #             target.style, raw_attrs, property_names=attr_types.keys()
-    #         )
-    #         for attr_name, attr_value in raw_attrs.items():
-    #             field_name = attr_name.replace("-", "_")
-    #             field_value = attr_types[attr_name](attr_value)
-    #             setattr(target, field_name, field_value)
-    #         target.style = unparsed_style
-    #     return target
-    
     # Modified apply_style_attribute to handle CSS length values (with units like px, pt, %, etc.)
     def apply_style_attribute(self, inplace=False) -> "SVGShape":
         """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
