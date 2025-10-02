@@ -31,6 +31,7 @@ from picosvg.svg_meta import (
     strip_ns,
     SVGCommand,
     SVGCommandSeq,
+    SVG_LENGTH_ATTRS,
     _LinkedDefault,
 )
 from picosvg import svg_pathops
@@ -315,7 +316,6 @@ class SVGShape:
             self.stroke_dashoffset,
         )
 
-    # Modified apply_style_attribute to handle CSS length values (with units like px, pt, %, etc.)
     def apply_style_attribute(self, inplace=False) -> "SVGShape":
         """Converts inlined CSS in "style" attribute to equivalent SVG attributes.
 
@@ -334,17 +334,11 @@ class SVGShape:
                 target.style, raw_attrs, property_names=attr_types.keys()
             )
             
-            # CSS length attributes that may contain units
-            length_attrs = {
-                'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry',
-                'x1', 'y1', 'x2', 'y2', 'stroke-width', 'stroke-dashoffset'
-            }
-            
             for attr_name, attr_value in raw_attrs.items():
                 field_name = attr_name.replace("-", "_")
                 field_type = attr_types[attr_name]
-                
-                if field_type == float and attr_name in length_attrs and isinstance(attr_value, str):
+
+                if field_type == float and attr_name in SVG_LENGTH_ATTRS and isinstance(attr_value, str):
                     # Handle CSS length values with units
                     try:
                         if attr_value.endswith('%'):

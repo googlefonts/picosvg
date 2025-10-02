@@ -43,6 +43,7 @@ from picosvg.svg_meta import (
     xlinkns,
     parse_css_declarations,
     parse_view_box,
+    SVG_LENGTH_FIELDS,
     _LinkedDefault,
 )
 from picosvg.svg_types import *
@@ -257,39 +258,20 @@ def _element_transform(el, current_transform=Affine2D.identity()):
     return current_transform
 
 
-# def from_element(el, **inherited_attrib):
-#     if not _is_shape(el.tag):
-#         raise ValueError(f"Bad tag <{el.tag}>")
-#     data_type = _SHAPE_CLASSES[el.tag]
-#     attrs = {**inherited_attrib, **el.attrib}
-#     args = {
-#         f.name: f.type(attrs[_attr_name(f.name)])
-#         for f in dataclasses.fields(data_type)
-#         if attrs.get(_attr_name(f.name), "").strip()
-#     }
-#     return data_type(**args)
-
-# Modified from_element to handle CSS length values (with units like px, pt, %, etc.)
 def from_element(el, **inherited_attrib):
     if not _is_shape(el.tag):
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _SHAPE_CLASSES[el.tag]
     attrs = {**inherited_attrib, **el.attrib}
-    
-    # Attributes that may contain CSS length values (with units like px, pt, %, etc.)
-    length_attrs = {
-        'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry',
-        'x1', 'y1', 'x2', 'y2', 'stroke_width', 'stroke_dashoffset'
-    }
-    
+
     args = {}
     for f in dataclasses.fields(data_type):
         attr_name = _attr_name(f.name)
         if attr_name not in attrs or not attrs[attr_name].strip():
             continue
-        
+
         attr_value = attrs[attr_name]
-        if f.type == float and f.name in length_attrs and isinstance(attr_value, str):
+        if f.type == float and f.name in SVG_LENGTH_FIELDS and isinstance(attr_value, str):
             # For CSS length values (including percentages and units), use parse_css_length
             try:
                 if attr_value.endswith('%'):
@@ -417,19 +399,7 @@ class SVG:
     def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
         self.elements[idx] = (el, shapes)
 
-    # def view_box(self) -> Optional[Rect]:
-    #     if "viewBox" not in self.svg_root.attrib:
-    #         # if there is no explicit viewbox try to use width/height
-    #         w = self.svg_root.attrib.get("width", None)
-    #         h = self.svg_root.attrib.get("height", None)
-    #         if w and h:
-    #             return Rect(0, 0, float(w), float(h))
-    #         else:
-    #             return None
-
-    #     return parse_view_box(self.svg_root.attrib["viewBox"])
     
-    # Modified view_box to handle CSS length values (with units like px, pt, %, etc.)
     def view_box(self) -> Optional[Rect]:
         if "viewBox" not in self.svg_root.attrib:
             # if there is no explicit viewbox try to use width/height
