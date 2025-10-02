@@ -24,12 +24,14 @@ from picosvg.svg_meta import (
     check_cmd,
     cmd_coords,
     number_or_percentage,
+    parse_css_length,
     ntos,
     parse_css_declarations,
     path_segment,
     strip_ns,
     SVGCommand,
     SVGCommandSeq,
+    SVG_LENGTH_ATTRS,
     _LinkedDefault,
 )
 from picosvg import svg_pathops
@@ -331,9 +333,27 @@ class SVGShape:
             unparsed_style = parse_css_declarations(
                 target.style, raw_attrs, property_names=attr_types.keys()
             )
+            
             for attr_name, attr_value in raw_attrs.items():
                 field_name = attr_name.replace("-", "_")
-                field_value = attr_types[attr_name](attr_value)
+                field_type = attr_types[attr_name]
+
+                if field_type == float and attr_name in SVG_LENGTH_ATTRS and isinstance(attr_value, str):
+                    # Handle CSS length values with units
+                    try:
+                        if attr_value.endswith('%'):
+                            # For percentage values, use number_or_percentage
+                            field_value = number_or_percentage(attr_value, scale=100)
+                        else:
+                            # For other CSS units, use parse_css_length
+                            field_value = parse_css_length(attr_value)
+                    except (ValueError, TypeError):
+                        # Fallback to original type conversion
+                        field_value = field_type(attr_value)
+                else:
+                    # Use original type conversion for non-length attributes
+                    field_value = field_type(attr_value)
+                
                 setattr(target, field_name, field_value)
             target.style = unparsed_style
         return target
@@ -865,13 +885,14 @@ class _SVGGradient:
 
     @staticmethod
     def _get_gradient_units_relative_scale(
-        attrib: Mapping[str, str], view_box: Rect
+        attrib: Mapping[str, str], view_box: Optional[Rect]
     ) -> Rect:
         gradient_units = attrib.get("gradientUnits", "objectBoundingBox")
         if gradient_units == "userSpaceOnUse":
             # For gradientUnits="userSpaceOnUse", percentages represent values relative to
             # the current viewport.
-            return view_box
+            # If view_box is None, fallback to unit rectangle
+            return view_box if view_box is not None else _UNIT_RECT
         elif gradient_units == "objectBoundingBox":
             # For gradientUnits="objectBoundingBox", percentages represent values relative
             # to the object bounding box. The latter defines an abstract coordinate system
