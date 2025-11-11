@@ -1,18 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      width="512" height="512"
-     viewBox="0 0 15 15">
-    <path d="M4,8 4,10"
+     viewBox="0 0 150 150">
+    <path d="M40,80 40,100"
         stroke="red"
         fill="none"
+        stroke-width="10"
         stroke-linejoin="round"
         stroke-linecap="round"/>
-    <path d="M7,5 a3,1 0,0,0 0,-3 a3,3 0 0 1 -4,2"
+    <path d="M70,50 a30,10 0,0,0 0,-30 a30,30 0 0 1 -40,20"
         stroke="black"
         fill="none"
+        stroke-width="10"
         stroke-linejoin="round"
         stroke-linecap="round"/>
-    <path d="m5,6 4,4 -4,4"
+    <path d="m50,60 40,40 -40,40"
         stroke="blue"
         fill="none"
+        stroke-width="10"
         stroke-miterlimit="1" />
 </svg>
