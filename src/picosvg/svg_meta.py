@@ -116,6 +116,64 @@ def ntos(n: float) -> str:
 def number_or_percentage(s: str, scale=1) -> float:
     return float(s[:-1]) / 100 * scale if s.endswith("%") else float(s)
 
+def parse_css_length(s: str) -> float:
+    """Parse CSS length values with absolute units and convert to pixels.
+
+    Converts absolute CSS units (px, pt, pc, mm, cm, in) to pixels using 96 DPI.
+    Percentages are returned as numeric values without the % sign (caller must handle scaling).
+    Relative units (em, rem, ex, ch, vw, vh) that require context are rejected.
+
+    Args:
+        s: String value like '100px', '12pt', '50%'
+
+    Returns:
+        float: Numeric value in pixels (or percentage value without % for percentages)
+
+    Raises:
+        ValueError: If the value is empty, invalid, or uses unsupported relative units
+    """
+    if not isinstance(s, str):
+        return float(s)
+
+    s = s.strip()
+    if not s:
+        raise ValueError("Empty CSS length value")
+
+    # Handle percentage values - return numeric value, caller handles scaling
+    if s.endswith('%'):
+        return float(s[:-1])
+
+    # Absolute unit conversions to pixels (96 DPI standard)
+    # Reference: https://www.w3.org/TR/css-values-3/#absolute-lengths
+    ABSOLUTE_UNITS = {
+        'px': 1.0,          # pixels (base unit)
+        'pt': 96 / 72,      # points: 1pt = 1/72 inch = 96/72 px
+        'pc': 96 / 6,       # picas: 1pc = 1/6 inch = 16px
+        'in': 96,           # inches: 1in = 96px (CSS standard)
+        'cm': 96 / 2.54,    # centimeters: 1cm = 96/2.54 px
+        'mm': 96 / 25.4,    # millimeters: 1mm = 96/25.4 px
+    }
+
+    # Extract number and unit
+    match = re.match(r'^([+-]?(?:\d+\.?\d*|\.\d+))([a-z]*)$', s, re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Invalid CSS length value: {s!r}")
+
+    number = float(match.group(1))
+    unit = match.group(2).lower()
+
+    if not unit:
+        # No unit specified, treat as pixels
+        return number
+
+    if unit in ABSOLUTE_UNITS:
+        return number * ABSOLUTE_UNITS[unit]
+
+    # Reject relative units that require context (em, rem, ex, ch, vw, vh, etc.)
+    raise ValueError(
+        f"Relative unit '{unit}' requires context and is not supported. "
+        f"Supported units: {', '.join(ABSOLUTE_UNITS.keys())}, %"
+    )
 
 def path_segment(cmd, *args):
     # put commas between coords, spaces otherwise, author readability pref
@@ -188,6 +246,18 @@ def parse_view_box(s: str) -> Rect:
     if len(box) != 4:
         raise ValueError(f"Unable to parse viewBox: {s!r}")
     return Rect(*box)
+
+
+# SVG attributes that may contain CSS length values with units
+# Define once using Python field naming convention (underscores)
+_LENGTH_FIELDS = frozenset({
+    'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry',
+    'x1', 'y1', 'x2', 'y2', 'stroke_width', 'stroke_dashoffset'
+})
+
+# Export both naming conventions
+SVG_LENGTH_FIELDS = _LENGTH_FIELDS
+SVG_LENGTH_ATTRS = frozenset(f.replace('_', '-') for f in _LENGTH_FIELDS)
 
 
 # sentinel object to check if special linked fields such as fx/fy are explicitly set;
