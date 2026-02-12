@@ -243,6 +243,12 @@ def normalize(shape: SVGShape, tolerance: float) -> SVGPath:
     scaled, rotated, etc.
 
     Intended use is to normalize multiple shapes to identify opportunity for reuse."""
+
+    # Only identical things should match
+    if tolerance < 0:
+        # Allow for tiny float deviations
+        tolerance = 0.001
+
     path = _affine_friendly(dataclasses.replace(shape, id=""))
 
     # Make path relative, with first coord at 0,0
@@ -300,10 +306,15 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     Intended use is to call this only when the normalized versions of the shapes
     are the same, in which case finding a solution is typical.
 
-
     See reuse_example.html in root of picosvg for a visual explanation.
 
+    If tolerance is < 0 only a pure translation can be returned.
     """
+    only_translate = tolerance < 0
+    if only_translate:
+        # Allow for tiny float deviations
+        tolerance = 0.001
+
     s1 = dataclasses.replace(s1, id="")
     s2 = dataclasses.replace(s2, id="")
 
@@ -319,6 +330,9 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
     affine = Affine2D.identity().translate(s2x - s1x, s2y - s1y)
     if _try_affine(affine, s1, s2, tolerance, "same start point"):
         return _round(affine, s1, s2, tolerance)
+
+    if only_translate:
+        return None
 
     # Align the first edge with a significant x part.
     # Fixes rotation, x-scale, and uniform scaling.
@@ -363,20 +377,25 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
         s1_prime, s2_prime, lambda v: v.y, tolerance
     )
     if idx != -1:
-        affine = Affine2D.compose_ltr(
-            (
-                s1_to_origin,
-                s1_vec1_to_s2_vec1x,
-                # lie vec1 along x axis
-                rotate_s2vec1_onto_x,
-                # scale first y-vectors to match; x-parts should already match
-                Affine2D.identity().scale(1.0, s2_vecy.y / s1_vecy.y),
-                # restore the rotation we removed
-                rotate_s2vec1_off_x,
-                # drop into final position
-                origin_to_s2,
+        try:
+            affine = Affine2D.compose_ltr(
+                (
+                    s1_to_origin,
+                    s1_vec1_to_s2_vec1x,
+                    # lie vec1 along x axis
+                    rotate_s2vec1_onto_x,
+                    # scale first y-vectors to match; x-parts should already match
+                    Affine2D.identity().scale(1.0, s2_vecy.y / s1_vecy.y),
+                    # restore the rotation we removed
+                    rotate_s2vec1_off_x,
+                    # drop into final position
+                    origin_to_s2,
+                )
             )
-        )
+        except ZeroDivisionError:
+            raise ValueError(
+                f"Div / 0 caused by {idx} {s1_vecy} {s2_vecy} despite tolerance {tolerance}"
+            )
         if _try_affine(affine, s1, s2, tolerance, "align vecy"):
             return _round(affine, s1, s2, tolerance)
 

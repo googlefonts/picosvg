@@ -267,6 +267,14 @@ def test_vectors_for_path(path, expected_vectors):
             Affine2D(0.2199, 0.0, 0.0, 0.3737, 67.8139, 38.0518),
             0.01,
         ),
+        # Negative tolerance - which can occur in nanoemoji - means translate only
+        # It definitely does not mean proceed directly to divide by 0
+        (
+            SVGPath(d="M0,0 L1,0 L1,1 Z"),
+            SVGPath(d="M2,0 L3,0 L3,1 Z"),
+            Affine2D(1.0, 0.0, 0.0, 1.0, 2.0, 0.0),
+            -1.0,
+        ),
     ],
 )
 def test_svg_reuse(s1, s2, expected_affine, tolerance):
