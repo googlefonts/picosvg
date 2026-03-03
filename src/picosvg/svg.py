@@ -1446,7 +1446,7 @@ class SVG:
         if hasattr(file_or_path, "read"):
             raw_svg = file_or_path.read()
         else:
-            with open(file_or_path) as f:
+            with open(file_or_path, encoding="utf-8-sig") as f:
                 raw_svg = f.read()
         return cls.fromstring(raw_svg)
 
