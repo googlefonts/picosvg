@@ -7,13 +7,18 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      with:
+        persist-credentials: false
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         # pytype currently doesn't work with python >= 3.9
         python-version: 3.8
@@ -29,9 +34,11 @@ jobs:
         python-version: ["3.8", "3.10", "3.11"]
         platform: [ubuntu-latest]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      with:
+        persist-credentials: false
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install tox
@@ -51,12 +58,13 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         # setuptools_scm requires the git clone to not be 'shallow'
         fetch-depth: 0
+        persist-credentials: false
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: "3.x"
     - name: Install dependencies
@@ -87,13 +95,8 @@ jobs:
         fi
     - name: Create GitHub release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        # This token is provided by Actions, you do not need to create your own token
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
         body_path: "${{ runner.temp }}/release_notes.md"
         draft: false
         prerelease: ${{ env.IS_PRERELEASE }}
