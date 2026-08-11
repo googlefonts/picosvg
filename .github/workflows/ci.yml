@@ -70,7 +70,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine
+        pip install build twine
     - name: Extract release notes from annotated tag message
       id: release_notes
       env:
@@ -110,5 +110,5 @@ jobs:
         else
           echo "DEBUG: This is a final release"
         fi
-        python setup.py sdist bdist_wheel
+        python -m build
         twine upload dist/*
