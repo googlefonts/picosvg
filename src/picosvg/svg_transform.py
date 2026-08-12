@@ -59,16 +59,16 @@ class Affine2D(NamedTuple):
     f: float
 
     @staticmethod
-    def flip_y():
-        return Affine2D._flip_y
+    def flip_y() -> "Affine2D":
+        return _FLIP_Y
 
     @staticmethod
-    def identity():
-        return Affine2D._identity
+    def identity() -> "Affine2D":
+        return _IDENTITY
 
     @staticmethod
-    def degenerate():
-        return Affine2D._degnerate
+    def degenerate() -> "Affine2D":
+        return _DEGENERATE
 
     @staticmethod
     def fromstring(raw_transform):
@@ -265,7 +265,13 @@ class Affine2D(NamedTuple):
     def almost_equals(
         self, other: "Affine2D", tolerance=DEFAULT_ALMOST_EQUAL_TOLERANCE
     ):
-        return all(almost_equal(v1, v2, tolerance) for v1, v2 in zip(self, other))
+        return all(
+            almost_equal(v1, v2, tolerance)
+            for v1, v2 in zip(
+                (self.a, self.b, self.c, self.d, self.e, self.f),
+                (other.a, other.b, other.c, other.d, other.e, other.f),
+            )
+        )
 
     def decompose_scale(self) -> Tuple["Affine2D", "Affine2D"]:
         """Split affine into a scale component and whatever remains.
@@ -343,9 +349,9 @@ class Affine2D(NamedTuple):
         return translation, affine_prime
 
 
-Affine2D._identity = Affine2D(1, 0, 0, 1, 0, 0)
-Affine2D._degnerate = Affine2D(0, 0, 0, 0, 0, 0)
-Affine2D._flip_y = Affine2D(1, 0, 0, -1, 0, 0)
+_IDENTITY = Affine2D(1, 0, 0, 1, 0, 0)
+_DEGENERATE = Affine2D(0, 0, 0, 0, 0, 0)
+_FLIP_Y = Affine2D(1, 0, 0, -1, 0, 0)
 
 
 def _fix_rotate(args):

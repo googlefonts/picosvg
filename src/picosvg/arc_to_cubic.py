@@ -19,7 +19,7 @@ is adapted from Blink's SVGPathNormalizer::DecomposeArcToCubic:
 https://github.com/chromium/chromium/blob/93831f2/third_party/blink/renderer/core/svg/svg_path_parser.cc#L169-L278
 """
 from math import atan2, ceil, cos, fabs, isfinite, pi, radians, sin, sqrt, tan
-from typing import Iterator, NamedTuple, Optional, Tuple
+from typing import Iterator, NamedTuple, Optional, Tuple, cast
 from picosvg.geometric_types import Point, Vector
 from picosvg.svg_transform import Affine2D
 
@@ -62,7 +62,7 @@ class EllipticalArc(NamedTuple):
         if self.is_straight_line() or self.is_zero_length():
             return self
 
-        mid_point_distance = (self.start_point - self.end_point) * 0.5
+        mid_point_distance = cast(Vector, self.start_point - self.end_point) * 0.5
 
         # SVG rotation is expressed in degrees, whereas Affin2D.rotate uses radians
         angle = radians(self.rotation)
@@ -96,7 +96,7 @@ class EllipticalArc(NamedTuple):
 
         point1 = point_transform.map_point(self.start_point)
         point2 = point_transform.map_point(self.end_point)
-        delta = point2 - point1
+        delta = cast(Vector, point2 - point1)
 
         d = delta.x * delta.x + delta.y * delta.y
         scale_factor_squared = max(1 / d - 0.25, 0.0)
@@ -105,8 +105,9 @@ class EllipticalArc(NamedTuple):
         if self.sweep == self.large:
             scale_factor = -scale_factor
 
-        delta *= scale_factor
-        center_point = point1 + (point2 - point1) * 0.5 + Vector(-delta.y, delta.x)
+        delta = delta * scale_factor
+        midpoint = cast(Vector, point2 - point1) * 0.5
+        center_point = point1 + midpoint + Vector(-delta.y, delta.x)
         v1 = point1 - center_point
         v2 = point2 - center_point
 

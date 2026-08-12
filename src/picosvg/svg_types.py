@@ -37,14 +37,18 @@ from picosvg.arc_to_cubic import arc_to_cubic
 from picosvg.svg_path_iter import parse_svg_path
 from picosvg.svg_transform import Affine2D
 from typing import (
+    Any,
+    Callable,
     ClassVar,
     Generator,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
     Sequence,
     Tuple,
+    cast,
 )
 
 
@@ -333,7 +337,8 @@ class SVGShape:
             )
             for attr_name, attr_value in raw_attrs.items():
                 field_name = attr_name.replace("-", "_")
-                field_value = attr_types[attr_name](attr_value)
+                field_type = cast(Callable[[str], Any], attr_types[attr_name])
+                field_value = field_type(attr_value)
                 setattr(target, field_name, field_value)
             target.style = unparsed_style
         return target
@@ -660,7 +665,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
                 end_y += curr_pos.y
             end_pt = Point(end_x, end_y)
 
-            result = []
+            result: List[SVGCommand] = []
             for p1, p2, target in arc_to_cubic(
                 curr_pos, rx, ry, x_rotation, large, sweep, end_pt
             ):
@@ -682,12 +687,10 @@ class SVGPath(SVGShape, SVGCommandSeq):
         return target
 
     @classmethod
-    def from_commands(cls, svg_cmds: Generator[SVGCommand, None, None]) -> "SVGPath":
+    def from_commands(cls, svg_cmds: SVGCommandSeq) -> "SVGPath":
         return cls().update_path(svg_cmds, inplace=True)
 
-    def update_path(
-        self, svg_cmds: Generator[SVGCommand, None, None], inplace=False
-    ) -> "SVGPath":
+    def update_path(self, svg_cmds: SVGCommandSeq, inplace=False) -> "SVGPath":
         target = self
         if not inplace:
             target = copy.deepcopy(self)
@@ -881,8 +884,10 @@ class _SVGGradient:
             raise ValueError(f'gradientUnits="{gradient_units}" not supported')
 
     @staticmethod
-    def _parse_common_gradient_parts(attrib: MutableMapping[str, str]):
-        result = {}
+    def _parse_common_gradient_parts(
+        attrib: MutableMapping[str, str],
+    ) -> Mapping[str, Any]:
+        result: dict[str, Any] = {}
         for attr_name in ("id", "gradientUnits", "spreadMethod"):
             if attr_name in attrib:
                 result[attr_name] = attrib.pop(attr_name)
@@ -967,7 +972,7 @@ class SVGRadialGradient(_SVGGradient):
         scale = cls._get_gradient_units_relative_scale(attrib, view_box)
         diagonal = scale.normalized_diagonal()
 
-        kwargs = dict(
+        kwargs: dict[str, Any] = dict(
             cx=number_or_percentage(attrib.pop("cx", "50%"), scale.w),
             cy=number_or_percentage(attrib.pop("cy", "50%"), scale.h),
             r=number_or_percentage(attrib.pop("r", "50%"), diagonal),
