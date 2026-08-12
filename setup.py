@@ -15,6 +15,19 @@
 from setuptools import setup, find_packages
 
 
+extras_require = {
+    "test": [
+        "pytest",
+        "pytest-clarity",
+    ],
+    "lint": [
+        "black==24.8.0",
+        "pytype",
+    ],
+}
+extras_require["dev"] = extras_require["test"] + extras_require["lint"]
+
+
 setup_args = dict(
     name="picosvg",
     use_scm_version={"write_to": "src/picosvg/_version.py"},
@@ -31,16 +44,8 @@ setup_args = dict(
         "lxml>=4.0",
         "skia-pathops>=0.6.0",
     ],
-    extras_require={
-        "dev": [
-            "pytest",
-            "pytest-clarity",
-            "black==24.8.0",
-            "pytype==2020.11.23; python_version < '3.9'",
-        ],
-    },
-    # this is so we can use the built-in dataclasses module
-    python_requires=">=3.8",
+    extras_require=extras_require,
+    python_requires=">=3.10",
     # this is for type checker to use our inline type hints:
     # https://www.python.org/dev/peps/pep-0561/#id18
     package_data={"picosvg": ["py.typed"]},
