@@ -27,7 +27,7 @@ pip install -e .
 picosvg mysvg.svg
 ```
 
-Requires Python 3.8 or greater.
+Requires Python 3.10 or greater.
 
 ## Test
 
