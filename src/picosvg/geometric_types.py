@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import math
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Union, overload
 
 
 DEFAULT_ALMOST_EQUAL_TOLERANCE = 1e-9
@@ -34,7 +34,13 @@ class Point(NamedTuple):
     def _sub_vec(self, other: "Vector") -> "Point":
         return self.__class__(self.x - other.x, self.y - other.y)
 
-    def __sub__(self, other: _PointOrVec) -> _PointOrVec:
+    @overload
+    def __sub__(self, other: "Point") -> "Vector": ...
+
+    @overload
+    def __sub__(self, other: "Vector") -> "Point": ...
+
+    def __sub__(self, other: object) -> _PointOrVec:
         """Return a Point or Vector based on the type of other.
 
         If other is a Point, return Vector from other to self.
