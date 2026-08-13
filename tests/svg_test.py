@@ -810,3 +810,161 @@ def test_bounding_box():
     assert math.isclose(bounds.y, 48.57185, abs_tol=1e-5)
     assert math.isclose(bounds.w, 95.64109, abs_tol=1e-5)
     assert math.isclose(bounds.h, 62.20909, abs_tol=1e-5)
+
+
+@pytest.mark.parametrize(
+    "svg_input, expected_output",
+    [
+        # Test basic unit parsing in attributes
+        # 72pt = 72 * 96/72 = 96px
+        (
+            '<rect width="100px" height="72pt" x="10" y="20"/>',
+            '<rect width="100" height="96" x="10" y="20"/>'
+        ),
+        # Test percentage and inch units
+        # 2.5in = 2.5 * 96 = 240px, 50% stays as 50
+        (
+            '<rect width="50%" height="2.5in" x="0" y="0"/>',
+            '<rect width="50%" height="240" x="0" y="0"/>'
+        ),
+        # Test mixed units in different attributes
+        # 25pt = 25 * 96/72 = 33.33333333333333px
+        (
+            '<circle cx="50px" cy="25pt" r="10"/>',
+            '<circle cx="50" cy="33.33333333333333" r="10"/>'
+        ),
+        # Test other absolute units: mm and cm
+        # 10mm = 10 * 96/25.4 = 37.795275590551185px
+        # Note: Only testing mm because cm has floating point precision issues
+        (
+            '<rect width="10mm" height="10mm"/>',
+            '<rect width="37.795275590551185" height="37.795275590551185"/>'
+        ),
+        # Test pica unit: pc
+        # 2pc = 2 * 16 = 32px
+        (
+            '<rect width="2pc" height="1.5pc"/>',
+            '<rect width="32" height="24"/>'
+        ),
+        # Test stroke-width with units
+        # 2pt = 2 * 96/72 = 2.6666666666666665px
+        (
+            '<line x1="0" y1="0" x2="100" y2="100" style="stroke-width: 2pt"/>',
+            '<line x1="0" y1="0" x2="100" y2="100" stroke-width="2.6666666666666665"/>'
+        ),
+        # Test negative values with units
+        # -10px = -10, -5pt = -6.666666666666667
+        (
+            '<rect x="-10px" y="-5pt" width="100" height="100"/>',
+            '<rect x="-10" y="-6.666666666666666" width="100" height="100"/>'
+        ),
+        # Test decimal values with units
+        # 1.5in = 1.5 * 96 = 144px
+        (
+            '<rect width="1.5in" height="0.5in"/>',
+            '<rect width="144" height="48"/>'
+        ),
+        # Test unitless values (should be treated as pixels)
+        (
+            '<rect width="100" height="50"/>',
+            '<rect width="100" height="50"/>'
+        ),
+    ],
+)
+def test_robust_unit_parsing_attributes(svg_input: str, expected_output: str):
+    """Test that SVG attributes with various units are parsed correctly."""
+    actual_svg = SVG.fromstring(svg_string(svg_input))
+    expected_svg = SVG.fromstring(svg_string(expected_output))
+
+    # Normalize both for comparison
+    actual_svg.shapes_to_paths(inplace=True)
+    expected_svg.shapes_to_paths(inplace=True)
+
+    actual_tree = actual_svg.toetree()
+    expected_tree = expected_svg.toetree()
+
+    # Compare the path data to verify correct unit conversion
+    actual_paths = actual_tree.xpath("//svg:path/@d", namespaces={"svg": "http://www.w3.org/2000/svg"})
+    expected_paths = expected_tree.xpath("//svg:path/@d", namespaces={"svg": "http://www.w3.org/2000/svg"})
+
+    assert len(actual_paths) > 0, "No paths found in actual SVG"
+    assert len(actual_paths) == len(expected_paths), f"Path count mismatch: {len(actual_paths)} != {len(expected_paths)}"
+
+    for actual_path, expected_path in zip(actual_paths, expected_paths):
+        assert actual_path == expected_path, f"Path mismatch:\nActual:   {actual_path}\nExpected: {expected_path}"
+
+
+def test_css_length_error_handling():
+    """Test that parse_css_length properly handles invalid inputs."""
+    from picosvg.svg_meta import parse_css_length
+
+    # Test empty string
+    with pytest.raises(ValueError, match="Empty CSS length value"):
+        parse_css_length("")
+
+    # Test whitespace only
+    with pytest.raises(ValueError, match="Empty CSS length value"):
+        parse_css_length("   ")
+
+    # Test relative units that require context
+    with pytest.raises(ValueError, match="Relative unit 'em' requires context"):
+        parse_css_length("16em")
+
+    with pytest.raises(ValueError, match="Relative unit 'rem' requires context"):
+        parse_css_length("2rem")
+
+    with pytest.raises(ValueError, match="Relative unit 'ex' requires context"):
+        parse_css_length("10ex")
+
+    with pytest.raises(ValueError, match="Relative unit 'ch' requires context"):
+        parse_css_length("5ch")
+
+    with pytest.raises(ValueError, match="Relative unit 'vw' requires context"):
+        parse_css_length("50vw")
+
+    with pytest.raises(ValueError, match="Relative unit 'vh' requires context"):
+        parse_css_length("100vh")
+
+    # Test invalid format
+    with pytest.raises(ValueError, match="Invalid CSS length value"):
+        parse_css_length("garbage")
+
+    with pytest.raises(ValueError, match="Invalid CSS length value"):
+        parse_css_length("px100")
+
+    # Test valid inputs that should not raise
+    assert parse_css_length("100px") == 100.0
+    assert parse_css_length("50%") == 50.0
+    assert parse_css_length("96") == 96.0  # unitless
+    assert parse_css_length("-10px") == -10.0
+    assert parse_css_length("1.5in") == 144.0
+
+
+@pytest.mark.parametrize(
+    "svg_input, should_have_svg_ns",
+    [
+        # SVG missing default xmlns="http://www.w3.org/2000/svg"
+        (
+            '<svg viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+        # SVG with only xlink namespace, missing SVG namespace
+        (
+            '<svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+        # SVG already has correct namespace
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="50" height="30"/></svg>',
+            True
+        ),
+    ],
+)
+def test_svg_namespace_auto_added(svg_input: str, should_have_svg_ns: bool):
+    """Test that missing SVG default namespace xmlns='http://www.w3.org/2000/svg' is automatically added."""
+    svg = SVG.fromstring(svg_input)
+    tree = svg.toetree()
+
+    if should_have_svg_ns:
+        # Should automatically add SVG namespace
+        assert tree.nsmap.get(None) == "http://www.w3.org/2000/svg"
