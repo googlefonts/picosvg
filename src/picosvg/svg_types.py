@@ -658,7 +658,7 @@ class SVGPath(SVGShape, SVGCommandSeq):
                 # no work to do
                 return ((cmd, args),)
 
-            (rx, ry, x_rotation, large, sweep, end_x, end_y) = args
+            rx, ry, x_rotation, large, sweep, end_x, end_y = args
 
             if cmd == "a":
                 end_x += curr_pos.x

@@ -15,7 +15,6 @@
 from pathlib import Path
 from setuptools import setup, find_packages
 
-
 long_description = (Path(__file__).parent / "README.md").read_text(encoding="utf-8")
 
 extras_require = {
@@ -24,7 +23,7 @@ extras_require = {
         "pytest-clarity",
     ],
     "lint": [
-        "black==24.8.0",
+        "black",
         "pyrefly",
     ],
 }

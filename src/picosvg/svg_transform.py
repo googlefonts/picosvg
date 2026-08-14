@@ -16,6 +16,7 @@
 
 Focuses on converting to a sequence of affine matrices.
 """
+
 import collections
 from functools import reduce
 from math import cos, sin, radians, tan, hypot
