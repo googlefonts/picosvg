@@ -196,3 +196,12 @@ def test_pathops_difference(shapes, expected_result):
         ).d
         == expected_result
     )
+
+
+@pytest.mark.parametrize(
+    "pathop",
+    [svg_pathops.union, svg_pathops.intersection, svg_pathops.difference],
+)
+def test_pathop_no_input(pathop):
+    # nothing to operate on yields nothing, not None
+    assert list(pathop([], [])) == []
