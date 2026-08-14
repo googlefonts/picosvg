@@ -14,7 +14,7 @@
 
 import re
 from types import MappingProxyType
-from lxml import etree  # pytype: disable=import-error
+from lxml import etree
 from typing import (
     Any,
     Container,
@@ -108,7 +108,7 @@ def cmd_coords(cmd):
     return _CMD_COORDS[cmd]
 
 
-def ntos(n: float) -> str:
+def ntos(n: Any) -> str:
     # strip superflous .0 decimals
     return str(int(n)) if isinstance(n, float) and n.is_integer() else str(n)
 
@@ -194,7 +194,9 @@ def parse_view_box(s: str) -> Rect:
 # using a float type instead of None to make the typechecker happy, and also so that one
 # doesn't need to unwrap Optional type whenever accessing those fields
 class _LinkedDefault(float):
-    def __new__(cls, attr_name):
+    attr_name: str
+
+    def __new__(cls, attr_name: str):
         self = float.__new__(cls, "NaN")
         self.attr_name = attr_name
         return self

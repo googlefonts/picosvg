@@ -17,10 +17,12 @@ import copy
 import dataclasses
 from functools import lru_cache, reduce
 import itertools
-from lxml import etree  # pytype: disable=import-error
+from lxml import etree
 import re
 from typing import (
     Any,
+    Callable,
+    cast,
     Generator,
     Iterable,
     List,
@@ -255,11 +257,12 @@ def from_element(el, **inherited_attrib):
         raise ValueError(f"Bad tag <{el.tag}>")
     data_type = _SHAPE_CLASSES[el.tag]
     attrs = {**inherited_attrib, **el.attrib}
-    args = {
-        f.name: f.type(attrs[_attr_name(f.name)])
-        for f in dataclasses.fields(data_type)
-        if attrs.get(_attr_name(f.name), "").strip()
-    }
+    args = {}
+    for field in dataclasses.fields(data_type):
+        attr_value = attrs.get(_attr_name(field.name), "")
+        if attr_value.strip():
+            field_type = cast(Callable[[str], Any], field.type)
+            args[field.name] = field_type(attr_value)
     return data_type(**args)
 
 
@@ -349,7 +352,7 @@ class SVGTraverseContext(NamedTuple):
 
 class SVG:
     svg_root: etree.Element
-    elements: List[Tuple[etree.Element, Tuple[SVGShape, ...]]]
+    elements: Optional[List[Tuple[etree.Element, Tuple[SVGShape, ...]]]]
 
     def __init__(self, svg_root):
         self.svg_root = svg_root
@@ -359,18 +362,20 @@ class SVG:
         return SVG(svg_root=copy.deepcopy(self.svg_root))
 
     def _elements(self) -> List[Tuple[etree.Element, Tuple[SVGShape, ...]]]:
-        if self.elements:
-            return self.elements
-        elements = []
+        cached_elements = self.elements
+        if cached_elements:
+            return cached_elements
+        elements: List[Tuple[etree.Element, Tuple[SVGShape, ...]]] = []
         for context in self.depth_first(resolve_clip_paths=False):
             el = context.element
             if el.tag not in _SHAPE_CLASSES:
                 continue
             elements.append((el, (context.shape(),)))
         self.elements = elements
-        return self.elements
+        return elements
 
     def _set_element(self, idx: int, el: etree.Element, shapes: Tuple[SVGShape, ...]):
+        assert self.elements is not None
         self.elements[idx] = (el, shapes)
 
     def view_box(self) -> Optional[Rect]:
@@ -421,7 +426,7 @@ class SVG:
 
         swaps = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            self.elements[idx] = (el, (shape.absolute(),))
+            self._set_element(idx, el, (shape.absolute(),))
         return self
 
     def shapes_to_paths(self, inplace=False):
@@ -433,7 +438,7 @@ class SVG:
 
         swaps = []
         for idx, (el, (shape,)) in enumerate(self._elements()):
-            self.elements[idx] = (el, (shape.as_path(),))
+            self._set_element(idx, el, (shape.as_path(),))
         return self
 
     def expand_shorthand(self, inplace=False):
@@ -444,7 +449,8 @@ class SVG:
 
         for idx, (el, (shape,)) in enumerate(self._elements()):
             if isinstance(shape, SVGPath):
-                self.elements[idx] = (
+                self._set_element(
+                    idx,
                     el,
                     (shape.explicit_lines().expand_shorthand(inplace=True),),
                 )
@@ -857,6 +863,8 @@ class SVG:
         self._update_etree()
 
         view_box = self.view_box()
+        if view_box is None:
+            raise ValueError("Cannot clip an SVG without a viewBox")
 
         # phase 1: dump shapes that are completely out of bounds
         for el, (shape,) in self._elements():
@@ -965,7 +973,7 @@ class SVG:
 
         self._update_etree()
 
-        good_ns = {svgns(), xlinkns()}
+        good_ns: set[Optional[str]] = {svgns(), xlinkns()}
         if self.svg_root.nsmap[None] == svgns():
             good_ns.add(None)
 
@@ -1399,7 +1407,8 @@ class SVG:
         )
 
     def _update_etree(self):
-        if not self.elements:
+        elements = self.elements
+        if not elements:
             return
         self._inherited_attrib.cache_clear()
         self._swap_elements(
@@ -1407,7 +1416,7 @@ class SVG:
                 old_el,
                 [to_element(s, **self._inherited_attrib(old_el)) for s in shapes],
             )
-            for old_el, shapes in self.elements
+            for old_el, shapes in elements
         )
         self.elements = None
 
@@ -1573,17 +1582,17 @@ def _inherit_attrib(
     skip_unhandled: bool = False,
     skips=frozenset(),
 ):
-    attrib: MutableMapping[str, Any] = copy.deepcopy(
-        attrib
-    )  # pytype: disable=annotation-type-mismatch
-    for attr_name in sorted(attrib.keys()):
+    attrib_copy: MutableMapping[str, Any] = cast(
+        MutableMapping[str, Any], copy.deepcopy(attrib)
+    )
+    for attr_name in sorted(attrib_copy.keys()):
         if attr_name in skips or not _attr_supported(child, attr_name):
-            del attrib[attr_name]
+            del attrib_copy[attr_name]
             continue
         if not attr_name in _INHERIT_ATTRIB_HANDLERS:
             continue
-        _INHERIT_ATTRIB_HANDLERS[attr_name](attrib, child, attr_name)
-        del attrib[attr_name]
+        _INHERIT_ATTRIB_HANDLERS[attr_name](attrib_copy, child, attr_name)
+        del attrib_copy[attr_name]
 
-    if len(attrib) and not skip_unhandled:
-        raise ValueError(f"Unable to process attrib {attrib}")
+    if len(attrib_copy) and not skip_unhandled:
+        raise ValueError(f"Unable to process attrib {attrib_copy}")

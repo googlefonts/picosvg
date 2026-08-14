@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import math
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Union, overload
 
 
 DEFAULT_ALMOST_EQUAL_TOLERANCE = 1e-9
@@ -34,7 +34,13 @@ class Point(NamedTuple):
     def _sub_vec(self, other: "Vector") -> "Point":
         return self.__class__(self.x - other.x, self.y - other.y)
 
-    def __sub__(self, other: _PointOrVec) -> _PointOrVec:
+    @overload
+    def __sub__(self, other: "Point") -> "Vector": ...
+
+    @overload
+    def __sub__(self, other: "Vector") -> "Point": ...
+
+    def __sub__(self, other: object) -> _PointOrVec:
         """Return a Point or Vector based on the type of other.
 
         If other is a Point, return Vector from other to self.
@@ -44,13 +50,13 @@ class Point(NamedTuple):
             return self._sub_pt(other)
         elif isinstance(other, Vector):
             return self._sub_vec(other)
-        return NotImplemented  # pytype: disable=bad-return-type
+        return NotImplemented
 
-    def __add__(self, other: "Vector") -> "Point":
+    def __add__(self, other: object) -> "Point":
         """Return Point translated by other Vector"""
         if isinstance(other, Vector):
             return self.__class__(self.x + other.x, self.y + other.y)
-        return NotImplemented  # pytype: disable=bad-return-type
+        return NotImplemented
 
     def round(self, digits: int) -> "Point":
         return Point(round(self.x, digits), round(self.y, digits))
@@ -67,7 +73,9 @@ class Vector(NamedTuple):
     x: float = 0
     y: float = 0
 
-    def __add__(self, other: "Vector") -> "Vector":
+    def __add__(self, other: object) -> "Vector":
+        if not isinstance(other, (Point, Vector)):
+            return NotImplemented
         return self.__class__(self.x + other.x, self.y + other.y)
 
     def __sub__(self, other: "Vector") -> "Vector":
@@ -76,7 +84,7 @@ class Vector(NamedTuple):
     def __neg__(self) -> "Vector":
         return self * -1.0
 
-    def __mul__(self, scalar: float) -> "Vector":
+    def __mul__(self, scalar: object) -> "Vector":
         """Multiply vector by a scalar value."""
         if not isinstance(scalar, (int, float)):
             return NotImplemented
@@ -116,7 +124,9 @@ class Vector(NamedTuple):
         if norm == 0:
             # it is more helpful for projection onto 0 to be 0 than an error
             return Vector()
-        return self.dot(other) / norm * other.unit()
+        unit = other.unit()
+        assert unit is not None
+        return self.dot(other) / norm * unit
 
     def almost_equals(
         self, other: "Vector", tolerance=DEFAULT_ALMOST_EQUAL_TOLERANCE

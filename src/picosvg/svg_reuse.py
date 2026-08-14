@@ -327,6 +327,7 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
         # bail out if we find no first edge with significant x part
         # https://github.com/googlefonts/picosvg/issues/246
         return None
+    assert s2_vec1x is not None
 
     s1_vec1 = _nth_vector(s1, s2_vec1x_idx)
 
@@ -363,6 +364,8 @@ def affine_between(s1: SVGShape, s2: SVGShape, tolerance: float) -> Optional[Aff
         s1_prime, s2_prime, lambda v: v.y, tolerance
     )
     if idx != -1:
+        assert s1_vecy is not None
+        assert s2_vecy is not None
         affine = Affine2D.compose_ltr(
             (
                 s1_to_origin,

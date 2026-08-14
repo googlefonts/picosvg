@@ -14,7 +14,7 @@
 
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
 import functools
-import pathops  # pytype: disable=import-error
+import pathops
 from typing import Sequence, Tuple
 from picosvg.svg_meta import SVGCommand, SVGCommandGen, SVGCommandSeq
 from picosvg.svg_transform import Affine2D
@@ -90,7 +90,7 @@ def _do_pathop(
     op: str, svg_cmd_seqs: Sequence[SVGCommandSeq], fill_rules: Sequence[str]
 ) -> SVGCommandGen:
     if not svg_cmd_seqs:
-        return  # pytype: disable=bad-return-type
+        return (command for command in ())
     assert len(svg_cmd_seqs) == len(fill_rules)
     sk_path = skia_path(svg_cmd_seqs[0], fill_rules[0])
     for svg_cmds, fill_rule in zip(svg_cmd_seqs[1:], fill_rules[1:]):

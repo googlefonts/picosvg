@@ -810,3 +810,21 @@ def test_bounding_box():
     assert math.isclose(bounds.y, 48.57185, abs_tol=1e-5)
     assert math.isclose(bounds.w, 95.64109, abs_tol=1e-5)
     assert math.isclose(bounds.h, 62.20909, abs_tol=1e-5)
+
+
+def test_empty_clip_path():
+    # an empty <clipPath> clips everything away, it used to raise TypeError
+    # https://www.w3.org/TR/SVG11/masking.html#EstablishingANewClippingPath
+    svg = SVG.fromstring(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'
+        '<clipPath id="c"/>'
+        '<rect clip-path="url(#c)" x="1" y="1" width="8" height="8"/>'
+        "</svg>"
+    )
+    assert svg.topicosvg().shapes() == ()
+
+
+def test_clip_to_viewbox_requires_viewbox():
+    svg = SVG.fromstring('<svg xmlns="http://www.w3.org/2000/svg"/>')
+    with pytest.raises(ValueError, match="viewBox"):
+        svg.clip_to_viewbox()

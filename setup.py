@@ -22,7 +22,7 @@ extras_require = {
     ],
     "lint": [
         "black==24.8.0",
-        "pytype",
+        "pyrefly",
     ],
 }
 extras_require["dev"] = extras_require["test"] + extras_require["lint"]

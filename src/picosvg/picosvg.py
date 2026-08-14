@@ -20,7 +20,7 @@ picosvg.py emoji_u1f469_1f3fd_200d_1f91d_200d_1f468_1f3fb.svg
 """
 from absl import app
 from absl import flags
-from lxml import etree  # pytype: disable=import-error
+from lxml import etree
 from picosvg.svg import SVG
 from picosvg.svg_meta import svgns
 import sys

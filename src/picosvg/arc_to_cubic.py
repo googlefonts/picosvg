@@ -105,8 +105,9 @@ class EllipticalArc(NamedTuple):
         if self.sweep == self.large:
             scale_factor = -scale_factor
 
-        delta *= scale_factor
-        center_point = point1 + (point2 - point1) * 0.5 + Vector(-delta.y, delta.x)
+        delta = delta * scale_factor
+        midpoint = (point2 - point1) * 0.5
+        center_point = point1 + midpoint + Vector(-delta.y, delta.x)
         v1 = point1 - center_point
         v2 = point2 - center_point
 
@@ -138,7 +139,7 @@ def _arc_to_cubic(arc: EllipticalArc) -> Iterator[Tuple[Point, Point, Point]]:
     # Some results of atan2 on some platform implementations are not exact
     # enough. So that we get more cubic curves than expected here. Adding 0.001f
     # reduces the count of sgements to the correct count.
-    num_segments = int(ceil(fabs(arc_params.theta_arc / (PI_OVER_TWO + 0.001))))
+    num_segments = ceil(fabs(arc_params.theta_arc / (PI_OVER_TWO + 0.001)))
     for i in range(num_segments):
         start_theta = arc_params.theta1 + i * arc_params.theta_arc / num_segments
         end_theta = arc_params.theta1 + (i + 1) * arc_params.theta_arc / num_segments
