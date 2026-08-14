@@ -13,12 +13,12 @@
 # limitations under the License.
 
 """SVGPath <=> skia-pathops constructs to enable ops on paths."""
+
 import functools
 import pathops
 from typing import Sequence, Tuple
 from picosvg.svg_meta import SVGCommand, SVGCommandGen, SVGCommandSeq
 from picosvg.svg_transform import Affine2D
-
 
 # Absolutes coords assumed
 # A should never occur because we convert arcs to cubics

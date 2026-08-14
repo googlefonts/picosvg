@@ -26,7 +26,6 @@ from typing import (
 )
 from picosvg.geometric_types import Rect
 
-
 SVGCommand = Tuple[str, Tuple[float, ...]]
 SVGCommandSeq = Iterable[SVGCommand]
 SVGCommandGen = Generator[SVGCommand, None, None]

@@ -642,8 +642,7 @@ def test_tostring_pretty_print():
         "</svg>"
     )
 
-    assert svg.tostring(pretty_print=True) == dedent(
-        """\
+    assert svg.tostring(pretty_print=True) == dedent("""\
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 128 128">
           <g>
             <g>
@@ -651,8 +650,7 @@ def test_tostring_pretty_print():
             </g>
           </g>
         </svg>
-        """
-    )
+        """)
 
 
 @pytest.mark.parametrize(

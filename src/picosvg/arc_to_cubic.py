@@ -18,11 +18,11 @@ The code is adapted from FontTools fontTools/svgLib/path/arc.py, which in turn
 is adapted from Blink's SVGPathNormalizer::DecomposeArcToCubic:
 https://github.com/chromium/chromium/blob/93831f2/third_party/blink/renderer/core/svg/svg_path_parser.cc#L169-L278
 """
+
 from math import atan2, ceil, cos, fabs, isfinite, pi, radians, sin, sqrt, tan
 from typing import Iterator, NamedTuple, Optional, Tuple
 from picosvg.geometric_types import Point, Vector
 from picosvg.svg_transform import Affine2D
-
 
 TWO_PI = 2 * pi
 PI_OVER_TWO = 0.5 * pi

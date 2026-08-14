@@ -24,7 +24,6 @@ from typing import Callable, Generator, Iterable, Optional, Tuple
 from picosvg import svg_meta
 from picosvg.svg_transform import Affine2D
 
-
 _SIGNIFICANCE_FACTOR = 5  # Must be at least N x tolerance to be significant
 _ROUND_RANGE = range(3, 13)  # range of rounds to try
 

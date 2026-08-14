@@ -15,7 +15,6 @@
 import math
 from typing import NamedTuple, Optional, Union, overload
 
-
 DEFAULT_ALMOST_EQUAL_TOLERANCE = 1e-9
 _PointOrVec = Union["Point", "Vector"]
 
