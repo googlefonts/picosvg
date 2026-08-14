@@ -822,3 +822,9 @@ def test_empty_clip_path():
         "</svg>"
     )
     assert svg.topicosvg().shapes() == ()
+
+
+def test_clip_to_viewbox_requires_viewbox():
+    svg = SVG.fromstring('<svg xmlns="http://www.w3.org/2000/svg"/>')
+    with pytest.raises(ValueError, match="viewBox"):
+        svg.clip_to_viewbox()

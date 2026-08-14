@@ -857,6 +857,8 @@ class SVG:
         self._update_etree()
 
         view_box = self.view_box()
+        if view_box is None:
+            raise ValueError("Cannot clip an SVG without a viewBox")
 
         # phase 1: dump shapes that are completely out of bounds
         for el, (shape,) in self._elements():
