@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from setuptools import setup, find_packages
 
+
+long_description = (Path(__file__).parent / "README.md").read_text(encoding="utf-8")
 
 extras_require = {
     "test": [
@@ -56,6 +59,8 @@ setup_args = dict(
         "Exploratory utility for svg simplification, "
         "meant for use playing with COLR fonts"
     ),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
 )
 
 
